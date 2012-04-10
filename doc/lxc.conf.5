@@ -3,7 +3,7 @@
 .\" <http://shell.ipoline.com/~elmert/comp/docbook2X/> 
 .\" Please send any bug reports, improvements, comments, patches, 
 .\" etc. to Steve Cheng <steve@ggi-project.org>.
-.TH "LXC.CONF" "5" "02 March 2012" "" ""
+.TH "LXC.CONF" "5" "10 July 2012" "" ""
 
 .SH NAME
 lxc.conf \- linux container configuration file
@@ -239,6 +239,22 @@ annoying messages on the console.
 \fB     lxc.tty \fR
 Specify the number of tty to make available to the
 container.
+.SS "CONSOLE DEVICES LOCATION"
+.PP
+LXC consoles are provided through Unix98 PTYs created on the
+host and bind-mounted over the expected devices in the container.
+By default, they are bind-mounted over \fI/dev/console\fR
+and \fI/dev/ttyN\fR\&.  This can prevent package upgrades
+in the guest.  Therefore you can specify a directory location (under
+\fI/dev\fR under which LXC will create the files and
+bind-mount over them.  These will then be symbolically linked to
+\fI/dev/console\fR and \fI/dev/ttyN\fR\&.
+A package upgrade can then succeed as it is able to remove and replace
+the symbolic links.
+.TP
+\fB     lxc.devttydir \fR
+Specify a directory under \fI/dev\fR
+under which to create the container console devices.
 .SS "MOUNT POINTS"
 .PP
 The mount points section specifies the different places to be
