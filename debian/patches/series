@@ -9,3 +9,4 @@
 09-lxc-create-trap-name.patch
 10-lxc-clone-trap-name.patch
 11-lxc-console-escape.patch
+12-lxc-create-rootfs.patch
