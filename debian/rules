@@ -18,7 +18,7 @@ override_dh_auto_clean:
 	done
 
 override_dh_auto_configure:
-	dh_auto_configure -- --libdir=\$${prefix}/lib/$(DEB_HOST_MULTIARCH)/lxc --with-rootfs-path=\$${prefix}/lib/$(DEB_HOST_MULTIARCH)/lxc --enable-doc
+	dh_auto_configure -- --libdir=\$${prefix}/lib/$(DEB_HOST_MULTIARCH)/lxc --libexecdir=\$${prefix}/lib/$(DEB_HOST_MULTIARCH) --with-rootfs-path=\$${prefix}/lib/$(DEB_HOST_MULTIARCH)/lxc --enable-doc
 
 override_dh_auto_install:
 	dh_auto_install
