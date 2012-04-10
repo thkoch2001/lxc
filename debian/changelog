@@ -1,3 +1,24 @@
+lxc (0.8.0~rc1-4) unstable; urgency=low
+
+  * Correcting spelling typo in debconf templates (Closes: #663547).
+  * Adding updated French debconf translations from Christian Perrier
+    <bubulle@debian.org> (Closes: #663546).
+  * Moving architecture independent files from /usr/lib/*/lxc to
+    /usr/share/lxc (Closes: #664160).
+  * Correcting multiarch conditional typo in rules.
+  * Creating lxc directories in a dangling symlink proof way in order to
+    respect sysadmins decisions for temporary incomplete deployments.
+  * Adding patch to avoid messing with rootfs directory creation in lxc-
+    create where its not required (Closes: #664159).
+  * Adding updated Spanish debconf translations from Camaleón
+    <noelamac@gmail.com> (Closes: #665366).
+  * Adding updated Russian debconf translations from Yuri Kozlov
+    <yuray@komyakino.ru> (Closes: #665370).
+  * Also setting libexedir via configure argument which in turn will set
+    lxcinitdir properly on multiarch (Closes: #664764).
+
+ -- Daniel Baumann <daniel.baumann@progress-technologies.net>  Tue, 10 Apr 2012 20:04:36 +0200
+
 lxc (0.8.0~rc1-3) unstable; urgency=low
 
   * Adding pre-depends to multiarch-support (Closes: #663274).
