@@ -97,6 +97,11 @@ Configure_system ()
 
 			${_PARENT_DIST}-proposed-updates)
 				echo "deb ${_PARENT_MIRROR} ${_PARENT_DIST}-proposed-updates ${_PARENT_AREA}" >> "${_ROOTFS}/etc/apt/sources.list.d/debian.list"
+				;;
+
+			experimental)
+				echo "deb ${_PARENT_MIRROR} experimental ${_PARENT_AREA}" >> "${_ROOTFS}/etc/apt/sources.list.d/debian.list"
+				;;
 		esac
 	done
 

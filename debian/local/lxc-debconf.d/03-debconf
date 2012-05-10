@@ -111,11 +111,23 @@ Archives ()
 	then
 		case "${_MODE}" in
 			debian)
-				db_subst linux-container/archives CHOICES "Debian Security, Debian Updates, Debian Backports, Debian Proposed Updates"
-				db_subst linux-container/archives CHOICES_C "${_DISTRIBUTION}-security, ${_DISTRIBUTION}-updates, ${_DISTRIBUTION}-backports, ${_DISTRIBUTION}-proposed-updates"
+				case "${_PARENT_DISTRIBUTION}" in
+					sid)
+						db_subst linux-container/archives CHOICES "Debian Experimental"
+						db_subst linux-container/archives CHOICES_C "experimental"
 
-				db_set linux-container/archives "${_DISTRIBUTION}-security, ${_DISTRIBUTION}-updates, ${_DISTRIBUTION}-backports"
-				db_fset linux-container/archives seen false
+						db_set linux-container/archives ""
+						db_fset linux-container/archives seen false
+						;;
+
+					*)
+						db_subst linux-container/archives CHOICES "Debian Security, Debian Updates, Debian Backports, Debian Proposed Updates"
+						db_subst linux-container/archives CHOICES_C "${_DISTRIBUTION}-security, ${_DISTRIBUTION}-updates, ${_DISTRIBUTION}-backports, ${_DISTRIBUTION}-proposed-updates"
+
+						db_set linux-container/archives "${_DISTRIBUTION}-security, ${_DISTRIBUTION}-updates, ${_DISTRIBUTION}-backports"
+						db_fset linux-container/archives seen false
+						;;
+				esac
 				;;
 
 			progress)
