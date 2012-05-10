@@ -289,14 +289,14 @@ Download_system ()
 	if [ -x "$(which cdebootstrap 2>/dev/null)" ]
 	then
 		cdebootstrap --arch=${_ARCHITECTURE} \
-			--flavour=minimal --include=${_INCLUDE} \
+			--flavour=minimal --include=bzip2,${_INCLUDE} \
 			${_PARENT_DISTRIBUTION} "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}.partial" ${_PARENT_MIRROR}
 
 		Chroot "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}.partial" "dpkg --purge cdebootstrap-helper-rc.d"
 	elif [ -x "$(which debootstrap 2>/dev/null)" ]
 	then
 		debootstrap --verbose --arch=${_ARCHITECTURE} --components=${_PARENT_ARCHIVE_AREAS} \
-			--variant=minbase --include=${_INCLUDE} \
+			--variant=minbase --include=bzip2,${_INCLUDE} \
 			${_PARENT_DISTRIBUTION} "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}.partial" ${_PARENT_MIRROR}
 	fi
 
