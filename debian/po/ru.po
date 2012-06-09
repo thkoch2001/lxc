@@ -4,30 +4,31 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: lxc 0.8.0~rc1-3\n"
+"Project-Id-Version: lxc 0.8.0~rc1-4\n"
 "Report-Msgid-Bugs-To: lxc@packages.debian.org\n"
 "POT-Creation-Date: 2012-02-09 13:08+0100\n"
-"PO-Revision-Date: 2012-03-23 18:58+0400\n"
+"PO-Revision-Date: 2012-05-21 21:39+0400\n"
 "Last-Translator: Yuri Kozlov <yuray@komyakino.ru>\n"
 "Language-Team: Russian <debian-l10n-russian@lists.debian.org>\n"
 "Language: ru\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
-"n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n"
+"%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+"X-Generator: Lokalize 1.2\n"
 
 #. Type: title
 #. Description
 #: ../lxc.templates:1001
 msgid "Linux Containers: LXC setup"
-msgstr "Linux Containers: Ð½Ð°ÑÑÑÐ¾Ð¹ÐºÐ° LXC"
+msgstr "Linux Containers: настройка LXC"
 
 #. Type: boolean
 #. Description
 #: ../lxc.templates:2001
 msgid "Automatically start Linux Containers on boot?"
-msgstr "ÐÐ°Ð¿ÑÑÐºÐ°ÑÑ Linux Containers Ð¿ÑÐ¸ Ð·Ð°Ð³ÑÑÐ·ÐºÐµ Ð°Ð²ÑÐ¾Ð¼Ð°ÑÐ¸ÑÐµÑÐºÐ¸?"
+msgstr "Запускать Linux Containers при загрузке автоматически?"
 
 #. Type: boolean
 #. Description
@@ -37,42 +38,36 @@ msgid ""
 "the /etc/lxc/auto directory can be automatically started during system boot, "
 "and shut down on reboot or halt."
 msgstr ""
-"Linux Containers, Ñ ÐºÐ¾ÑÐ¾ÑÑÑ ÑÐ°Ð¹Ð»Ñ Ð½Ð°ÑÑÑÐ¾Ð¹ÐºÐ¸ ÑÐºÐ¾Ð¿Ð¸ÑÐ¾Ð²Ð°Ð½Ñ Ð¸Ð· Ð¸Ð»Ð¸ ÑÐ²Ð»ÑÑÑÑÑ "
-"ÑÐ¸Ð¼Ð²Ð¾Ð»ÑÐ½ÑÐ¼Ð¸ ÑÑÑÐ»ÐºÐ°Ð¼Ð¸ Ð½Ð° ÐºÐ°ÑÐ°Ð»Ð¾Ð³ /etc/lxc/auto, Ð¼Ð¾Ð³ÑÑ Ð·Ð°Ð¿ÑÑÐºÐ°ÑÑÑÑ "
-"Ð°Ð²ÑÐ¾Ð¼Ð°ÑÐ¸ÑÐµÑÐºÐ¸ Ð¿ÑÐ¸ Ð²ÐºÐ»ÑÑÐµÐ½Ð¸Ð¸ Ð¼Ð°ÑÐ¸Ð½Ñ Ð¸ Ð²ÑÐºÐ»ÑÑÐ°ÑÑÑÑ Ð¿ÑÐ¸ Ð¿ÐµÑÐµÐ·Ð°Ð³ÑÑÐ·ÐºÐµ Ð¸Ð»Ð¸ "
-"Ð¾ÑÑÐ°Ð½Ð¾Ð²ÐºÐµ."
+"Linux Containers, у которых файлы настройки скопированы из или являются "
+"символьными ссылками на каталог /etc/lxc/auto, могут запускаться "
+"автоматически при включении машины и выключаться при перезагрузке или "
+"остановке."
 
 #. Type: boolean
 #. Description
 #: ../lxc.templates:2001
 msgid "If unsure, choose yes (default)."
-msgstr "ÐÑÐ»Ð¸ Ð½Ðµ ÑÐ²ÐµÑÐµÐ½Ñ, Ð¾ÑÐ²ÐµÑÑÑÐµ ÑÑÐ²ÐµÑÐ´Ð¸ÑÐµÐ»ÑÐ½Ð¾ (Ð¿Ð¾ ÑÐ¼Ð¾Ð»ÑÐ°Ð½Ð¸Ñ)."
+msgstr "Если не уверены, ответьте утвердительно (по умолчанию)."
 
 #. Type: select
 #. Description
 #: ../lxc.templates:3001
-#| msgid "Linux Container: Stop method"
 msgid "Linux Container: Shutdown method"
-msgstr "Linux Container: Ð¼ÐµÑÐ¾Ð´ Ð²ÑÐºÐ»ÑÑÐµÐ½Ð¸Ñ"
+msgstr "Linux Container: метод выключения"
 
 #. Type: select
 #. Description
 #: ../lxc.templates:3001
-#| msgid ""
-#| "Linux Containers can be stopped in different ways. The stop method kills "
-#| "all processes inside the container. The halt method initiates a shutdown, "
-#| "which takes longer and can have problems with containers that don't "
-#| "shutdown themselfs properly."
 msgid ""
 "Linux Containers can be shutdown in different ways. The stop method "
 "terminates all processes inside the container. The halt method initiates a "
 "shutdown, which takes longer and can have problems with containers that "
-"don't shutdown themselfs properly."
+"don't shutdown themselves properly."
 msgstr ""
-"Ð Ð°Ð±Ð¾ÑÑ Linux Containers Ð¼Ð¾Ð¶Ð½Ð¾ Ð²ÑÐºÐ»ÑÑÐ°ÑÑ ÑÐ°Ð·Ð½ÑÐ¼Ð¸ ÑÐ¿Ð¾ÑÐ¾Ð±Ð°Ð¼Ð¸. ÐÐµÑÐ¾Ð´ stop "
-"Ð·Ð°Ð²ÐµÑÑÐ°ÐµÑ Ð²ÑÐµ Ð¿ÑÐ¾ÑÐµÑÑÑ Ð²Ð½ÑÑÑÐ¸ ÐºÐ¾Ð½ÑÐµÐ¹Ð½ÐµÑÐ°. ÐÐµÑÐ¾Ð´ halt Ð·Ð°Ð¿ÑÑÐºÐ°ÐµÑ Ð¿ÑÐ¾ÑÐµÑÑ "
-"Ð²ÑÐºÐ»ÑÑÐµÐ½Ð¸Ñ, ÐºÐ¾ÑÐ¾ÑÑÐ¹ Ð²ÑÐ¿Ð¾Ð»Ð½ÑÐµÑÑÑ Ð´Ð¾Ð»ÑÑÐµ Ð¸ Ð¼Ð¾Ð¶ÐµÑ Ð¿ÑÐ¸Ð²ÐµÑÑÐ¸ Ðº Ð¿ÑÐ¾Ð±Ð»ÐµÐ¼Ðµ Ñ "
-"ÐºÐ¾Ð½ÑÐµÐ¹Ð½ÐµÑÐ°Ð¼Ð¸, ÐºÐ¾ÑÐ¾ÑÑÐµ Ð½Ðµ Ð¼Ð¾Ð³ÑÑ ÑÐ°Ð¼Ð¾ÑÑÐ¾ÑÑÐµÐ»ÑÐ½Ð¾ Ð²ÑÐºÐ»ÑÑÐ¸ÑÑÑÑ Ð¿ÑÐ°Ð²Ð¸Ð»ÑÐ½Ð¾."
+"Работу Linux Containers можно выключать разными способами. Метод stop "
+"завершает все процессы внутри контейнера. Метод halt запускает процесс "
+"выключения, который выполняется дольше и могут возникнуть проблемы с "
+"контейнерами, которые не могут самостоятельно выключиться правильно."
 
 #. Type: select
 #. Description
@@ -81,15 +76,14 @@ msgid ""
 "Unless you know that your containers don't shutdown properly, choose halt "
 "(default)."
 msgstr ""
-"ÐÑÐ»Ð¸ Ð²Ñ Ð·Ð½Ð°ÐµÑÐµ, ÑÑÐ¾ Ð²Ð°ÑÐ¸ ÐºÐ¾Ð½ÑÐµÐ¹Ð½ÐµÑÑ Ð½Ðµ Ð²ÑÐºÐ»ÑÑÐ°ÑÑÑÑ Ð¿ÑÐ°Ð²Ð¸Ð»ÑÐ½ÑÐ¼ Ð¾Ð±ÑÐ°Ð·Ð¾Ð¼, "
-"Ð²ÑÐ±ÐµÑÐ¸ÑÐµ "
-"Ð¾ÑÑÐ°Ð½Ð¾Ð²ÐºÑ (halt, Ð¿Ð¾ ÑÐ¼Ð¾Ð»ÑÐ°Ð½Ð¸Ñ)."
+"Если вы знаете, что ваши контейнеры не выключаются корректно, выберите "
+"остановку (halt, по умолчанию)."
 
 #. Type: string
 #. Description
 #: ../lxc.templates:4001
 msgid "LXC directory:"
-msgstr "ÐÐ°ÑÐ°Ð»Ð¾Ð³ LXC:"
+msgstr "Каталог LXC:"
 
 #. Type: string
 #. Description
@@ -97,13 +91,10 @@ msgstr "ÐÐ°ÑÐ°Ð»Ð¾Ð³ LXC:"
 msgid ""
 "Please specify the directory that will be used to store the Linux Containers."
 msgstr ""
-"Ð£ÐºÐ°Ð¶Ð¸ÑÐµ ÐºÐ°ÑÐ°Ð»Ð¾Ð³, ÐºÐ¾ÑÐ¾ÑÑÐ¹ Ð±ÑÐ´ÐµÑ Ð¸ÑÐ¿Ð¾Ð»ÑÐ·Ð¾Ð²Ð°Ð½ Ð´Ð»Ñ ÑÑÐ°Ð½ÐµÐ½Ð¸Ñ Linux Containers."
+"Укажите каталог, который будет использован для хранения Linux Containers."
 
 #. Type: string
 #. Description
 #: ../lxc.templates:4001
 msgid "If unsure, use /var/lib/lxc (default)."
-msgstr "ÐÑÐ»Ð¸ Ð½Ðµ ÑÐ²ÐµÑÐµÐ½Ñ, Ð¸ÑÐ¿Ð¾Ð»ÑÐ·ÑÐ¹ÑÐµ /var/lib/lxc (Ð¿Ð¾ ÑÐ¼Ð¾Ð»ÑÐ°Ð½Ð¸Ñ)."
-
-#~ msgid "If unsure, choose stop (default)."
-#~ msgstr "ÐÑÐ»Ð¸ Ð½Ðµ ÑÐ²ÐµÑÐµÐ½Ñ, Ð²ÑÐ±ÐµÑÐ¸ÑÐµ stop (Ð¿Ð¾ ÑÐ¼Ð¾Ð»ÑÐ°Ð½Ð¸Ñ)."
+msgstr "Если не уверены, используйте /var/lib/lxc (по умолчанию)."
