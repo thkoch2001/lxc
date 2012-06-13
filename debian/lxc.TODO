@@ -8,7 +8,6 @@ lxc:
   * expose lxc-setcap run with debconf
   * integrate example debian packages that contain /usr/share/lxc/cache/*
   * add debconf question to ask for level of mac conflict check
-  * add debconf question to ask for putting linux-container local package in /u/s/l-c/
   * support 'all' in lxc convenience wrapper
   * add a lxc-reboot command
   * add a timeout to lxc-halt after which the container is forcefully stopped
@@ -24,7 +23,7 @@ lxc-debconf:
   * allow to have templates (that do not get modified) in /etc/lxc/debconf
   * write preseed file into /etc/lxc/debconf after lxc-debconf is done
   * create /etc/lxc/{debian,progress} and respect it depending on mode
-  * add a warning when building squeeze but no linux-container in /usr/share/lxc
+  * add a warning when building squeeze but no live-config 3.x in /usr/share/lxc
   * allow using architecture=auto
   * save last used IP, use this +1 as default for next container
   * add manpage

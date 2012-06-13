@@ -212,27 +212,36 @@ EOF
 		Chroot "${_ROOTFS}" "apt-get --yes install ${_PACKAGES}"
 	fi
 
-	# Configure linux-container
-
-cat > "${_ROOTFS}/preseed.cfg" << EOF
-linux-container linux-container/enable boolean true
-EOF
-
-	Chroot "${_ROOTFS}" "debconf-set-selections preseed.cfg"
-
-	rm -f "${_ROOTFS}/preseed.cfg"
-
-	if ls /usr/share/lxc/packages/linux-container*deb > /dev/null 2>&1
+	# Install live-config
+	if ls /usr/share/lxc/packages/live-config*.deb > /dev/null 2>&1
 	then
-		# Install local linux-container package
-		cp -L /usr/share/lxc/packages/linux-container_*.deb "${_ROOTFS}"
-
-		Chroot "${_ROOTFS}" "dpkg -i $(basename ${_ROOTFS}/linux-container_*.deb)"
-		rm -f "${_ROOTFS}"/linux-container_*.deb
+		# Install local live-config package
+		for _PACKAGE in /usr/share/lxc/packages/live-config-*_*.deb /usr/share/lxc/packages/live-config_*.deb
+		do
+			cp -L ${_PACKAGE} "${_ROOTFS}"
+			Chroot "${_ROOTFS}" "dpkg -i $(basename ${_ROOTFS}/live-config*.deb)"
+			rm -f "${_ROOTFS}"/live-config*.deb
+		done
 	else
-		# Install remote linux-container package
-		Chroot "${_ROOTFS}" "apt-get install --yes linux-container"
+		# Install remote live-config package
+		Chroot "${_ROOTFS}" "apt-get install --yes live-config"
 	fi
+
+	# Initialize live-debconfig debconf database
+	Chroot "${_ROOTFS}" "live-debconfig --noscripts"
+
+	# Preseed live-debconfig
+	if [ -e "${_PRESEED_FILE}" ]
+	then
+		cat "${_PRESEED_FILE}" > "${_ROOTFS}/preseed.cfg"
+
+		Chroot "${_ROOTFS}" "DEBCONF_SYSTEMRC=/var/lib/live/debconfig/systemrc debconf-set-selections preseed.cfg"
+
+		rm -f "${_ROOTFS}/preseed.cfg"
+	fi
+
+	# Run live-debconfig
+	Chroot "${_ROOTFS}" "live-debconfig"
 
 	# Configure user-setup
 
