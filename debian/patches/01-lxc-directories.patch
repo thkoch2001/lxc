@@ -1,18 +1,12 @@
 Author: Daniel Baumann <daniel.baumann@progress-technologies.net>
-Description:
- Trimming directories to use:
-   * /usr/lib/lxc instead of /usr/lib/lxc/lxc
-   * /usr/share/lxc/templates instead of /usr/lib/lxc/lxc/templates
+Description: Setting template directory to /usr/share/lxc/templates.
 
 diff -Naurp lxc.orig/configure lxc/configure
---- lxc.orig/configure	2012-03-09 12:51:26.713705881 +0100
-+++ lxc/configure	2012-03-09 13:27:14.848357913 +0100
-@@ -4694,9 +4694,9 @@ LXCPATH="${with_config_path}"
+--- lxc.orig/configure	2012-06-13 18:46:21.922951004 +0200
++++ lxc/configure	2012-06-14 08:14:05.717758441 +0200
+@@ -4696,7 +4696,7 @@ LXCROOTFSMOUNT="${with_rootfs_path}"
  
- LXCROOTFSMOUNT="${with_rootfs_path}"
- 
--LXCINITDIR='${libexecdir}/lxc'
-+LXCINITDIR='${libexecdir}'
+ LXCINITDIR='${libexecdir}/lxc'
  
 -LXCTEMPLATEDIR='${libdir}/lxc/templates'
 +LXCTEMPLATEDIR='/usr/share/lxc/templates'
@@ -20,15 +14,13 @@ diff -Naurp lxc.orig/configure lxc/configure
  
  for ac_header in linux/netlink.h linux/genetlink.h
 diff -Naurp lxc.orig/configure.ac lxc/configure.ac
---- lxc.orig/configure.ac	2012-03-09 12:51:26.713705881 +0100
-+++ lxc/configure.ac	2012-03-09 13:27:35.752463435 +0100
-@@ -62,8 +62,8 @@ AS_AC_EXPAND(LXC_GENERATE_DATE, "$(date)
- 
+--- lxc.orig/configure.ac	2012-06-13 18:46:21.922951004 +0200
++++ lxc/configure.ac	2012-06-14 08:14:19.753853748 +0200
+@@ -63,7 +63,7 @@ AS_AC_EXPAND(LXC_GENERATE_DATE, "$(date)
  AC_SUBST(LXCPATH, "${with_config_path}")
  AC_SUBST(LXCROOTFSMOUNT, "${with_rootfs_path}")
--AC_SUBST(LXCINITDIR, ['${libexecdir}/lxc'])
+ AC_SUBST(LXCINITDIR, ['${libexecdir}/lxc'])
 -AC_SUBST(LXCTEMPLATEDIR, ['${libdir}/lxc/templates'])
-+AC_SUBST(LXCINITDIR, ['${libexecdir}'])
 +AC_SUBST(LXCTEMPLATEDIR, ['/usr/share/lxc/templates'])
  
  AC_CHECK_HEADERS([linux/netlink.h linux/genetlink.h],
