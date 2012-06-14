@@ -1,3 +1,35 @@
+lxc (0.8.0~rc1-5) unstable; urgency=low
+
+  * Updating todo file.
+  * Prefering iputils-ping over inetutils-ping in lxc-progress.cfg
+    example.
+  * Temporarily including bzip2 manually when bootstrapping until
+    #657560 has been fixed in unstable.
+  * Only show experimental as a valid optional archive choice in lxc-
+    debconf for sid, rather than security, volatile, backports, and
+    proposed-updates (which all are evidently unavailable for unstable).
+  * Adding updated Russian debconf translations from Yuri Kozlov
+    <yuray@komyakino.ru> (Closes: #671053).
+  * Adding updated Spanish debconf translations from Camaleón
+    <noelamac@gmail.com> (Closes: #677404).
+  * Adding updated Swedish debconf translations from Martin Bagge
+    <brother@bsnet.se> (Closes: #673889).
+  * Adding updated Portuguese debconf translations from Miguel
+    Figueiredo <elmig@debianpt.org> (Closes: #674950).
+  * Adding updated Dutch debconf translations from Jeroen Schot
+    <schot@a-eskwadraat.nl> (Closes: #673776).
+  * Correcting incorrect lxc-netstat.patch, thanks to Serge Hallyn
+    <serge.hallyn@canonical.com> (Closes: #677124).
+  * Updating lxc-directories.patch (Closes: #664764).
+  * Updating base-files hack for newer versions of base-files (sid).
+  * Moving away from linux-container and use live-config instead.
+  * Replacing linux-container debconf prefix with lxc-debconf for
+    outside template preseeding.
+  * Updating some remaining leftover cruft from linux-container in
+    variable namespacing.
+
+ -- Daniel Baumann <daniel.baumann@progress-technologies.net>  Thu, 14 Jun 2012 10:15:53 +0200
+
 lxc (0.8.0~rc1-4) unstable; urgency=low
 
   * Correcting spelling typo in debconf templates (Closes: #663547).
