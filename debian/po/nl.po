@@ -4,10 +4,10 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: lxc 0.7.5-24\n"
+"Project-Id-Version: lxc 0.8.0~rc1-4\n"
 "Report-Msgid-Bugs-To: lxc@packages.debian.org\n"
 "POT-Creation-Date: 2012-02-09 13:08+0100\n"
-"PO-Revision-Date: 2012-02-09 17:01+0100\n"
+"PO-Revision-Date: 2012-05-21 13:51+0200\n"
 "Last-Translator: Jeroen Schot <schot@a-eskwadraat.nl>\n"
 "Language-Team: Debian l10n Dutch <debian-l10n-dutch@lists.debian.org>\n"
 "Language: nl\n"
@@ -48,28 +48,20 @@ msgstr "Als u twijfelt, kies dan ja (standaard)."
 #. Type: select
 #. Description
 #: ../lxc.templates:3001
-#, fuzzy
-#| msgid "Linux Container: Stop method"
 msgid "Linux Container: Shutdown method"
-msgstr "Linux Container: Stop-methode"
+msgstr "Linux Container: Uitschakel-methode"
 
 #. Type: select
 #. Description
 #: ../lxc.templates:3001
-#, fuzzy
-#| msgid ""
-#| "Linux Containers can be stopped in different ways. The stop method kills "
-#| "all processes inside the container. The halt method initiates a shutdown, "
-#| "which takes longer and can have problems with containers that don't "
-#| "shutdown themselves properly."
 msgid ""
 "Linux Containers can be shutdown in different ways. The stop method "
 "terminates all processes inside the container. The halt method initiates a "
 "shutdown, which takes longer and can have problems with containers that "
 "don't shutdown themselves properly."
 msgstr ""
-"Linux Containers kunnen op verschillende manieren worden gestopt. De stop-"
-"methode termineert alle processen in de container. De halt-methode doet "
+"Linux Containers kunnen op verschillende manieren worden uitgeschakeld. De "
+"stop-methode termineert alle processen in de container. De halt-methode doet "
 "alsof het systeem wordt uitgeschakeld, dit duurt langer en kan problemen "
 "geven met containers die zich niet netjes uitschakelen."
 
@@ -80,6 +72,8 @@ msgid ""
 "Unless you know that your containers don't shutdown properly, choose halt "
 "(default)."
 msgstr ""
+"Kies halt (standaard), tenzij u weet dat uw containers niet netjes "
+"uitschakelen."
 
 #. Type: string
 #. Description
@@ -99,6 +93,3 @@ msgstr "In welke map moeten de Linux Containers worden bewaard?"
 #: ../lxc.templates:4001
 msgid "If unsure, use /var/lib/lxc (default)."
 msgstr "Als u twijfelt, gebruik dan /var/lib/lxc (standaard)"
-
-#~ msgid "If unsure, choose stop (default)."
-#~ msgstr "Als u twijfelt, kies dan stop (standaard)."
