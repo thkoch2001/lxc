@@ -21,7 +21,7 @@ diff -Naurp lxc.orig/src/lxc/lxc-netstat.in lxc/src/lxc/lxc-netstat.in
  
 -exec=""
 +shortoptions='hn:'
-+longoptions='help,name:,exec:'
++longoptions='help,name:,exec'
  
 -if [ $# -eq  0 ]; then
 -	usage
@@ -53,7 +53,7 @@ diff -Naurp lxc.orig/src/lxc/lxc-netstat.in lxc/src/lxc/lxc-netstat.in
 +		;;
 +	    -n|--name)
 +		shift
-+		lxc_name=$1
++		name=$1
 +		shift
 +		;;
 +	    --exec)
