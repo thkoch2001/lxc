@@ -7,38 +7,38 @@ set -e
 if [ -e "${_PRESEED_FILE}" ]
 then
 	# user specified preseed file through commandline option
-	db_set linux-container/preseed-file "${_PRESEED_FILE}"
-	db_fset linux-container/preseed-file seen true
+	db_set lxc-debconf/preseed-file "${_PRESEED_FILE}"
+	db_fset lxc-debconf/preseed-file seen true
 elif ls /etc/lxc/debconf/* > /dev/null 2>&1
 then
 	_PRESEED_FILES="$(for _FILE in $(ls /etc/lxc/debconf/*); do echo -n "$(basename ${_FILE}), "; done)"
 
 	if [ -n "${_PRESEED_FILES}" ]
 	then
-		db_subst linux-container/preseed-files CHOICES "${_PRESEED_FILES}custom"
+		db_subst lxc-debconf/preseed-files CHOICES "${_PRESEED_FILES}custom"
 
-		db_settitle linux-container/title
-		db_input high linux-container/preseed-files || true
+		db_settitle lxc-debconf/title
+		db_input high lxc-debconf/preseed-files || true
 		db_go
 
-		db_get linux-container/preseed-files
+		db_get lxc-debconf/preseed-files
 		_PRESEED_FILE="${RET}" # select
 
 		if [ "${_PRESEED_FILE}" != "custom" ]
 		then
 			# user specified preseed file through debconf select
-			db_set linux-container/preseed-file "/etc/lxc/debconf/${_PRESEED_FILE}"
-			db_fset linux-container/preseed-file seen true
+			db_set lxc-debconf/preseed-file "/etc/lxc/debconf/${_PRESEED_FILE}"
+			db_fset lxc-debconf/preseed-file seen true
 		fi
 	fi
 fi
 
 # ask user for a preseed file
-db_settitle linux-container/title
-db_input high linux-container/preseed-file || true
+db_settitle lxc-debconf/title
+db_input high lxc-debconf/preseed-file || true
 db_go
 
-db_get linux-container/preseed-file
+db_get lxc-debconf/preseed-file
 _PRESEED_FILE="${RET}" # string (w/ empty)
 
 echo "_PRESEED_FILE=\"${_PRESEED_FILE}\"" >> "${_TMPDIR}/debconf.default"
