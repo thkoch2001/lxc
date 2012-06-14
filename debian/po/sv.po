@@ -1,5 +1,5 @@
 # Swedish translation of lxc debconf templates.
-# Copyright (C) 2011 Martin Bagge <brother@bsnet.se>
+# Copyright (C) 2011-2012 Martin Bagge <brother@bsnet.se>
 # This file is distributed under the same license as the lxc package.
 #
 msgid ""
@@ -7,7 +7,7 @@ msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: lxc@packages.debian.org\n"
 "POT-Creation-Date: 2012-02-09 13:08+0100\n"
-"PO-Revision-Date: 2011-12-06 21:02+0100\n"
+"PO-Revision-Date: 2012-05-21 20:41+0100\n"
 "Last-Translator: Martin Bagge / brother <brother@bsnet.se>\n"
 "Language-Team: Swedish <debian-l10n-swedish@lists.debian.org>\n"
 "Language: \n"
@@ -50,15 +50,13 @@ msgstr "Om du är osäker välj ja (standard)"
 #. Type: select
 #. Description
 #: ../lxc.templates:3001
-#, fuzzy
 #| msgid "Linux Container: Stop method"
 msgid "Linux Container: Shutdown method"
-msgstr " Linux Container: Metdo för avstängning"
+msgstr " Linux Container: Avstängningsmetod"
 
 #. Type: select
 #. Description
 #: ../lxc.templates:3001
-#, fuzzy
 #| msgid ""
 #| "Linux Containers can be stopped in different ways. The stop method kills "
 #| "all processes inside the container. The halt method initiates a shutdown, "
@@ -70,10 +68,10 @@ msgid ""
 "shutdown, which takes longer and can have problems with containers that "
 "don't shutdown themselves properly."
 msgstr ""
-"Linux Containers kan stängas av på olika sätt. Metoden avstäning kommer att "
-"döda alla processer inuti containern. Halt-metoden påbörjar en nedstängning, "
-"detta tar längre tid och kan innebära problem med containers som inte "
-"stänger av sig korrekt själva."
+"Linux Containers kan stängas av på olika sätt. Metoden avstängning kommer "
+"att döda alla processer inuti containern. Halt-metoden påbörjar en "
+"nedstängning, detta tar längre tid och kan innebära problem med containers "
+"som inte stänger av sig korrekt själva."
 
 #. Type: select
 #. Description
@@ -82,6 +80,8 @@ msgid ""
 "Unless you know that your containers don't shutdown properly, choose halt "
 "(default)."
 msgstr ""
+"Såvida du inte vet att containers inte stänger av sig korrekt välj halt "
+"(standard)."
 
 #. Type: string
 #. Description
