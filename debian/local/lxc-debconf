@@ -174,10 +174,13 @@ EOF
 	Upgrade_system "${_ROOTFS}"
 
 	# Temporary hack for base-files (FIXME)
-	for _FILE in motd profile
+	for _FILE in motd.tail motd profile
 	do
-		rm -f "${_ROOTFS}/etc/${_FILE}"
-		cp "${_ROOTFS}/usr/share/base-files/${_FILE}" "${_ROOTFS}/etc"
+		if [ -e "${_ROOTFS}/usr/share/base-files/${_FILE}" ]
+		then
+			rm -f "${_ROOTFS}/etc/${_FILE}"
+			cp "${_ROOTFS}/usr/share/base-files/${_FILE}" "${_ROOTFS}/etc"
+		fi
 	done
 
 	# Removing hostname
