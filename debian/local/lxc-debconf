@@ -611,10 +611,10 @@ lxc.mount.entry                         = sysfs ${_ROOTFS}/sys sysfs defaults,ro
 EOF
 
 	# Adding preseeded mount entries
-	for _NUMBER in $(seq 0 ${LINUX_CONTAINER_MOUNT_NUMBER})
+	for _NUMBER in $(seq 0 ${LXC_DEBCONF_MOUNT_NUMBER})
 	do
-		eval _COMMENT="$`echo LINUX_CONTAINER_MOUNT${_NUMBER}_COMMENT`"
-		eval _ENTRY="$`echo LINUX_CONTAINER_MOUNT${_NUMBER}_ENTRY`"
+		eval _COMMENT="$`echo LXC_DEBCONF_MOUNT${_NUMBER}_COMMENT`"
+		eval _ENTRY="$`echo LXC_DEBCONF_MOUNT${_NUMBER}_ENTRY`"
 
 		if [ -n "${_COMMENT}" ]
 		then
@@ -649,13 +649,12 @@ EOF
 	fi
 
 	# Adding network configuration
-	for _NUMBER in $(seq 0 ${LINUX_CONTAINER_ETH_NUMBER})
+	for _NUMBER in $(seq 0 ${LXC_DEBCONF_ETH_NUMBER})
 	do
-		eval _COMMENT="$`echo LINUX_CONTAINER_ETH${_NUMBER}_COMMENT`"
-		eval _BRIDGE="$`echo LINUX_CONTAINER_ETH${_NUMBER}_BRIDGE`"
-		eval _MAC="$`echo LINUX_CONTAINER_ETH${_NUMBER}_MAC`"
-		eval _MTU="$`echo LINUX_CONTAINER_ETH${_NUMBER}_MTU`"
-		eval _VETH="$`echo LINUX_CONTAINER_ETH${_NUMBER}_VETH`"
+		eval _COMMENT="$`echo LXC_DEBCONF_ETH${_NUMBER}_COMMENT`"
+		eval _BRIDGE="$`echo LXC_DEBCONF_ETH${_NUMBER}_BRIDGE`"
+		eval _MAC="$`echo LXC_DEBCONF_ETH${_NUMBER}_MAC`"
+		eval _VETH="$`echo LXC_DEBCONF_ETH${_NUMBER}_VETH`"
 
 		if [ -n "${_COMMENT}" ]
 		then
@@ -680,11 +679,6 @@ lxc.network.flags                       = up
 lxc.network.hwaddr                      = ${_MAC}
 lxc.network.link                        = ${_BRIDGE}
 EOF
-
-		if [ -n "${_MTU}" ]
-		then
-			echo "lxc.network.mtu                         = ${_MTU}" >> "${_PATH}/config"
-		fi
 
 		echo "lxc.network.name                        = eth${_NUMBER}" >> "${_PATH}/config"
 
