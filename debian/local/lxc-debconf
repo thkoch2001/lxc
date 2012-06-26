@@ -715,6 +715,7 @@ EOF
 
 	case "${_AUTO}" in
 		true)
+			mkdir -p /etc/lxc/auto
 			ln -s ${_PATH}/config /etc/lxc/auto/${_NAME}
 			;;
 	esac
