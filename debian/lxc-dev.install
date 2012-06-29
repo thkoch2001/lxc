@@ -1,0 +1,11 @@
+#!/bin/sh
+
+set -e
+
+DEB_HOST_MULTIARCH="$(dpkg-architecture -qDEB_HOST_MULTIARCH)"
+
+cat << EOF
+usr/include
+usr/lib/${DEB_HOST_MULTIARCH}/lxc/*.so
+usr/share/pkgconfig
+EOF
