@@ -1,3 +1,23 @@
+lxc (0.8.0~rc1-6) unstable; urgency=low
+
+  * Adding copyright headers to local debian additions.
+  * Create /etc/lxc/auto when creating symlinks for the unlikely event
+    that user has it removed.
+  * Switching to xz compression.
+  * Updating GPL boilerplate in copyright file.
+  * Simplyfing backports compatible use of multiarch debhelper install
+    files.
+  * Adding prerm script to remove alternatives (Closes: #668438).
+  * Correcting spelling typo in readme.
+  * Clarify in readme the name of the symlinks in /etc/lxc/auto.
+  * Deriving container name from parent directory of the configuration
+    file, not from the name of the configuration file (Closes: #673552).
+  * Tidying up initscripts start sequence.
+  * Adding explicit docbook build-depends.
+  * Updating lintian overrides.
+
+ -- Daniel Baumann <daniel.baumann@progress-technologies.net>  Sat, 30 Jun 2012 00:05:28 +0200
+
 lxc (0.8.0~rc1-5) unstable; urgency=low
 
   * Updating todo file.
