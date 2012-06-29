@@ -46,7 +46,7 @@ Lxc ()
 
 	for _CONFIG in /etc/lxc/auto/*
 	do
-		_CONTAINER="$(basename ${_CONFIG})"
+		_CONTAINER="$(basename $(dirname $(readlink -e ${_CONFIG})))"
 
 		if [ -L "${_CONFIG}" ] && [ ! -e "${_CONFIG}" ]
 		then
