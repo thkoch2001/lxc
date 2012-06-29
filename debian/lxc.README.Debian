@@ -49,7 +49,7 @@ allow it.
 
 LXC container can be automatically started on boot. In order to enable this, the
 LXC init script has to be enabled in /etc/default/lxc and and container that
-should be automatically start needs its configuration file symlinked (or copied)
+should be automatically started needs its configuration file symlinked (or copied)
 into the /etc/lxc/auto directory.
 
  -- Daniel Baumann <daniel.baumann@progress-technologies.net>  Tue, 12 Jul 2011 20:32:16 +0200
