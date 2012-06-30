@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ## lxc-debconf - LXC template for Debian and Debian Derivatives
-## Copyright (C) 2006-2012 Daniel Baumann <daniel@debian.org>
+## Copyright (C) 2006-2012 Daniel Baumann <daniel.baumann@progress-technologies.net>
 ##
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
