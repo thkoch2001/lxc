@@ -1,3 +1,11 @@
+lxc (0.8.0~rc1-8) unstable; urgency=low
+
+  * Removing comments in lxc-debconf debconf templates, apparently
+    that's no longer supported (Closes: #679849).
+  * Removing lxc directory in postrm (Closes: #679842).
+
+ -- Daniel Baumann <daniel.baumann@progress-technologies.net>  Wed, 04 Jul 2012 00:24:59 +0200
+
 lxc (0.8.0~rc1-7) unstable; urgency=low
 
   * Updating email address in copyright headers for local additions.
