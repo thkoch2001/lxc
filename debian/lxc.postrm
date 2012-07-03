@@ -4,7 +4,16 @@ set -e
 
 case "${1}" in
 	purge)
+		if [ -e /etc/default/lxc ]
+		then
+			. /etc/default/lxc
+		fi
+
+		LXC_DIRECTORY="${LXC_DIRECTORY:-/etc/default/lxc}"
+
 		rm -f /etc/default/lxc
+
+		rmdir --ignore-fail-on-non-empty "${LXC_DIRECTORY}" > /dev/null 2>&1 || true
 		;;
 
 	remove|upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)
