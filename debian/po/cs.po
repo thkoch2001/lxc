@@ -1,13 +1,13 @@
 # Czech translation of lxc debconf templates.
-# Copyright (C) 2011 Michal Simunek <michal.simunek@gmail.com>
+# Copyright (C) 2011-2012 Michal Simunek <michal.simunek@gmail.com>
 # This file is distributed under the same license as the lxc package.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: lxc 0.7.5-9\n"
+"Project-Id-Version: lxc 0.8.0~rc1-5\n"
 "Report-Msgid-Bugs-To: lxc@packages.debian.org\n"
 "POT-Creation-Date: 2012-02-09 13:08+0100\n"
-"PO-Revision-Date: 2011-11-17 17:31+0100\n"
+"PO-Revision-Date: 2011-06-30 14:31+0200\n"
 "Last-Translator: Michal Simunek <michal.simunek@gmail.com>\n"
 "Language-Team: Czech <debian-l10n-czech@lists.debian.org>\n"
 "Language: cs\n"
@@ -48,29 +48,21 @@ msgstr "Nejste-li si jistí, zvolte ano (výchozí)."
 #. Type: select
 #. Description
 #: ../lxc.templates:3001
-#, fuzzy
-#| msgid "Linux Container: Stop method"
 msgid "Linux Container: Shutdown method"
-msgstr "Linuxový kontejner: Způsob zastavení"
+msgstr "Linuxový kontejner: Způsob ukončení"
 
 #. Type: select
 #. Description
 #: ../lxc.templates:3001
-#, fuzzy
-#| msgid ""
-#| "Linux Containers can be stopped in different ways. The stop method kills "
-#| "all processes inside the container. The halt method initiates a shutdown, "
-#| "which takes longer and can have problems with containers that don't "
-#| "shutdown themselves properly."
 msgid ""
 "Linux Containers can be shutdown in different ways. The stop method "
 "terminates all processes inside the container. The halt method initiates a "
 "shutdown, which takes longer and can have problems with containers that "
 "don't shutdown themselves properly."
 msgstr ""
-"Linuxové kontejnery lze zastavit různými způsoby. Způsob stop zabije všechny "
-"procesy uvnitř kontejneru. Způsob halt zinicializuje vypnutí, které trvá "
-"delší dobu a může mít problémy s kontejnery, které se sami správně nevypnou."
+"Linuxové kontejnery lze ukončit různými způsoby. Způsob stop zabije všechny "
+"procesy uvnitř kontejneru. Způsob halt zinicializuje ukončení, které trvá "
+"delší dobu a může mít problémy s kontejnery, které se sami správně neukončí."
 
 #. Type: select
 #. Description
@@ -79,6 +71,8 @@ msgid ""
 "Unless you know that your containers don't shutdown properly, choose halt "
 "(default)."
 msgstr ""
+"Pokud nevíte, zda se vaše kontejnery správně ukončí, zvolte halt "
+"(výchozí)"
 
 #. Type: string
 #. Description
@@ -100,6 +94,3 @@ msgstr ""
 #: ../lxc.templates:4001
 msgid "If unsure, use /var/lib/lxc (default)."
 msgstr "Nejste-li si jistí, použijte /var/lib/lxc (výchozí)."
-
-#~ msgid "If unsure, choose stop (default)."
-#~ msgstr "Nejste-li si jistí, zvolte stop (výchozí)."
