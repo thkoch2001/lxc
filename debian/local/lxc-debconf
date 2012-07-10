@@ -244,21 +244,36 @@ EOF
 		Chroot "${_ROOTFS}" "apt-get install --yes live-debconfig"
 	fi
 
-	# Initialize live-debconfig debconf database
-	Chroot "${_ROOTFS}" "live-debconfig --noscripts"
-
 	# Preseed live-debconfig
 	if [ -e "${_PRESEED_FILE}" ]
 	then
-		cat "${_PRESEED_FILE}" > "${_ROOTFS}/preseed.cfg"
-
-		Chroot "${_ROOTFS}" "DEBCONF_SYSTEMRC=/var/lib/live/debconfig/systemrc debconf-set-selections preseed.cfg"
-
-		rm -f "${_ROOTFS}/preseed.cfg"
+		grep -E '^ *live-debconfig' "${_PRESEED_FILE}" > "${_ROOTFS}/preseed.cfg"
 	fi
 
+cat >> "${_ROOTFS}/preseed.cfg" << EOF
+# ifupdown
+live-debconfig live-debconfig/ifupdown/lo-enable boolean false
+
+# sysvinit
+live-debconfig live-debconfig/sysvinit/lxc-enable boolean true
+
+# util-linux
+live-debconfig live-debconfig/util-linux/hwclockaccess boolean false
+
+# selinux
+live-debconfig live-debconfig/selinux/enable boolean false
+EOF
+
+	# Initialize live-debconfig debconf database
+	Chroot "${_ROOTFS}" "live-debconfig --noscripts"
+
+	# Apply preseed information
+	Chroot "${_ROOTFS}" "DEBCONF_SYSTEMRC=/var/lib/live/debconfig/systemrc debconf-set-selections preseed.cfg"
+
+	rm -f "${_ROOTFS}/preseed.cfg"
+
 	# Run live-debconfig
-	Chroot "${_ROOTFS}" "live-debconfig"
+	Chroot "${_ROOTFS}" "DEBIAN_FRONTEND=dialog DEBIAN_PRIORITY=high live-debconfig"
 
 	# Configure user-setup
 
