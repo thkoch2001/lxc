@@ -232,19 +232,16 @@ EOF
 		Chroot "${_ROOTFS}" "apt-get --yes install ${_PACKAGES}"
 	fi
 
-	# Install live-config
-	if ls /usr/share/lxc/packages/live-config*.deb > /dev/null 2>&1
+	# Install live-debconfig
+	if ls /usr/share/lxc/packages/live-debconfig_*.deb > /dev/null 2>&1
 	then
-		# Install local live-config package
-		for _PACKAGE in /usr/share/lxc/packages/live-config-*_*.deb /usr/share/lxc/packages/live-config_*.deb
-		do
-			cp -L ${_PACKAGE} "${_ROOTFS}"
-			Chroot "${_ROOTFS}" "dpkg -i $(basename ${_ROOTFS}/live-config*.deb)"
-			rm -f "${_ROOTFS}"/live-config*.deb
-		done
+		# Install local live-debconfig package
+		cp -L /usr/share/lxc/packages/live-debconfig_*.deb "${_ROOTFS}"
+		Chroot "${_ROOTFS}" "dpkg -i $(basename ${_ROOTFS}/live-debconfig_*.deb)"
+		rm -f "${_ROOTFS}"/live-debconfig_*.deb
 	else
-		# Install remote live-config package
-		Chroot "${_ROOTFS}" "apt-get install --yes live-config"
+		# Install remote live-debconfig package
+		Chroot "${_ROOTFS}" "apt-get install --yes live-debconfig"
 	fi
 
 	# Initialize live-debconfig debconf database
