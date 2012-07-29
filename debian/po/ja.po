@@ -1,0 +1,86 @@
+# Japanese translation of lxc debconf templates.
+# Copyright (C) 2012 Kenshi Muto <kmuto@debian.org>
+# This file is distributed under the same license as the lxc package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: lxc\n"
+"Report-Msgid-Bugs-To: lxc@packages.debian.org\n"
+"POT-Creation-Date: 2012-02-09 13:08+0100\n"
+"PO-Revision-Date: 2012-07-29 08:00+0900\n"
+"Last-Translator: Kenshi Muto <kmuto@debian.org>\n"
+"Language-Team: debian-japanese <debian-japanese@lists.debian.org>\n"
+"Language: ja\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. Type: title
+#. Description
+#: ../lxc.templates:1001
+msgid "Linux Containers: LXC setup"
+msgstr "Linux コンテナ: LXC のセットアップ"
+
+#. Type: boolean
+#. Description
+#: ../lxc.templates:2001
+msgid "Automatically start Linux Containers on boot?"
+msgstr "ブート時に Linux コンテナを自動で開始しますか?"
+
+#. Type: boolean
+#. Description
+#: ../lxc.templates:2001
+msgid ""
+"Linux Containers that have their configuration files copied or symlinked to "
+"the /etc/lxc/auto directory can be automatically started during system boot, "
+"and shut down on reboot or halt."
+msgstr "/etc/lxc/auto ディレクトリにその設定ファイルをコピーまたはシンボリックリンクされている Linux コンテナは、システムのブート時に自動で開始され、再起動あるいは停止時に自動でシャットダウンされます。"
+
+#. Type: boolean
+#. Description
+#: ../lxc.templates:2001
+msgid "If unsure, choose yes (default)."
+msgstr "よくわからなければこの質問に「はい」と答えてください (デフォルト)。"
+
+#. Type: select
+#. Description
+#: ../lxc.templates:3001
+msgid "Linux Container: Shutdown method"
+msgstr "Linux コンテナ: シャットダウンの方法"
+
+#. Type: select
+#. Description
+#: ../lxc.templates:3001
+msgid ""
+"Linux Containers can be shutdown in different ways. The stop method "
+"terminates all processes inside the container. The halt method initiates a "
+"shutdown, which takes longer and can have problems with containers that "
+"don't shutdown themselves properly."
+msgstr "Linux コンテナは異なる手法でシャットダウンできます。stop 手法はコンテナ内のすべてのプロセスをターミネートします。halt 手法は shutdown を呼び出しますが、これは stop 手法よりも長くかかり、正常にシャットダウンできないコンテナでは問題となる可能性があります。"
+
+#. Type: select
+#. Description
+#: ../lxc.templates:3001
+msgid ""
+"Unless you know that your containers don't shutdown properly, choose halt "
+"(default)."
+msgstr "コンテナが正常にシャットダウンされるか不明であれば、halt を選んでください (デフォルト)。"
+
+#. Type: string
+#. Description
+#: ../lxc.templates:4001
+msgid "LXC directory:"
+msgstr "LXC のディレクトリ:"
+
+#. Type: string
+#. Description
+#: ../lxc.templates:4001
+msgid ""
+"Please specify the directory that will be used to store the Linux Containers."
+msgstr "Linux コンテナを格納するのに利用するディレクトリを指定してください。"
+
+#. Type: string
+#. Description
+#: ../lxc.templates:4001
+msgid "If unsure, use /var/lib/lxc (default)."
+msgstr "よくわからなければ、/var/lib/lxc を使用してください (デフォルト)。"
