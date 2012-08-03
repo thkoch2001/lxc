@@ -46,7 +46,7 @@ Upgrade_system ()
 
 	# Disable dpkg syncing
 
-cat > "${_ROOT}/etc/dpkg/dpkg.cfg.d/lxc-debconf" << EOF
+cat > "${_ROOT}/etc/dpkg/dpkg.cfg.d/lxc" << EOF
 force-unsafe-io
 EOF
 
@@ -79,7 +79,7 @@ Cleanup_system ()
 	Chroot "${_ROOT}" "apt-get clean"
 
 	# Cleanup
-	rm -f "${_ROOT}/etc/dpkg/dpkg.cfg.d/lxc-debconf"
+	rm -f "${_ROOT}/etc/dpkg/dpkg.cfg.d/lxc"
 	rm -f "${_ROOT}/usr/sbin/policy-rc.d"
 
 	# Unmount pseudo-filesystems
