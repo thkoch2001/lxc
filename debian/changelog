@@ -1,3 +1,22 @@
+lxc (0.8.0~rc1-9) unstable; urgency=low
+
+  * Updating todo file.
+  * Correcting freudian typo in lxc directory removal in postrm (Closes:
+    #679842).
+  * Adding updated Czech debconf translations from Michal Simunek
+    <michal.simunek@gmail.com> (Closes: #679681).
+  * Using splitted out live-debconfig now.
+  * Adding patch to correct paths to lxc-init in lxc-setcap (Closes:
+    #682790).
+  * Adding Japanese debconf translations from Kenshi Muto
+    <kmuto@debian.org> (Closes: #683123).
+  * Using relative mount paths for /proc and /sys in container
+    configurations produced by lxc-debconf (Closes: #683444).
+  * Shortening name of dpkg.cfg.d configuration file used during chroot
+    operations.
+
+ -- Daniel Baumann <daniel.baumann@progress-technologies.net>  Sat, 04 Aug 2012 10:38:43 +0200
+
 lxc (0.8.0~rc1-8) unstable; urgency=low
 
   * Removing comments in lxc-debconf debconf templates, apparently
