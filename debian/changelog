@@ -5,7 +5,7 @@ lxc (0.8.0~rc1-9) unstable; urgency=low
     #679842).
   * Adding updated Czech debconf translations from Michal Simunek
     <michal.simunek@gmail.com> (Closes: #679681).
-  * Using splitted out live-debconfig now.
+  * Using split out live-debconfig now.
   * Adding patch to correct paths to lxc-init in lxc-setcap (Closes:
     #682790).
   * Adding Japanese debconf translations from Kenshi Muto
