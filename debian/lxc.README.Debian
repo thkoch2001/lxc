@@ -71,4 +71,20 @@ Note that the name in /etc/lxc/auto needs to be the container name, e.g.:
 
   /etc/lxc/auto/www.example.org -> /var/lib/lxc/www.example.org/config
 
+
+5. Directory
+
+LXC container are stored in /var/lib/lxc by default. Various components within the
+lxc package assume that the containers are there. Therefore, if you want to move
+the containers to another directory, use:
+
+  # dpkg-reconfigure -plow lxc
+
+and answer the debconf question about the lxc directory accordingly. The package's
+maintainer scripts will take care about replacing /var/lib/lxc (if empty) with a
+symlink to your new lxc directory.
+
+In case you're doing things manually, make sure that /var/lib/lxc is a symlink
+pointing to your lxc directory at all times.
+
  -- Daniel Baumann <daniel.baumann@progress-technologies.net>  Tue, 12 Jul 2011 20:32:16 +0200
