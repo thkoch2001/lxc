@@ -9,7 +9,12 @@
 
 set -e
 
-_LXC_DIRECTORY="/var/lib/lxc"
+if [ -e /etc/default/lxc ]
+then
+	. /etc/default/lxc
+fi
+
+_LXC_DIRECTORY="${LXC_DIRECTORY:-/var/lib/lxc}"
 
 if [ ! -e "${_LXC_DIRECTORY}" ]
 then
