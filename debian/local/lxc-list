@@ -27,10 +27,15 @@ do
 
 			if [ -e /etc/lxc/auto/${_CONTAINER} ]
 			then
-				echo " (auto)"
-			else
-				echo
+				echo -n " (auto)"
 			fi
+
+			if ps -eaf | grep -sq "lxc-console --name ${_CONTAINER}\$"
+			then
+				echo -n " [CONSOLE]"
+			fi
+
+			echo
 		fi
 	done
 
