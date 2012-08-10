@@ -23,19 +23,25 @@ do
 	do
 		if lxc-info -n ${_CONTAINER} 2>&1 | grep -qs "${_STATUS}"
 		then
-			echo -n "  ${_CONTAINER}"
+			printf "  %-55.50s" "${_CONTAINER}"
 
 			if [ -e /etc/lxc/auto/${_CONTAINER} ]
 			then
-				echo -n " (auto)"
+				printf "%-10.6s" "(auto)"
+			else
+				printf "%-10.6s" "      "
 			fi
 
-			if ps -eaf | grep -sq "lxc-console --name ${_CONTAINER}\$"
-			then
-				echo -n " [CONSOLE]"
-			fi
+			case "${_STATUS}" in
+				RUNNING)
+					if ps -eaf | grep -sq "lxc-console --name ${_CONTAINER}\$"
+					then
+						printf "%-10.9s" "[CONSOLE]"
+					fi
+					;;
+			esac
 
-			echo
+			printf "\n"
 		fi
 	done
 
