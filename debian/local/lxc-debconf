@@ -623,7 +623,20 @@ lxc.cgroup.devices.allow                = c 1:5 rwm
 #lxc.cgroup.memory.memsw.limit_in_bytes = 1G
 
 ## Filesystem
-lxc.mount.entry                         = proc proc proc nodev,noexec,nosuid 0 0
+EOF
+
+case "${_MODE}" in
+	progress)
+		_PROC_OPTIONS="nodev,noexec,nosuid,hidepid=2"
+		;;
+
+	*)
+		_PROC_OPTIONS="nodev,noexec,nosuid"
+		;;
+esac
+
+cat >> "${_PATH}/config" << EOF
+lxc.mount.entry                         = proc proc proc ${_PROC_OPTIONS} 0 0
 lxc.mount.entry                         = sysfs sys sysfs defaults,ro 0 0
 EOF
 
