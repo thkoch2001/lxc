@@ -1,5 +1,5 @@
 # Danish translation of lxc debconf templates.
-# Copyright (C) 2011 Joe Hansen <joedalton2@yahoo.dk>
+# Copyright (C) 2011-2012 Joe Hansen <joedalton2@yahoo.dk>
 # This file is distributed under the same license as the lxc package.
 #
 msgid ""
@@ -7,7 +7,7 @@ msgstr ""
 "Project-Id-Version: lxc\n"
 "Report-Msgid-Bugs-To: lxc@packages.debian.org\n"
 "POT-Creation-Date: 2012-02-09 13:08+0100\n"
-"PO-Revision-Date: 2011-10-23 17:30+01:00\n"
+"PO-Revision-Date: 2012-08-11 17:30+01:00\n"
 "Last-Translator: Joe Hansen <joedalton2@yahoo.dk>\n"
 "Language-Team: Danish <debian-l10n-danish@lists.debian.org>\n"
 "Language: da\n"
@@ -18,10 +18,8 @@ msgstr ""
 #. Type: title
 #. Description
 #: ../lxc.templates:1001
-#, fuzzy
-#| msgid "Linux Containers (LXC) setup"
 msgid "Linux Containers: LXC setup"
-msgstr "Opsætning af Linuxcontainere (LXC)"
+msgstr "Linuxcontainere: LXC-opsætning"
 
 #. Type: boolean
 #. Description
@@ -32,31 +30,26 @@ msgstr "Igangsæt automatisk Linuxcontainere ved opstart?"
 #. Type: boolean
 #. Description
 #: ../lxc.templates:2001
-#, fuzzy
-#| msgid ""
-#| "Linux Containers can be automatically started during system boot and shut "
-#| "down on reboot or halt."
 msgid ""
 "Linux Containers that have their configuration files copied or symlinked to "
 "the /etc/lxc/auto directory can be automatically started during system boot, "
 "and shut down on reboot or halt."
 msgstr ""
-"Linuxcontainere kan automatisk igangsættes ved systemopstart og lukke ned "
-"ved genstart eller stop."
+"Linuxcontainere, som får deres konfigurationsfiler kopieret eller symbolsk "
+"henvist til mappen /etc/lxc/auto, kan automatisk igangsættes ved systemopstart "
+"og lukkes ned ved genstart eller stop."
 
 #. Type: boolean
 #. Description
 #: ../lxc.templates:2001
 msgid "If unsure, choose yes (default)."
-msgstr ""
+msgstr "Hvis i tvivl, så vælg ja »yes« (standard)."
 
 #. Type: select
 #. Description
 #: ../lxc.templates:3001
-#, fuzzy
-#| msgid "Linux Containers (LXC) setup"
 msgid "Linux Container: Shutdown method"
-msgstr "Opsætning af Linuxcontainere (LXC)"
+msgstr "Linuxcontainer: Metode for nedlukning"
 
 #. Type: select
 #. Description
@@ -67,6 +60,10 @@ msgid ""
 "shutdown, which takes longer and can have problems with containers that "
 "don't shutdown themselves properly."
 msgstr ""
+"Linuxcontainere kan lukkes ned på forskellige måder. Stopmetoden "
+"terminerer alle processer inden i containeren. Stop-metoden initierer "
+"en nedlukning, som tager længere tid og kan have problemer med containere "
+"som ikke lukker sig selv ned korrekt."
 
 #. Type: select
 #. Description
@@ -75,12 +72,14 @@ msgid ""
 "Unless you know that your containers don't shutdown properly, choose halt "
 "(default)."
 msgstr ""
+"Med mindre du ved, at dine containere ikke lukker korrekt ned, så vælg "
+"stop (standard)."
 
 #. Type: string
 #. Description
 #: ../lxc.templates:4001
 msgid "LXC directory:"
-msgstr ""
+msgstr "LXC-mappe:"
 
 #. Type: string
 #. Description
@@ -88,9 +87,10 @@ msgstr ""
 msgid ""
 "Please specify the directory that will be used to store the Linux Containers."
 msgstr ""
+"Angiv venligst mappen som vil blive brugt til at lagre Linuxcontainerne."
 
 #. Type: string
 #. Description
 #: ../lxc.templates:4001
 msgid "If unsure, use /var/lib/lxc (default)."
-msgstr ""
+msgstr "Hvis i tvivl, så brug /var/lib/lxc (standard)."
