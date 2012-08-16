@@ -20,6 +20,32 @@
 ## can be found in /usr/share/common-licenses/GPL-3 file.
 
 
+Warnings ()
+{
+	case "${_DISTRIBUTION}" in
+		squeeze*|wheezy*)
+			if ! ls /usr/share/lxc/packages/live-debconfig_*.deb > /dev/null 2>&1
+			then
+
+cat << EOF
+WARNING: This version of the lxc-debconfig template requires the live-debconfig
+package to configure the container.
+
+live-debconfig is available as of Debian 8.0 (jessie).
+
+Attempting to build a container based on any older Debian release *without*
+having a local copy of live-debconfig in /usr/share/lxc/packages/ on the host
+system will fail.
+
+Press enter to continue nevertheless, or Ctrl-c to abort..
+EOF
+
+				read WAITING
+			fi
+			;;
+	esac
+}
+
 Chroot ()
 {
 	_CHROOT="${1}"
@@ -954,6 +980,8 @@ done
 
 # Read-in configuration from debconf
 . "${_TMPDIR}/debconf.default"
+
+Warnings
 
 Install_system "${_ROOTFS}"
 
