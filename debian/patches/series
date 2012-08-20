@@ -11,3 +11,4 @@
 11-lxc-console-escape.patch
 12-lxc-create-rootfs.patch
 13-lxc-setcap-paths.patch
+14-lxc-destroy-symlinks.patch
