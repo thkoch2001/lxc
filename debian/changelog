@@ -1,3 +1,23 @@
+lxc (0.8.0~rc1-10) unstable; urgency=low
+
+  * Adding some lxc related boot parameters in readme (Closes: #683999).
+  * Correcting spelling typo in previous changelog entry.
+  * Adding note about lxc directory in readme.
+  * Sourcing /etc/default/lxc in lxc-ls (Closes: #684124).
+  * Listing attached consoles in lxc-list.
+  * Using printf in lxc-list to produce a table output.
+  * Adding updated Danish debconf translations from Joe Dalton
+    <joedalton2@yahoo.dk> (Closes: #684572).
+  * Mounting /proc with hidepid=2 on progress by default.
+  * Also removing auto symlink when destroying containers.
+  * Protecting multiarch queries since install files are run with set -
+    e.
+  * Adding missing live-config preseedings in lxc-debconf (Closes:
+    #680469).
+  * Updating todo file.
+
+ -- Daniel Baumann <daniel.baumann@progress-technologies.net>  Wed, 22 Aug 2012 09:01:11 +0200
+
 lxc (0.8.0~rc1-9) unstable; urgency=low
 
   * Updating todo file.
