@@ -1,14 +1,14 @@
-Template: lxc-debconf/title
+Template: lxc-debconfig/title
 Type: title
 Description: Linux Container (LXC)
 
-Template: lxc-debconf/preseed-file
+Template: lxc-debconfig/preseed-file
 Type: string
 Default:
 Description: Enter (optional) preseed file to use:
  Preseed file anyone?
 
-Template: lxc-debconf/preseed-files
+Template: lxc-debconfig/preseed-files
 Type: select
 Default: custom
 Choices: ${CHOICES}

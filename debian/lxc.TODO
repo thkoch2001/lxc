@@ -18,13 +18,13 @@ lxc:
   * add lxc 'control' user with sudo magics so that unprivileged users can
     start/stop/restart/create/destroy their containers
 
-lxc-debconf:
+lxc-debconfig:
   * for some reason the Internal_options don't make it to debconf.default;
     probably because the 'if db_get ...' constructs don't work with set -e.
   * allow mechanism to store local packages that overwrite repository ones
-  * if invoked as lxc-debconf, ask for mode (debian, progress, ubuntu, etc.)
+  * if invoked as lxc-debconfig, ask for mode (debian, progress, ubuntu, etc.)
   * allow to have templates (that do not get modified) in /etc/lxc/debconf
-  * write preseed file into /etc/lxc/debconf after lxc-debconf is done
+  * write preseed file into /etc/lxc/debconf after lxc-debconfig is done
   * create /etc/lxc/{debian,progress} and respect it depending on mode
   * add a warning when building squeeze but no live-debconfig in /usr/share/lxc
   * allow using architecture=auto

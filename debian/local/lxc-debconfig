@@ -1,6 +1,6 @@
 #!/bin/bash
 
-## lxc-debconf - LXC template for Debian and Debian Derivatives
+## lxc-debconfig - LXC template for Debian and Debian Derivatives
 ## Copyright (C) 2006-2012 Daniel Baumann <daniel.baumann@progress-technologies.net>
 ##
 ## This program is free software: you can redistribute it and/or modify
@@ -925,12 +925,12 @@ DEBCONF_SYSTEMRC="${_TMPDIR}/debconf.systemrc"
 export DEBCONF_SYSTEMRC
 
 # Run debconf parts
-for _SCRIPT in /usr/share/lxc/templates/lxc-debconf.d/*
+for _SCRIPT in /usr/share/lxc/templates/lxc-debconfig.d/*
 do
 	if [ -x "${_SCRIPT}" ]
 	then
 		# FIXME
-		#debconf -olxc-debconf "${_SCRIPT}"
+		#debconf -olxc-debconfig "${_SCRIPT}"
 		"${_SCRIPT}"
 	fi
 done

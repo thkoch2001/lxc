@@ -1,6 +1,6 @@
 #!/bin/sh
 
-## lxc-debconf - LXC template for Debian and Debian Derivatives
+## lxc-debconfig - LXC template for Debian and Debian Derivatives
 ## Copyright (C) 2006-2012 Daniel Baumann <daniel.baumann@progress-technologies.net>
 ##
 ## This program comes with ABSOLUTELY NO WARRANTY; for details see COPYING.
@@ -16,34 +16,34 @@ set -e
 
 Distribution ()
 {
-	db_get lxc-debconf/distribution
+	db_get lxc-debconfig/distribution
 	_DISTRIBUTION="${RET}" # select
 
 	if [ -z "${_DISTRIBUTION}" ]
 	then
 		case "${_MODE}" in
 			debian)
-				db_subst lxc-debconf/distribution CHOICES "Debian GNU/Linux 6.0 \"squeeze\", Debian GNU/Linux 7.0 \"wheezy\", Debian GNU/Linux unstable/sid"
-				db_subst lxc-debconf/distribution CHOICES_C "squeeze, wheezy, sid"
+				db_subst lxc-debconfig/distribution CHOICES "Debian GNU/Linux 6.0 \"squeeze\", Debian GNU/Linux 7.0 \"wheezy\", Debian GNU/Linux unstable/sid"
+				db_subst lxc-debconfig/distribution CHOICES_C "squeeze, wheezy, sid"
 
-				db_set lxc-debconf/distribution squeeze
-				db_fset lxc-debconf/distribution seen false
+				db_set lxc-debconfig/distribution squeeze
+				db_fset lxc-debconfig/distribution seen false
 				;;
 
 			progress)
-				db_subst lxc-debconf/distribution CHOICES "Progress Linux 1.0 (artax), Progress Linux 1.9 (artax-backports), Progress Linux 2.0 (baureo)"
-				db_subst lxc-debconf/distribution CHOICES_C "artax, artax-backports, baureo"
+				db_subst lxc-debconfig/distribution CHOICES "Progress Linux 1.0 (artax), Progress Linux 1.9 (artax-backports), Progress Linux 2.0 (baureo)"
+				db_subst lxc-debconfig/distribution CHOICES_C "artax, artax-backports, baureo"
 
-				db_set lxc-debconf/distribution artax
-				db_fset lxc-debconf/distribution seen false
+				db_set lxc-debconfig/distribution artax
+				db_fset lxc-debconfig/distribution seen false
 				;;
 		esac
 
-		db_settitle lxc-debconf/title
-		db_input high lxc-debconf/distribution || true
+		db_settitle lxc-debconfig/title
+		db_input high lxc-debconfig/distribution || true
 		db_go
 
-		db_get lxc-debconf/distribution
+		db_get lxc-debconfig/distribution
 		_DISTRIBUTION="${RET}" # select
 	fi
 
@@ -53,7 +53,7 @@ Distribution ()
 
 Parent_distribution ()
 {
-	db_get lxc-debconf/parent-distribution
+	db_get lxc-debconfig/parent-distribution
 	_PARENT_DISTRIBUTION="${RET}"
 
 	if [ -z "${_PARENT_DISTRIBUTION}" ]
@@ -87,22 +87,22 @@ Architecture ()
 	_CHOICES_C="${2}"
 	_DEFAULT="${3}"
 
-	db_get lxc-debconf/architecture
+	db_get lxc-debconfig/architecture
 	_ARCHITECTURE="${RET}" # select
 
 	if [ -z "${_ARCHITECTURE}" ]
 	then
-		db_subst lxc-debconf/architecture CHOICES ${_CHOICES}
-		db_subst lxc-debconf/architecture CHOICES_C ${_CHOICES_C}
+		db_subst lxc-debconfig/architecture CHOICES ${_CHOICES}
+		db_subst lxc-debconfig/architecture CHOICES_C ${_CHOICES_C}
 
-		db_set lxc-debconf/architecture ${_DEFAULT}
-		db_fset lxc-debconf/distribution seen false
+		db_set lxc-debconfig/architecture ${_DEFAULT}
+		db_fset lxc-debconfig/distribution seen false
 
-		db_settitle lxc-debconf/title
-		db_input high lxc-debconf/architecture || true
+		db_settitle lxc-debconfig/title
+		db_input high lxc-debconfig/architecture || true
 		db_go
 
-		db_get lxc-debconf/architecture
+		db_get lxc-debconfig/architecture
 		_ARCHITECTURE="${RET}" # select
 	fi
 
@@ -112,7 +112,7 @@ Architecture ()
 
 Archives ()
 {
-	db_get lxc-debconf/archives
+	db_get lxc-debconfig/archives
 	_ARCHIVES="${RET}" # multiselect
 
 	if [ -z "${_ARCHIVES}" ]
@@ -121,37 +121,37 @@ Archives ()
 			debian)
 				case "${_PARENT_DISTRIBUTION}" in
 					sid)
-						db_subst lxc-debconf/archives CHOICES "Debian Experimental"
-						db_subst lxc-debconf/archives CHOICES_C "experimental"
+						db_subst lxc-debconfig/archives CHOICES "Debian Experimental"
+						db_subst lxc-debconfig/archives CHOICES_C "experimental"
 
-						db_set lxc-debconf/archives ""
-						db_fset lxc-debconf/archives seen false
+						db_set lxc-debconfig/archives ""
+						db_fset lxc-debconfig/archives seen false
 						;;
 
 					*)
-						db_subst lxc-debconf/archives CHOICES "Debian Security, Debian Updates, Debian Backports, Debian Proposed Updates"
-						db_subst lxc-debconf/archives CHOICES_C "${_DISTRIBUTION}-security, ${_DISTRIBUTION}-updates, ${_DISTRIBUTION}-backports, ${_DISTRIBUTION}-proposed-updates"
+						db_subst lxc-debconfig/archives CHOICES "Debian Security, Debian Updates, Debian Backports, Debian Proposed Updates"
+						db_subst lxc-debconfig/archives CHOICES_C "${_DISTRIBUTION}-security, ${_DISTRIBUTION}-updates, ${_DISTRIBUTION}-backports, ${_DISTRIBUTION}-proposed-updates"
 
-						db_set lxc-debconf/archives "${_DISTRIBUTION}-security, ${_DISTRIBUTION}-updates, ${_DISTRIBUTION}-backports"
-						db_fset lxc-debconf/archives seen false
+						db_set lxc-debconfig/archives "${_DISTRIBUTION}-security, ${_DISTRIBUTION}-updates, ${_DISTRIBUTION}-backports"
+						db_fset lxc-debconfig/archives seen false
 						;;
 				esac
 				;;
 
 			progress)
-				db_subst lxc-debconf/archives CHOICES "Progress (staging), Progress Security, Progress Security (staging), Progress Updates, Progress Updates (staging), Progress Backports, Progress Backports (staging)"
-				db_subst lxc-debconf/archives CHOICES_C "${_DISTRIBUTION}-staging, ${_DISTRIBUTION}-security, ${_DISTRIBUTION}-security-staging, ${_DISTRIBUTION}-updates, ${_DISTRIBUTION}-updates-staging, ${_DISTRIBUTION}-backports, ${_DISTRIBUTION}-backports-staging"
+				db_subst lxc-debconfig/archives CHOICES "Progress (staging), Progress Security, Progress Security (staging), Progress Updates, Progress Updates (staging), Progress Backports, Progress Backports (staging)"
+				db_subst lxc-debconfig/archives CHOICES_C "${_DISTRIBUTION}-staging, ${_DISTRIBUTION}-security, ${_DISTRIBUTION}-security-staging, ${_DISTRIBUTION}-updates, ${_DISTRIBUTION}-updates-staging, ${_DISTRIBUTION}-backports, ${_DISTRIBUTION}-backports-staging"
 
-				db_set lxc-debconf/archives "${_DISTRIBUTION}-security, ${_DISTRIBUTION}-updates, ${_DISTRIBUTION}-backports"
-				db_fset lxc-debconf/archives seen false
+				db_set lxc-debconfig/archives "${_DISTRIBUTION}-security, ${_DISTRIBUTION}-updates, ${_DISTRIBUTION}-backports"
+				db_fset lxc-debconfig/archives seen false
 				;;
 		esac
 
-		db_settitle lxc-debconf/title
-		db_input high lxc-debconf/archives || true
+		db_settitle lxc-debconfig/title
+		db_input high lxc-debconfig/archives || true
 		db_go
 
-		db_get lxc-debconf/archives
+		db_get lxc-debconfig/archives
 		_ARCHIVES="${RET}" # multiselect
 	fi
 
@@ -163,34 +163,34 @@ Archives ()
 
 Parent_archives ()
 {
-	db_get lxc-debconf/parent-archives
+	db_get lxc-debconfig/parent-archives
 	_PARENT_ARCHIVES="${RET}" # multiselect (w/o empty)
 
 	if [ -z "${_PARENT_ARCHIVES}" ]
 	then
 		case "${_MODE}" in
 			progress)
-				db_subst lxc-debconf/parent-archives CHOICES "Debian Security, Debian Updates , Debian Backports, Debian Proposed Updates"
-				db_subst lxc-debconf/parent-archives CHOICES_C "${_DISTRIBUTION}-security, ${_DISTRIBUTION}-updates, ${_DISTRIBUTION}-backports, ${_DISTRIBUTION}-proposed-updates"
+				db_subst lxc-debconfig/parent-archives CHOICES "Debian Security, Debian Updates , Debian Backports, Debian Proposed Updates"
+				db_subst lxc-debconfig/parent-archives CHOICES_C "${_DISTRIBUTION}-security, ${_DISTRIBUTION}-updates, ${_DISTRIBUTION}-backports, ${_DISTRIBUTION}-proposed-updates"
 
-				db_set lxc-debconf/parent-archives "${_DISTRIBUTION}-security, ${_DISTRIBUTION}-updates, ${_DISTRIBUTION}-backports"
-				db_fset lxc-debconf/parent-archives seen false
+				db_set lxc-debconfig/parent-archives "${_DISTRIBUTION}-security, ${_DISTRIBUTION}-updates, ${_DISTRIBUTION}-backports"
+				db_fset lxc-debconfig/parent-archives seen false
 
-				db_settitle lxc-debconf/title
-				db_input high lxc-debconf/parent-archives || true
+				db_settitle lxc-debconfig/title
+				db_input high lxc-debconfig/parent-archives || true
 				db_go
 				;;
 
 			*)
-				db_subst lxc-debconf/parent-archives CHOICES "Debian Security, Debian Updates , Debian Backports, Debian Proposed Updates"
-				db_subst lxc-debconf/parent-archives CHOICES_C "${_ARCHIVES}"
+				db_subst lxc-debconfig/parent-archives CHOICES "Debian Security, Debian Updates , Debian Backports, Debian Proposed Updates"
+				db_subst lxc-debconfig/parent-archives CHOICES_C "${_ARCHIVES}"
 
-				db_set lxc-debconf/parent-archives "${_ARCHIVES}"
-				db_fset lxc-debconf/parent-archives seen true
+				db_set lxc-debconfig/parent-archives "${_ARCHIVES}"
+				db_fset lxc-debconfig/parent-archives seen true
 				;;
 		esac
 
-		db_get lxc-debconf/parent-archives
+		db_get lxc-debconfig/parent-archives
 		_PARENT_ARCHIVES="${RET}" # multiselect (w/o empty)
 
 		if [ -z "${_PARENT_ARCHIVES}" ]
@@ -215,28 +215,28 @@ Parent_archives ()
 
 Mirror ()
 {
-	db_get lxc-debconf/mirror
+	db_get lxc-debconfig/mirror
 	_MIRROR="${RET}"
 
 	if [ -z "${_MIRROR}" ]
 	then
 		case "${_MODE}" in
 			debian)
-				db_set lxc-debconf/mirror http://ftp.debian.org/debian/
-				db_fset lxc-debconf/mirror seen false
+				db_set lxc-debconfig/mirror http://ftp.debian.org/debian/
+				db_fset lxc-debconfig/mirror seen false
 				;;
 
 			progress)
-				db_set lxc-debconf/mirror http://cdn.archive.progress-linux.org/progress/
-				db_fset lxc-debconf/mirror seen false
+				db_set lxc-debconfig/mirror http://cdn.archive.progress-linux.org/progress/
+				db_fset lxc-debconfig/mirror seen false
 				;;
 		esac
 
-		db_settitle lxc-debconf/title
-		db_input high lxc-debconf/mirror || true
+		db_settitle lxc-debconfig/title
+		db_input high lxc-debconfig/mirror || true
 		db_go
 
-		db_get lxc-debconf/mirror
+		db_get lxc-debconfig/mirror
 		_MIRROR="${RET}" # string (w/o empty)
 
 		if [ -z "${_MIRROR}" ]
@@ -259,28 +259,28 @@ Mirror ()
 
 Mirror_security ()
 {
-	db_get lxc-debconf/mirror-security
+	db_get lxc-debconfig/mirror-security
 	_MIRROR_SECURITY="${RET}" # string (w/o empty)
 
 	if [ -z "${_MIRROR_SECURITY}" ]
 	then
 		case "${_MODE}" in
 			debian)
-				db_set lxc-debconf/mirror-security http://security.debian.org/
-				db_fset lxc-debconf/mirror-security seen false
+				db_set lxc-debconfig/mirror-security http://security.debian.org/
+				db_fset lxc-debconfig/mirror-security seen false
 				;;
 
 			*)
-				db_set lxc-debconf/mirror-security ${_MIRROR}
-				db_fset lxc-debconf/mirror-security seen true
+				db_set lxc-debconfig/mirror-security ${_MIRROR}
+				db_fset lxc-debconfig/mirror-security seen true
 				;;
 		esac
 
-		db_settitle lxc-debconf/title
-		db_input high lxc-debconf/mirror-security || true
+		db_settitle lxc-debconfig/title
+		db_input high lxc-debconfig/mirror-security || true
 		db_go
 
-		db_get lxc-debconf/mirror-security
+		db_get lxc-debconfig/mirror-security
 		_MIRROR_SECURITY="${RET}" # string (w/o empty)
 
 		if [ -z "${_MIRROR_SECURITY}" ]
@@ -303,28 +303,28 @@ Mirror_security ()
 
 Mirror_backports ()
 {
-	db_get lxc-debconf/mirror-backports
+	db_get lxc-debconfig/mirror-backports
 	_MIRROR_BACKPORTS="${RET}" # string (w/o empty)
 
 	if [ -z "${_MIRROR_BACKPORTS}" ]
 	then
 		case "${_MODE}" in
 			debian)
-				db_set lxc-debconf/mirror-backports http://backports.debian.org/debian-backports/
-				db_fset lxc-debconf/mirror-backports seen false
+				db_set lxc-debconfig/mirror-backports http://backports.debian.org/debian-backports/
+				db_fset lxc-debconfig/mirror-backports seen false
 				;;
 
 			*)
-				db_set lxc-debconf/mirror-backports ${_MIRROR}
-				db_fset lxc-debconf/mirror-backports seen true
+				db_set lxc-debconfig/mirror-backports ${_MIRROR}
+				db_fset lxc-debconfig/mirror-backports seen true
 				;;
 		esac
 
-		db_settitle lxc-debconf/title
-		db_input high lxc-debconf/mirror-backports || true
+		db_settitle lxc-debconfig/title
+		db_input high lxc-debconfig/mirror-backports || true
 		db_go
 
-		db_get lxc-debconf/mirror-backports
+		db_get lxc-debconfig/mirror-backports
 		_MIRROR_BACKPORTS="${RET}" # string (w/o empty)
 
 		if [ -z "${_MIRROR_BACKPORTS}" ]
@@ -347,28 +347,28 @@ Mirror_backports ()
 
 Parent_mirror ()
 {
-	db_get lxc-debconf/parent-mirror
+	db_get lxc-debconfig/parent-mirror
 	_PARENT_MIRROR="${RET}" # string (w/o empty)
 
 	if [ -z "${_PARENT_MIRROR}" ]
 	then
 		case "${_MODE}" in
 			progress)
-				db_set lxc-debconf/parent-mirror http://ftp.debian.org/debian/
-				db_fset lxc-debconf/parent-mirror seen false
+				db_set lxc-debconfig/parent-mirror http://ftp.debian.org/debian/
+				db_fset lxc-debconfig/parent-mirror seen false
 
-				db_settitle lxc-debconf/title
-				db_input high lxc-debconf/parent-mirror || true
+				db_settitle lxc-debconfig/title
+				db_input high lxc-debconfig/parent-mirror || true
 				db_go
 				;;
 
 			*)
-				db_set lxc-debconf/parent-mirror ${_MIRROR}
-				db_fset lxc-debconf/parent-mirror seen true
+				db_set lxc-debconfig/parent-mirror ${_MIRROR}
+				db_fset lxc-debconfig/parent-mirror seen true
 				;;
 		esac
 
-		db_get lxc-debconf/parent-mirror
+		db_get lxc-debconfig/parent-mirror
 		_PARENT_MIRROR="${RET}" # string (w/o empty)
 
 		if [ -z "${_PARENT_MIRROR}" ]
@@ -391,28 +391,28 @@ Parent_mirror ()
 
 Parent_mirror_security ()
 {
-	db_get lxc-debconf/parent-mirror-security
+	db_get lxc-debconfig/parent-mirror-security
 	_PARENT_MIRROR_SECURITY="${RET}" # string (w/o empty)
 
 	if [ -z "${_PARENT_MIRROR_SECURITY}" ]
 	then
 		case "${_MODE}" in
 			progress)
-				db_set lxc-debconf/parent-mirror-security http://security.debian.org/
-				db_fset lxc-debconf/parent-mirror-security seen false
+				db_set lxc-debconfig/parent-mirror-security http://security.debian.org/
+				db_fset lxc-debconfig/parent-mirror-security seen false
 
-				db_settitle lxc-debconf/title
-				db_input high lxc-debconf/parent-mirror-security || true
+				db_settitle lxc-debconfig/title
+				db_input high lxc-debconfig/parent-mirror-security || true
 				db_go
 				;;
 
 			*)
-				db_set lxc-debconf/parent-mirror-security ${_MIRROR_SECURITY}
-				db_fset lxc-debconf/parent-mirror-security seen true
+				db_set lxc-debconfig/parent-mirror-security ${_MIRROR_SECURITY}
+				db_fset lxc-debconfig/parent-mirror-security seen true
 				;;
 		esac
 
-		db_get lxc-debconf/parent-mirror-security
+		db_get lxc-debconfig/parent-mirror-security
 		_PARENT_MIRROR_SECURITY="${RET}" # string (w/o empty)
 
 		if [ -z "${_PARENT_MIRROR_SECURITY}" ]
@@ -435,28 +435,28 @@ Parent_mirror_security ()
 
 Parent_mirror_backports ()
 {
-	db_get lxc-debconf/parent-mirror-backports
+	db_get lxc-debconfig/parent-mirror-backports
 	_PARENT_MIRROR_BACKPORTS="${RET}" # string (w/o empty)
 
 	if [ -z "${_PARENT_MIRROR_BACKPORTS}" ]
 	then
 		case "${_MODE}" in
 			progress)
-				db_set lxc-debconf/parent-mirror-backports http://backports.debian.org/debian-backports/
-				db_fset lxc-debconf/parent-mirror-backports seen false
+				db_set lxc-debconfig/parent-mirror-backports http://backports.debian.org/debian-backports/
+				db_fset lxc-debconfig/parent-mirror-backports seen false
 
-				db_settitle lxc-debconf/title
-				db_input high lxc-debconf/parent-mirror-backports || true
+				db_settitle lxc-debconfig/title
+				db_input high lxc-debconfig/parent-mirror-backports || true
 				db_go
 				;;
 
 			*)
-				db_set lxc-debconf/parent-mirror-backports ${_MIRROR_BACKPORTS}
-				db_fset lxc-debconf/parent-mirror-backports seen true
+				db_set lxc-debconfig/parent-mirror-backports ${_MIRROR_BACKPORTS}
+				db_fset lxc-debconfig/parent-mirror-backports seen true
 				;;
 		esac
 
-		db_get lxc-debconf/parent-mirror-backports
+		db_get lxc-debconfig/parent-mirror-backports
 		_PARENT_MIRROR_BACKPORTS="${RET}" # string (w/o empty)
 
 		if [ -z "${_PARENT_MIRROR_BACKPORTS}" ]
@@ -479,32 +479,32 @@ Parent_mirror_backports ()
 
 Archive_areas ()
 {
-	db_get lxc-debconf/archive-areas
+	db_get lxc-debconfig/archive-areas
 	_ARCHIVE_AREAS="${RET}"
 
 	if [ -z "${_ARCHIVE_AREAS}" ]
 	then
 		case "${_MODE}" in
 			progress)
-				db_subst lxc-debconf/archive-areas CHOICES "main, contrib, non-free"
+				db_subst lxc-debconfig/archive-areas CHOICES "main, contrib, non-free"
 
-				db_set lxc-debconf/archive-areas "main, contrib, non-free"
-				db_fset lxc-debconf/archive-areas seen false
+				db_set lxc-debconfig/archive-areas "main, contrib, non-free"
+				db_fset lxc-debconfig/archive-areas seen false
 				;;
 
 			*)
-				db_subst lxc-debconf/archive-areas CHOICES "main, contrib, non-free"
+				db_subst lxc-debconfig/archive-areas CHOICES "main, contrib, non-free"
 
-				db_set lxc-debconf/archive-areas "main"
-				db_fset lxc-debconf/archive-areas seen false
+				db_set lxc-debconfig/archive-areas "main"
+				db_fset lxc-debconfig/archive-areas seen false
 				;;
 		esac
 
-		db_settitle lxc-debconf/title
-		db_input high lxc-debconf/archive-areas || true
+		db_settitle lxc-debconfig/title
+		db_input high lxc-debconfig/archive-areas || true
 		db_go
 
-		db_get lxc-debconf/archive-areas
+		db_get lxc-debconfig/archive-areas
 		_ARCHIVE_AREAS="${RET}" # multiselect (w/o empty)
 
 		if [ -z "${_ARCHIVE_AREAS}" ]
@@ -529,32 +529,32 @@ Archive_areas ()
 
 Parent_archive_areas ()
 {
-	db_get lxc-debconf/parent-archive-areas
+	db_get lxc-debconfig/parent-archive-areas
 	_PARENT_ARCHIVE_AREAS="${RET}" # multiselect (w/o empty)
 
 	if [ -z "${_PARENT_ARCHIVE_AREAS}" ]
 	then
 		case "${_MODE}" in
 			progress)
-				db_subst lxc-debconf/parent-archive-areas CHOICES "main, contrib, non-free"
+				db_subst lxc-debconfig/parent-archive-areas CHOICES "main, contrib, non-free"
 
-				db_set lxc-debconf/parent-archive-areas "main, contrib, non-free"
-				db_fset lxc-debconf/parent-archive-areas seen false
+				db_set lxc-debconfig/parent-archive-areas "main, contrib, non-free"
+				db_fset lxc-debconfig/parent-archive-areas seen false
 
-				db_settitle lxc-debconf/title
-				db_input high lxc-debconf/parent-archive-areas || true
+				db_settitle lxc-debconfig/title
+				db_input high lxc-debconfig/parent-archive-areas || true
 				db_go
 				;;
 
 			*)
-				db_subst lxc-debconf/parent-archive-areas CHOICES "${_ARCHIVE_AREAS}"
+				db_subst lxc-debconfig/parent-archive-areas CHOICES "${_ARCHIVE_AREAS}"
 
-				db_set lxc-debconf/parent-archive-areas "${_ARCHIVE_AREAS}"
-				db_fset lxc-debconf/parent-archive-areas seen true
+				db_set lxc-debconfig/parent-archive-areas "${_ARCHIVE_AREAS}"
+				db_fset lxc-debconfig/parent-archive-areas seen true
 				;;
 		esac
 
-		db_get lxc-debconf/parent-archive-areas
+		db_get lxc-debconfig/parent-archive-areas
 		_PARENT_ARCHIVE_AREAS="${RET}" # multiselect (w/o empty)
 
 		if [ -z "${_PARENT_ARCHIVE_AREAS}" ]
@@ -579,16 +579,16 @@ Parent_archive_areas ()
 
 Packages ()
 {
-	db_get lxc-debconf/packages
+	db_get lxc-debconfig/packages
 	_PACKAGES="${RET}" # string (w/ empty)
 
 	if [ -z "${_PACKAGES}" ]
 	then
-		db_settitle lxc-debconf/title
-		db_input high lxc-debconf/packages || true
+		db_settitle lxc-debconfig/title
+		db_input high lxc-debconfig/packages || true
 		db_go
 
-		db_get lxc-debconf/packages
+		db_get lxc-debconfig/packages
 		_PACKAGES="${RET}" # string (w/ empty)
 	fi
 
@@ -600,20 +600,20 @@ Local_repositories ()
 {
 	_NUMBER="0"
 
-	while db_get lxc-debconf/local${_NUMBER}/repository && [ "${RET}" ]
+	while db_get lxc-debconfig/local${_NUMBER}/repository && [ "${RET}" ]
 	do
 		mkdir -p "${_TMPDIR}/sources.list.d"
 
 		_REPOSITORY="${RET#deb }"
 
 		_LIST="local${_NUMBER}.list"
-		if db_get lxc-debconf/local${_NUMBER}/list
+		if db_get lxc-debconfig/local${_NUMBER}/list
 		then
 			_LIST="$(basename ${RET} .list).list"
 		fi
 
 		_COMMENT=""
-		if db_get lxc-debconf/local${_NUMBER}/comment
+		if db_get lxc-debconfig/local${_NUMBER}/comment
 		then
 			_COMMENT="${RET}"
 
@@ -622,13 +622,13 @@ Local_repositories ()
 
 		echo "deb ${_REPOSITORY}" >> "${_TMPDIR}/sources.list.d/${_LIST}"
 
-		if db_get lxc-debconf/local${_NUMBER}/source && [ "$RET" = true ]
+		if db_get lxc-debconfig/local${_NUMBER}/source && [ "$RET" = true ]
 		then
 			echo "deb-src ${_REPOSITORY}" >> "${_TMPDIR}/sources.list.d/${_LIST}"
 		fi
 
 		_KEY=""
-		if db_get lxc-debconf/local${_NUMBER}/key
+		if db_get lxc-debconfig/local${_NUMBER}/key
 		then
 			_KEY="${RET}"
 
@@ -654,7 +654,7 @@ Root_password ()
 		db_set passwd/root-password ${_RANDOM_PASSWORD}
 		db_fset passwd/root-password seen false
 
-		db_settitle lxc-debconf/title
+		db_settitle lxc-debconfig/title
 		db_input high passwd/root-password || true
 		db_go
 
@@ -684,17 +684,17 @@ Network ()
 			eval LXC_DEBCONF_ETH${_NUMBER}_COMMENT="\"${RET}\"" # string (w/)
 		fi
 
-		if db_get lxc-debconf/eth${_NUMBER}-bridge
+		if db_get lxc-debconfig/eth${_NUMBER}-bridge
 		then
 			eval LXC_DEBCONF_ETH${_NUMBER}_BRIDGE="\"${RET}\"" # string (w/o empty)
 		fi
 
-		if db_get lxc-debconf/eth${_NUMBER}-mac
+		if db_get lxc-debconfig/eth${_NUMBER}-mac
 		then
 			eval LXC_DEBCONF_ETH${_NUMBER}_MAC="\"${RET}\"" # string (w/o empty)
 		fi
 
-		if db_get lxc-debconf/eth${_NUMBER}-veth
+		if db_get lxc-debconfig/eth${_NUMBER}-veth
 		then
 			eval LXC_DEBCONF_ETH${_NUMBER}_VETH="\"${RET}\"" # string (w/ empty)
 		fi
@@ -713,28 +713,28 @@ Network ()
 	if [ -z ${LXC_DEBCONF_ETH0_BRIDGE} ]
 	then
 		# FIXME: do guess the default bridge device
-		db_set lxc-debconf/eth0-bridge br0
-		db_fset lxc-debconf/eth0-bridge seen false
+		db_set lxc-debconfig/eth0-bridge br0
+		db_fset lxc-debconfig/eth0-bridge seen false
 
-		db_settitle lxc-debconf/title
-		db_input high lxc-debconf/eth0-bridge || true
+		db_settitle lxc-debconfig/title
+		db_input high lxc-debconfig/eth0-bridge || true
 		db_go
 
-		db_get lxc-debconf/eth0-bridge
+		db_get lxc-debconfig/eth0-bridge
 		LXC_DEBCONF_ETH0_BRIDGE="${RET:-br0}"
 	fi
 
 	if [ -z "${LXC_DEBCONF_ETH0_MAC}" ]
 	then
 		# FIXME: do guess the default mac address
-		db_set lxc-debconf/eth0-mac 00:FF:00:00:00:01
-		db_fset lxc-debconf/eth0-mac seen false
+		db_set lxc-debconfig/eth0-mac 00:FF:00:00:00:01
+		db_fset lxc-debconfig/eth0-mac seen false
 
-		db_settitle lxc-debconf/title
-		db_input high lxc-debconf/eth0-mac || true
+		db_settitle lxc-debconfig/title
+		db_input high lxc-debconfig/eth0-mac || true
 		db_go
 
-		db_get lxc-debconf/eth0-mac
+		db_get lxc-debconfig/eth0-mac
 		LXC_DEBCONF_ETH0_MAC="${RET:-00:FF:00:00:00:01}"
 	fi
 
@@ -758,19 +758,19 @@ Network ()
 
 Auto ()
 {
-	db_get lxc-debconf/auto
+	db_get lxc-debconfig/auto
 	_AUTO="${RET}" # boolean
 
 	if [ -z "${_AUTO}" ]
 	then
-		db_set lxc-debconf/auto false
-		db_fset lxc-debconf/auto seen false
+		db_set lxc-debconfig/auto false
+		db_fset lxc-debconfig/auto seen false
 
-		db_settitle lxc-debconf/title
-		db_input high lxc-debconf/auto || true
+		db_settitle lxc-debconfig/title
+		db_input high lxc-debconfig/auto || true
 		db_go
 
-		db_get lxc-debconf/auto
+		db_get lxc-debconfig/auto
 		_AUTO="${RET}"
 	fi
 
@@ -780,14 +780,14 @@ Auto ()
 
 Internal_options ()
 {
-	if db_get lxc-debconf/apt-recommends
+	if db_get lxc-debconfig/apt-recommends
 	then
 		_APT_RECOMMENDS="${RET}" # boolean (w/ empty)
 	fi
 
 	echo "_APT_RECOMMENDS=\"${_APT_RECOMMENDS}\"" >> "${_TMPDIR}/debconf.default"
 
-	if db_get lxc-debconf/debconf-frontend
+	if db_get lxc-debconfig/debconf-frontend
 	then
 		_DEBCONF_FRONTEND="${RET}" # select
 	fi
@@ -795,7 +795,7 @@ Internal_options ()
 	_DEBCONF_FRONTEND="${_DEBCONF_FRONTEND:-dialog}"
 	echo "_DEBCONF_FRONTEND=\"${_DEBCONF_FRONTEND}\"" >> "${_TMPDIR}/debconf.default"
 
-	if db_get lxc-debconf/debconf-priority
+	if db_get lxc-debconfig/debconf-priority
 	then
 		_DEBCONF_PRIORITY="${RET}" # select
 	fi
@@ -803,21 +803,21 @@ Internal_options ()
 	_DEBCONF_PRIORITY="${_DEBCONF_PRIORITY:-high}"
 	echo "_DEBCONF_PRIORITY=\"${_DEBCONF_PRIORITY}\"" >> "${_TMPDIR}/debconf.default"
 
-	if db_get lxc-debconf/late-command
+	if db_get lxc-debconfig/late-command
 	then
 		_LATE_COMMAND="${RET}" # string (w/ empty)
 	fi
 
 	echo "_LATE_COMMAND=\"${_LATE_COMMAND}\"" >> "${_TMPDIR}/debconf.default"
 
-	if db_get lxc-debconf/late-host-command
+	if db_get lxc-debconfig/late-host-command
 	then
 		_LATE_HOST_COMMAND="${RET}" # string (w/ empty)
 	fi
 
 	echo "_LATE_HOST_COMMAND=\"${_LATE_HOST_COMMAND}\"" >> "${_TMPDIR}/debconf.default"
 
-	if db_get lxc-debconf/capabilities
+	if db_get lxc-debconfig/capabilities
 	then
 		_CAPABILITIES="${RET}" # string (w/ empty)
 	fi
@@ -826,11 +826,11 @@ Internal_options ()
 
 	_NUMBER="0"
 
-	while db_get lxc-debconf/mount${_NUMBER}/entry && [ "${RET}" ]
+	while db_get lxc-debconfig/mount${_NUMBER}/entry && [ "${RET}" ]
 	do
 		eval LXC_DEBCONF_MOUNT${_NUMBER}_ENTRY="\"${RET}\"" # string (w/o empty)
 
-		if db_get lxc-debconf/mount${_NUMBER}/comment
+		if db_get lxc-debconfig/mount${_NUMBER}/comment
 		then
 			eval LXC_DEBCONF_MOUNT${_NUMBER}_COMMENT="\"${RET}\"" # string (w/ empty)
 		fi

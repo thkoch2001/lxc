@@ -1,15 +1,15 @@
-.\" lxc-debconf(1) - LXC template to create Debian and Debian based containers
+.\" lxc-debconfig(1) - LXC template to create Debian and Debian based containers
 .\" Copyright (C) 2006-2011 Daniel Baumann <daniel.baumann@progress-technologies.net>
 .\"
-.\" lxc-debconf comes with ABSOLUTELY NO WARRANTY; for details see COPYING.
+.\" This program comes with ABSOLUTELY NO WARRANTY; for details see COPYING.
 .\" This is free software, and you are welcome to redistribute it
 .\" under certain conditions; see COPYING for details.
 .\"
 .\"
-.TH LXC 1 2011\-12\-08 0.7.5-12 "Linux Containers"
+.TH LXC 1 2012\-08\-22 0.8.0~rc1-10 "Linux Containers"
 
 .SH NAME
-\fBlxc\-debconf\fR \- LXC template to create Debian and Debian based containers
+\fBlxc\-debconfig\fR \- LXC template to create Debian and Debian based containers
 
 .SH SYNOPSIS
 \fBlxc\-create\fR \-t debian \-n|\-\-name \fICONTAINER\fR \-\- [\-\-apt\-recommends] [\-\-debconf\-frontend \fIDEBCONF_FRONTEND\fR] [\-\-debconf\-priority \fIDEBCONF_PRIORITY\fR] [\-\-preseed\-file \fIPRESEED_FILE\fR]
@@ -17,9 +17,9 @@
 \fBlxc\-create\fR \-t progress \-n|\-\-name \fICONTAINER\fR \-\- [\-\-apt\-recommends] [\-\-debconf\-frontend \fIDEBCONF_FRONTEND\fR] [\-\-debconf\-priority \fIDEBCONF_PRIORITY\fR] [\-\-preseed\-file \fIPRESEED_FILE\fR]
 
 .SH DESCRIPTION
-LXC(7) uses so called templates to create Linux Container systems. \fBlxc\-debconf\fR is such a template script to create Debian and Debian based containers.
+LXC(7) uses so called templates to create Linux Container systems. \fBlxc\-debconfig\fR is such a template script to create Debian and Debian based containers.
 .PP
-\fBlxc\-debconf\fR can be invoked through lxc\-create(1) in three modes: debconf, debian, and progress. In debconf mode, it currently falls automatically back to debian mode. In debian mode, it will allow offer to choose to create Debian GNU/Linux containers. In progress mode, it will allow to choose to create Progress Linux containers.
+\fBlxc\-debconfig\fR can be invoked through lxc\-create(1) in three modes: debconf, debian, and progress. In debconf mode, it currently falls automatically back to debian mode. In debian mode, it will allow offer to choose to create Debian GNU/Linux containers. In progress mode, it will allow to choose to create Progress Linux containers.
 .PP
 
 .SH OPTIONS
@@ -41,4 +41,4 @@ LXC(7) uses so called templates to create Linux Container systems. \fBlxc\-debco
 Bugs can be reported by submitting a bugreport for the lxc package in the Debian Bug Tracking System at <\fIhttp://bugs.debian.org/\fR> or by writing a mail to the author.
 
 .SH AUTHOR
-lxc\-debconf was written by Daniel Baumann <\fIdaniel.baumann@progress-technologies.net\fR>.
+lxc\-debconfig was written by Daniel Baumann <\fIdaniel.baumann@progress-technologies.net\fR>.
