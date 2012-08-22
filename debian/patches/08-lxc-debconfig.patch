@@ -9,7 +9,7 @@ diff -Naurp lxc/src/lxc/lxc-create.in lxc.orig/src/lxc/lxc-create.in
      if [ -z $lxc_template ]; then
          echo "for template-specific help, specify a template, for instance:"
 -        echo "lxc-create -t ubuntu -h"
-+        echo "lxc-create -t debconf -h"
++        echo "lxc-create -t debconfig -h"
          exit 0
      fi
      type ${templatedir}/lxc-$lxc_template >/dev/null

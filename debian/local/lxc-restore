@@ -1,6 +1,5 @@
 #!/bin/sh
 
-## lxc-debconf - LXC template for Debian and Debian Derivatives
 ## Copyright (C) 2006-2012 Daniel Baumann <daniel.baumann@progress-technologies.net>
 ##
 ## This program comes with ABSOLUTELY NO WARRANTY; for details see COPYING.

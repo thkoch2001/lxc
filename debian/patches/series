@@ -5,7 +5,7 @@
 05-doc-ip-address.patch
 06-bash.patch
 07-lxc-netstat.patch
-08-lxc-debconf.patch
+08-lxc-debconfig.patch
 09-lxc-create-trap-name.patch
 10-lxc-clone-trap-name.patch
 11-lxc-console-escape.patch

@@ -1,8 +1,8 @@
-Template: lxc-debconf/title
+Template: lxc-debconfig/title
 Type: title
 Description: Linux Container (LXC)
 
-Template: lxc-debconf/distribution
+Template: lxc-debconfig/distribution
 Type: select
 Default:
 Choices-C: ${CHOICES_C}
@@ -10,7 +10,7 @@ Choices: ${CHOICES}
 Description: Distribution
  Distribution.
 
-Template: lxc-debconf/parent-distribution
+Template: lxc-debconfig/parent-distribution
 Type: select
 Default:
 Choices-C: ${CHOICES_C}
@@ -18,7 +18,7 @@ Choices: ${CHOICES}
 Description: for internal use; can be preseeded
  Parent Distribution.
 
-Template: lxc-debconf/architecture
+Template: lxc-debconfig/architecture
 Type: select
 Default:
 Choices-C: ${CHOICES_C}
@@ -26,7 +26,7 @@ Choices: ${CHOICES}
 Description: Architecture
  Architecture.
 
-Template: lxc-debconf/archives
+Template: lxc-debconfig/archives
 Type: multiselect
 Default:
 Choices-C: ${CHOICES_C}
@@ -34,7 +34,7 @@ Choices: ${CHOICES}
 Description: Archives
  Archives.
 
-Template: lxc-debconf/parent-archives
+Template: lxc-debconfig/parent-archives
 Type: multiselect
 Default:
 Choices-C: ${CHOICES_C}
@@ -42,57 +42,57 @@ Choices: ${CHOICES}
 Description: Parent Archives
  Parent Archives.
 
-Template: lxc-debconf/mirror
+Template: lxc-debconfig/mirror
 Type: string
 Default:
 Description: Mirror
  Mirror.
 
-Template: lxc-debconf/mirror-security
+Template: lxc-debconfig/mirror-security
 Type: string
 Default:
 Description: Mirror Security
  Mirror Security.
 
-Template: lxc-debconf/mirror-backports
+Template: lxc-debconfig/mirror-backports
 Type: string
 Default:
 Description: Mirror Backports
  Mirror Backports.
 
-Template: lxc-debconf/parent-mirror
+Template: lxc-debconfig/parent-mirror
 Type: string
 Default:
 Description: Parent Mirror
  Parent Mirror.
 
-Template: lxc-debconf/parent-mirror-security
+Template: lxc-debconfig/parent-mirror-security
 Type: string
 Default:
 Description: Parent Mirror Security
  Parent Mirror Security.
 
-Template: lxc-debconf/parent-mirror-backports
+Template: lxc-debconfig/parent-mirror-backports
 Type: string
 Default:
 Description: Parent Mirror Backports
  Parent Mirror Backports.
 
-Template: lxc-debconf/archive-areas
+Template: lxc-debconfig/archive-areas
 Type: multiselect
 Default:
 Choices: ${CHOICES}
 Description: Archive Areas
  Archive Areas.
 
-Template: lxc-debconf/parent-archive-areas
+Template: lxc-debconfig/parent-archive-areas
 Type: multiselect
 Default:
 Choices: ${CHOICES}
 Description: Parent Archive Areas
  Parent Archive Areas.
 
-Template: lxc-debconf/packages
+Template: lxc-debconfig/packages
 Type: string
 Default:
 Description: Packages
@@ -104,19 +104,19 @@ Default:
 Description: Root password
  Root password.
 
-Template: lxc-debconf/eth0/bridge
+Template: lxc-debconfig/eth0/bridge
 Type: string
 Default:
 Description: Bridge
  Bridge.
 
-Template: lxc-debconf/eth0/mac
+Template: lxc-debconfig/eth0/mac
 Type: string
 Default:
 Description: MAC
  MAC.
 
-Template: lxc-debconf/auto
+Template: lxc-debconfig/auto
 Type: boolean
 Default: false
 Description: Auto start container?

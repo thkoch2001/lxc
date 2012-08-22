@@ -50,7 +50,7 @@ EOF
 		mv -f "${_CONFFILE}.tmp" "${_CONFFILE}"
 
 		# Create lxc directories
-		for _DIRECTORY in "${LXC_DIRECTORY}" /etc/lxc/auto /etc/lxc/debconf /usr/share/lxc/cache /usr/share/lxc/packages /var/log/lxc
+		for _DIRECTORY in "${LXC_DIRECTORY}" /etc/lxc/auto /etc/lxc/debconfig /usr/share/lxc/cache /usr/share/lxc/packages /var/log/lxc
 		do
 			# Using ls to not fail on (temporarily) dangling symlinks
 			# which might be the sysadmins intention
