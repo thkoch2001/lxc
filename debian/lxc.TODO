@@ -19,6 +19,8 @@ lxc:
     start/stop/restart/create/destroy their containers
 
 lxc-debconf:
+  * for some reason the Internal_options don't make it to debconf.default;
+    probably because the 'if db_get ...' constructs don't work with set -e.
   * allow mechanism to store local packages that overwrite repository ones
   * if invoked as lxc-debconf, ask for mode (debian, progress, ubuntu, etc.)
   * allow to have templates (that do not get modified) in /etc/lxc/debconf
