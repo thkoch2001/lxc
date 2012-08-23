@@ -203,6 +203,9 @@ EOF
 		fi
 	done
 
+	rm -f ${_ROOTFS}/etc/dpkg/origins/default
+	Chroot "${_ROOTFS}" "dpkg-reconfigure base-files"
+
 	# Removing hostname
 	rm -f "${_ROOTFS}"/etc/hostname
 
