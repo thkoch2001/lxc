@@ -1,3 +1,16 @@
+lxc (0.8.0~rc1-11) unstable; urgency=low
+
+  * Avoid superfluous asking twice of debconf questions (Closes:
+    #685602).
+  * Renaming lxc-debconf to lxc-debconfig for consistency with live-
+    debconfig.
+  * Updating base-files hack for dpkg origins.
+  * Installing additional packages after live-debconfig in order to
+    provide an already preconfigured system for configuration packages
+    to act upon.
+
+ -- Daniel Baumann <daniel.baumann@progress-linux.org>  Wed, 29 Aug 2012 12:57:33 +0200
+
 lxc (0.8.0~rc1-10) unstable; urgency=low
 
   * Adding some lxc related boot parameters in readme (Closes: #683999).
