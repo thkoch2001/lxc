@@ -229,12 +229,6 @@ EOF
 		Chroot "${_ROOTFS}" "DEBIAN_FRONTEND=noninteractive DEBIAN_PRIORITY=criticial dpkg-reconfigure tzdata"
 	fi
 
-	# Install additional packages
-	if [ -n "${_PACKAGES}" ]
-	then
-		Chroot "${_ROOTFS}" "apt-get --yes install ${_PACKAGES}"
-	fi
-
 	# Install live-debconfig
 	if ls /usr/share/lxc/packages/live-debconfig_*.deb > /dev/null 2>&1
 	then
@@ -277,6 +271,12 @@ EOF
 
 	# Run live-debconfig
 	Chroot "${_ROOTFS}" "DEBIAN_FRONTEND=dialog DEBIAN_PRIORITY=high live-debconfig"
+
+	# Install additional packages
+	if [ -n "${_PACKAGES}" ]
+	then
+		Chroot "${_ROOTFS}" "apt-get --yes install ${_PACKAGES}"
+	fi
 
 	# Configure user-setup
 
