@@ -27,27 +27,38 @@ fi
 
 _CONTAINER="${1}"
 
-if [ -n "${_CONTAINER}" ]
-then
-	shift
+case "${_PROGRAM}" in
+	checkconfig|list|ls|setcap|setuid|version)
+		# programs do not require any container as argument
 
-	if ! lxc-ls | grep -qs ^${_CONTAINER}$
-	then
-		echo "E: ${_CONTAINER} - no such container" >&2
-		exit 1
-	fi
+		;;
 
-	_OPTIONS="--name ${_CONTAINER}"
-else
-	case "${_PROGRAM}" in
-		backup|list|restore)
-			;;
+	*)
+		if [ -n "${_CONTAINER}" ]
+		then
+			shift
 
-		*)
+			case "${_PROGRAM}" in
+				clone|create|monitor|wait)
+					# programms do not require an existing container as argument
+
+					;;
+
+				*)
+					if ! lxc-ls | grep -qs ^${_CONTAINER}$
+					then
+						echo "E: ${_CONTAINER} - no such container" >&2
+						exit 1
+					fi
+					;;
+			esac
+
+			_OPTIONS="--name ${_CONTAINER}"
+		else
 			echo "Usage: ${0} PROGRAM CONTAINER"
 			exit 1
-			;;
-	esac
-fi
+		fi
+		;;
+esac
 
 lxc-${_PROGRAM} ${_OPTIONS} ${@}
