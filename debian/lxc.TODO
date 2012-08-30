@@ -17,6 +17,7 @@ lxc:
     access lxc containers on the host
   * add lxc 'control' user with sudo magics so that unprivileged users can
     start/stop/restart/create/destroy their containers
+  * update lxc bash-completion to cover newer commands too
 
 lxc-debconfig:
   * for some reason the Internal_options don't make it to debconf.default;
