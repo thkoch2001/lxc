@@ -31,8 +31,8 @@ Distribution ()
 				;;
 
 			progress)
-				db_subst lxc-debconfig/distribution CHOICES "Progress Linux 1.0 (artax), Progress Linux 1.9 (artax-backports), Progress Linux 2.0 (baureo)"
-				db_subst lxc-debconfig/distribution CHOICES_C "artax, artax-backports, baureo"
+				db_subst lxc-debconfig/distribution CHOICES "Progress Linux 1.0 (artax), Progress Linux 1.9 (artax-backports), Progress Linux 2.0 (baureo), Progress Linux 2.9 (baureo-backports)"
+				db_subst lxc-debconfig/distribution CHOICES_C "artax, artax-backports, baureo, baureo-backports"
 
 				db_set lxc-debconfig/distribution artax
 				db_fset lxc-debconfig/distribution seen false
@@ -66,7 +66,7 @@ Parent_distribution ()
 						;;
 
 					baureo*)
-						_PARENT_DISTRIBUTION="sid"
+						_PARENT_DISTRIBUTION="wheezy"
 						;;
 				esac
 				;;
