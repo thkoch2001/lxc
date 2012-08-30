@@ -222,7 +222,7 @@ Mirror ()
 	then
 		case "${_MODE}" in
 			debian)
-				db_set lxc-debconfig/mirror http://ftp.debian.org/debian/
+				db_set lxc-debconfig/mirror http://http.debian.net/debian/
 				db_fset lxc-debconfig/mirror seen false
 				;;
 
@@ -243,7 +243,7 @@ Mirror ()
 		then
 			case "${_MODE}" in
 				debian)
-					_MIRROR="http://ftp.debian.org/debian/"
+					_MIRROR="http://http.debian.net/debian/"
 					;;
 
 				progress)
@@ -310,7 +310,7 @@ Mirror_backports ()
 	then
 		case "${_MODE}" in
 			debian)
-				db_set lxc-debconfig/mirror-backports http://backports.debian.org/debian-backports/
+				db_set lxc-debconfig/mirror-backports http://http.debian.net/debian-backports/
 				db_fset lxc-debconfig/mirror-backports seen false
 				;;
 
@@ -331,7 +331,7 @@ Mirror_backports ()
 		then
 			case "${_MODE}" in
 				debian)
-					_MIRROR_BACKPORTS="http://backports.debian.org/debian-backports/"
+					_MIRROR_BACKPORTS="http://http.debian.net/debian-backports/"
 					;;
 
 				*)
