@@ -1,3 +1,27 @@
+lxc (0.8.0~rc1-12) unstable; urgency=low
+
+  * Correcting email addres in previous changelog entry.
+  * Using http.debian.net for debian and debian-backports mirrors in
+    lxc-debconfig for debian mode.
+  * Sourcing /etc/lxc/default for lxc directory in lxc-backup and lxc-
+    restore, if available.
+  * Reworking lxc convenience wrapper to work with the different lxc
+    programs that do or do not require container arguments.
+  * Updating todo file.
+  * Adding support for jessie in lxc-debconfig.
+  * Completing support for baureo and baureo-backports in lxc-debconfig.
+  * Adding support for charon and charon-backports in lxc-debconfig.
+  * Setting debian default distribution to wheezy in lxc-debconfig.
+  * Setting progress default distribution to baureo in lxc-debconfig.
+  * Correcting debconf fieldnames for bridge and mac in lxc-debconfig
+    templates and examples.
+  * Importing the proper archive keys beyond artax for the respective
+    progress release in lxc-debconfig.
+  * Correcting initscript to not make noise about container configs in
+    /etc/lxc/auto without having an existing container for it.
+
+ -- Daniel Baumann <daniel.baumann@progress-technologies.net>  Thu, 30 Aug 2012 15:32:44 +0200
+
 lxc (0.8.0~rc1-11) unstable; urgency=low
 
   * Avoid superfluous asking twice of debconf questions (Closes:
