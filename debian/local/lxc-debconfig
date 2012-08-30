@@ -447,7 +447,21 @@ EOF
 			esac
 
 			# Import archive keys
-			for _KEY in 1.0-artax-automatic 1.0-artax-stable
+			case "${_DIST}" in
+				artax)
+					_KEYS="1.0-artax-automatic 1.0-artax-stable"
+					;;
+
+				baureo)
+					_KEYS="2.0-baureo-automatic 2.0-baureo-stable"
+					;;
+
+				charon)
+					_KEYS="3.0-charon-automatic 3.0-charon-stable"
+					;;
+			esac
+
+			for _KEY in ${_KEYS}
 			do
 				wget "${_MIRROR}/project/keys/archive-key-${_KEY}.asc" -O "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}.partial/key.asc"
 				Chroot "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}.partial" "apt-key add key.asc"
