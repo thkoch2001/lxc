@@ -11,6 +11,13 @@ set -e
 
 _CONTAINER="${1}"
 
+if [ -e /etc/default/lxc ]
+then
+	. /etc/default/lxc
+fi
+
+_LXC_DIRECTORY="${LXC_DIRECTORY:-/var/lib/lxc}"
+
 if [ -n "${_CONTAINER}" ]
 then
 	shift
@@ -38,8 +45,7 @@ then
 	exit 1
 fi
 
-# FIXME: Assumption of /var/lib/lxc
-if ls /var/lib/lxc/${_CONTAINER}/rootfs.backup* > /dev/null 2>&1
+if ls ${_LXC_DIRECTORY}/${_CONTAINER}/rootfs.backup* > /dev/null 2>&1
 then
 #	if [ -n "${2}" ]
 #	then
@@ -47,7 +53,7 @@ then
 #	else
 #		_BACKUP="1"
 #
-#		while [ -e "/var/lib/lxc/${_CONTAINER}/rootfs.backup${_BACKUP}" ]
+#		while [ -e "${_LXC_DIRECTORY}/${_CONTAINER}/rootfs.backup${_BACKUP}" ]
 #		do
 #			_BACKUP="$((${_BACKUP} + 1))"
 #		done
@@ -55,8 +61,8 @@ then
 #		_BACKUP="$((${_BACKUP} - 1))"
 #	fi
 
-	rsync -aPHv --delete --progress /var/lib/lxc/${_CONTAINER}/rootfs.backup${_BACKUP}/ /var/lib/lxc/${_CONTAINER}/rootfs
+	rsync -aPHv --delete --progress ${_LXC_DIRECTORY}/${_CONTAINER}/rootfs.backup${_BACKUP}/ ${_LXC_DIRECTORY}/${_CONTAINER}/rootfs
 else
-	echo "E: /var/lib/lxc/${_CONTAINER}/rootfs.backup* - no such directories" >&2
+	echo "E: ${_LXC_DIRECTORY}/${_CONTAINER}/rootfs.backup* - no such directories" >&2
 	exit 1
 fi
