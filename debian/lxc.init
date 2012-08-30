@@ -46,15 +46,15 @@ Lxc ()
 
 	for _CONFIG in /etc/lxc/auto/*
 	do
-		_CONTAINER="$(basename $(dirname $(readlink -e ${_CONFIG})))"
-
 		if [ -L "${_CONFIG}" ] && [ ! -e "${_CONFIG}" ]
 		then
 			# dangling symlink
-			log_progress_msg "${_CONTAINER} (broken)"
+			log_progress_msg "$(basename ${_CONFIG}) (broken)"
 
 			continue
 		fi
+
+		_CONTAINER="$(basename $(dirname $(readlink -e ${_CONFIG})))"
 
 		case "${_PROGRAM}" in
 			start)
