@@ -26,7 +26,7 @@ Distribution ()
 				db_subst lxc-debconfig/distribution CHOICES "Debian GNU/Linux 6.0 \"squeeze\", Debian GNU/Linux 7.0 \"wheezy\", Debian GNU/Linux 8.0 \"jessie\", Debian GNU/Linux unstable/sid"
 				db_subst lxc-debconfig/distribution CHOICES_C "squeeze, wheezy, jessie, sid"
 
-				db_set lxc-debconfig/distribution squeeze
+				db_set lxc-debconfig/distribution wheezy
 				db_fset lxc-debconfig/distribution seen false
 				;;
 
