@@ -104,13 +104,13 @@ Default:
 Description: Root password
  Root password.
 
-Template: lxc-debconfig/eth0/bridge
+Template: lxc-debconfig/eth0-bridge
 Type: string
 Default:
 Description: Bridge
  Bridge.
 
-Template: lxc-debconfig/eth0/mac
+Template: lxc-debconfig/eth0-mac
 Type: string
 Default:
 Description: MAC
