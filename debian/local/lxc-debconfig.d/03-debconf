@@ -685,22 +685,22 @@ Network ()
 	do
 		if db_get live-debconfig/ifupdown/eth${_NUMBER}-comment
 		then
-			eval LXC_DEBCONF_ETH${_NUMBER}_COMMENT="\"${RET}\"" # string (w/)
+			eval LXC_DEBCONFIG_ETH${_NUMBER}_COMMENT="\"${RET}\"" # string (w/)
 		fi
 
 		if db_get lxc-debconfig/eth${_NUMBER}-bridge
 		then
-			eval LXC_DEBCONF_ETH${_NUMBER}_BRIDGE="\"${RET}\"" # string (w/o empty)
+			eval LXC_DEBCONFIG_ETH${_NUMBER}_BRIDGE="\"${RET}\"" # string (w/o empty)
 		fi
 
 		if db_get lxc-debconfig/eth${_NUMBER}-mac
 		then
-			eval LXC_DEBCONF_ETH${_NUMBER}_MAC="\"${RET}\"" # string (w/o empty)
+			eval LXC_DEBCONFIG_ETH${_NUMBER}_MAC="\"${RET}\"" # string (w/o empty)
 		fi
 
 		if db_get lxc-debconfig/eth${_NUMBER}-veth
 		then
-			eval LXC_DEBCONF_ETH${_NUMBER}_VETH="\"${RET}\"" # string (w/ empty)
+			eval LXC_DEBCONFIG_ETH${_NUMBER}_VETH="\"${RET}\"" # string (w/ empty)
 		fi
 
 		_NUMBER="$((${_NUMBER} + 1))"
@@ -709,12 +709,12 @@ Network ()
 	# FIXME: this is ugly
 	if [ "${_NUMBER}" -gt 0 ]
 	then
-		LXC_DEBCONF_ETH_NUMBER="$((${_NUMBER} - 1))"
+		LXC_DEBCONFIG_ETH_NUMBER="$((${_NUMBER} - 1))"
 	else
-		LXC_DEBCONF_ETH_NUMBER="${_NUMBER}"
+		LXC_DEBCONFIG_ETH_NUMBER="${_NUMBER}"
 	fi
 
-	if [ -z ${LXC_DEBCONF_ETH0_BRIDGE} ]
+	if [ -z ${LXC_DEBCONFIG_ETH0_BRIDGE} ]
 	then
 		# FIXME: do guess the default bridge device
 		db_set lxc-debconfig/eth0-bridge br0
@@ -725,10 +725,10 @@ Network ()
 		db_go
 
 		db_get lxc-debconfig/eth0-bridge
-		LXC_DEBCONF_ETH0_BRIDGE="${RET:-br0}"
+		LXC_DEBCONFIG_ETH0_BRIDGE="${RET:-br0}"
 	fi
 
-	if [ -z "${LXC_DEBCONF_ETH0_MAC}" ]
+	if [ -z "${LXC_DEBCONFIG_ETH0_MAC}" ]
 	then
 		if [ -x /usr/bin/hexdump ]
 		then
@@ -747,24 +747,24 @@ Network ()
 		db_go
 
 		db_get lxc-debconfig/eth0-mac
-		LXC_DEBCONF_ETH0_MAC="${RET:-${_RANDOM_MAC}}"
+		LXC_DEBCONFIG_ETH0_MAC="${RET:-${_RANDOM_MAC}}"
 	fi
 
-	echo "LXC_DEBCONF_ETH_NUMBER=\"${LXC_DEBCONF_ETH_NUMBER}\"" >> "${_TMPDIR}/debconf.default"
+	echo "LXC_DEBCONFIG_ETH_NUMBER=\"${LXC_DEBCONFIG_ETH_NUMBER}\"" >> "${_TMPDIR}/debconf.default"
 
-	for _NUMBER in $(seq 0 ${LXC_DEBCONF_ETH_NUMBER})
+	for _NUMBER in $(seq 0 ${LXC_DEBCONFIG_ETH_NUMBER})
 	do
-		eval _COMMENT="$`echo LXC_DEBCONF_ETH${_NUMBER}_COMMENT`"
-		echo "LXC_DEBCONF_ETH${_NUMBER}_COMMENT=\"${_COMMENT}\"" >> "${_TMPDIR}/debconf.default"
+		eval _COMMENT="$`echo LXC_DEBCONFIG_ETH${_NUMBER}_COMMENT`"
+		echo "LXC_DEBCONFIG_ETH${_NUMBER}_COMMENT=\"${_COMMENT}\"" >> "${_TMPDIR}/debconf.default"
 
-		eval _BRIDGE="$`echo LXC_DEBCONF_ETH${_NUMBER}_BRIDGE`"
-		echo "LXC_DEBCONF_ETH${_NUMBER}_BRIDGE=\"${_BRIDGE}\"" >> "${_TMPDIR}/debconf.default"
+		eval _BRIDGE="$`echo LXC_DEBCONFIG_ETH${_NUMBER}_BRIDGE`"
+		echo "LXC_DEBCONFIG_ETH${_NUMBER}_BRIDGE=\"${_BRIDGE}\"" >> "${_TMPDIR}/debconf.default"
 
-		eval _MAC="$`echo LXC_DEBCONF_ETH${_NUMBER}_MAC`"
-		echo "LXC_DEBCONF_ETH${_NUMBER}_MAC=\"${_MAC}\"" >> "${_TMPDIR}/debconf.default"
+		eval _MAC="$`echo LXC_DEBCONFIG_ETH${_NUMBER}_MAC`"
+		echo "LXC_DEBCONFIG_ETH${_NUMBER}_MAC=\"${_MAC}\"" >> "${_TMPDIR}/debconf.default"
 
-		eval _VETH="$`echo LXC_DEBCONF_ETH${_NUMBER}_VETH`"
-		echo "LXC_DEBCONF_ETH${_NUMBER}_VETH=\"${_VETH}\"" >> "${_TMPDIR}/debconf.default"
+		eval _VETH="$`echo LXC_DEBCONFIG_ETH${_NUMBER}_VETH`"
+		echo "LXC_DEBCONFIG_ETH${_NUMBER}_VETH=\"${_VETH}\"" >> "${_TMPDIR}/debconf.default"
 	done
 }
 
@@ -840,11 +840,11 @@ Internal_options ()
 
 	while db_get lxc-debconfig/mount${_NUMBER}/entry && [ "${RET}" ]
 	do
-		eval LXC_DEBCONF_MOUNT${_NUMBER}_ENTRY="\"${RET}\"" # string (w/o empty)
+		eval LXC_DEBCONFIG_MOUNT${_NUMBER}_ENTRY="\"${RET}\"" # string (w/o empty)
 
 		if db_get lxc-debconfig/mount${_NUMBER}/comment
 		then
-			eval LXC_DEBCONF_MOUNT${_NUMBER}_COMMENT="\"${RET}\"" # string (w/ empty)
+			eval LXC_DEBCONFIG_MOUNT${_NUMBER}_COMMENT="\"${RET}\"" # string (w/ empty)
 		fi
 
 		_NUMBER="$((${_NUMBER} + 1))"
@@ -853,20 +853,20 @@ Internal_options ()
 	# FIXME: this is ugly
 	if [ "${_NUMBER}" -gt 0 ]
 	then
-		LXC_DEBCONF_MOUNT_NUMBER="$((${_NUMBER} - 1))"
+		LXC_DEBCONFIG_MOUNT_NUMBER="$((${_NUMBER} - 1))"
 	else
-		LXC_DEBCONF_MOUNT_NUMBER="${_NUMBER}"
+		LXC_DEBCONFIG_MOUNT_NUMBER="${_NUMBER}"
 	fi
 
-	echo "LXC_DEBCONF_MOUNT_NUMBER=\"${LXC_DEBCONF_MOUNT_NUMBER}\"" >> "${_TMPDIR}/debconf.default"
+	echo "LXC_DEBCONFIG_MOUNT_NUMBER=\"${LXC_DEBCONFIG_MOUNT_NUMBER}\"" >> "${_TMPDIR}/debconf.default"
 
-	for _NUMBER in $(seq 0 ${LXC_DEBCONF_MOUNT_NUMBER})
+	for _NUMBER in $(seq 0 ${LXC_DEBCONFIG_MOUNT_NUMBER})
 	do
-		eval _COMMENT="$`echo LXC_DEBCONF_MOUNT${_NUMBER}_COMMENT`"
-		echo "LXC_DEBCONF_MOUNT${_NUMBER}_COMMENT=\"${_COMMENT}\"" >> "${_TMPDIR}/debconf.default"
+		eval _COMMENT="$`echo LXC_DEBCONFIG_MOUNT${_NUMBER}_COMMENT`"
+		echo "LXC_DEBCONFIG_MOUNT${_NUMBER}_COMMENT=\"${_COMMENT}\"" >> "${_TMPDIR}/debconf.default"
 
-		eval _ENTRY="$`echo LXC_DEBCONF_MOUNT${_NUMBER}_ENTRY`"
-		echo "LXC_DEBCONF_MOUNT${_NUMBER}_ENTRY=\"${_ENTRY}\"" >> "${_TMPDIR}/debconf.default"
+		eval _ENTRY="$`echo LXC_DEBCONFIG_MOUNT${_NUMBER}_ENTRY`"
+		echo "LXC_DEBCONFIG_MOUNT${_NUMBER}_ENTRY=\"${_ENTRY}\"" >> "${_TMPDIR}/debconf.default"
 	done
 }
 
