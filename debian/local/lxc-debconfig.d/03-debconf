@@ -730,8 +730,16 @@ Network ()
 
 	if [ -z "${LXC_DEBCONF_ETH0_MAC}" ]
 	then
-		# FIXME: do guess the default mac address
-		db_set lxc-debconfig/eth0-mac 00:FF:00:00:00:01
+		if [ -x /usr/bin/hexdump ]
+		then
+			# Create a random mac as suggestion for the user
+			_RANDOM_MAC="00:FF$(dd bs=1 count=4 if=/dev/urandom 2> /dev/null | hexdump -v -e '/1 ":%02X"')"
+		else
+			# FIXME: do guess a default mac adrress based on existing container macs or something
+			_RANDOM_MAC="00:FF:00:00:00:01"
+		fi
+
+		db_set lxc-debconfig/eth0-mac ${_RANDOM_MAC}
 		db_fset lxc-debconfig/eth0-mac seen false
 
 		db_settitle lxc-debconfig/title
@@ -739,7 +747,7 @@ Network ()
 		db_go
 
 		db_get lxc-debconfig/eth0-mac
-		LXC_DEBCONF_ETH0_MAC="${RET:-00:FF:00:00:00:01}"
+		LXC_DEBCONF_ETH0_MAC="${RET:-${_RANDOM_MAC}}"
 	fi
 
 	echo "LXC_DEBCONF_ETH_NUMBER=\"${LXC_DEBCONF_ETH_NUMBER}\"" >> "${_TMPDIR}/debconf.default"
