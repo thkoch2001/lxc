@@ -1,3 +1,12 @@
+lxc (0.8.0~rc1-13) unstable; urgency=low
+
+  * Suggesting a random MAC by default in lxc-debconfig.
+  * Renaming leftover internal variables from lxc-debconf to lxc-
+    debconfig in lxc-debconfig for consistency.
+  * Using 4 digits as script prefix rather than two for consistency.
+
+ -- Daniel Baumann <daniel.baumann@progress-technologies.net>  Thu, 30 Aug 2012 17:37:03 +0200
+
 lxc (0.8.0~rc1-12) unstable; urgency=low
 
   * Correcting email addres in previous changelog entry.
