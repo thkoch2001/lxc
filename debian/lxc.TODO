@@ -20,6 +20,7 @@ lxc:
   * update lxc bash-completion to cover newer commands too
 
 lxc-debconfig:
+  * make /usr/share/lxc/includes or somesuch for local includes (e.g. certs)
   * for some reason the Internal_options don't make it to debconf.default;
     probably because the 'if db_get ...' constructs don't work with set -e.
   * allow mechanism to store local packages that overwrite repository ones
