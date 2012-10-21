@@ -739,6 +739,7 @@ EOF
 	# Adding network configuration
 	for _NUMBER in $(seq 0 ${LXC_DEBCONFIG_ETH_NUMBER})
 	do
+		eval _METHOD="$`echo LXC_DEBCONFIG_ETH${_NUMBER}_METHOD`"
 		eval _COMMENT="$`echo LXC_DEBCONFIG_ETH${_NUMBER}_COMMENT`"
 		eval _BRIDGE="$`echo LXC_DEBCONFIG_ETH${_NUMBER}_BRIDGE`"
 		eval _MAC="$`echo LXC_DEBCONFIG_ETH${_NUMBER}_MAC`"
@@ -759,6 +760,14 @@ cat >> "${_PATH}/config" << EOF
 ## Network
 EOF
 
+		fi
+
+		if [ "${_METHOD}" = "none" ]
+		then
+			echo "lxc.network.type                        = empty" >> "${_PATH}/config"
+
+			_NUMBER="$((${_NUMBER} + 1))"
+			continue
 		fi
 
 cat >> "${_PATH}/config" << EOF
