@@ -87,4 +87,25 @@ symlink to your new lxc directory.
 In case you're doing things manually, make sure that /var/lib/lxc is a symlink
 pointing to your lxc directory at all times.
 
+
+6. Bugs
+
+  * veth not removed on container stop
+
+    When stopping a container, it irregularly but reproducibly happen that the
+    corresponding veth device of the container is not shutdown, making it
+    impossible to start the container again.
+
+    This is caused by a kernel bug not cleaning up veth devices on container
+    collapsing. The veth device is supposed to be go away automatically after
+    some time, definitely after a reboot though.
+
+    A manual workaround is to shutdown the veth device manually with:
+
+      # ip link delete ${VETH_DEVICE}
+
+    There is a patch for it and hopefully landing in linux 3.7, see
+    http://lists.linuxfoundation.org/pipermail/containers/2012-October/030533.html
+    for more information.
+
  -- Daniel Baumann <daniel.baumann@progress-technologies.net>  Tue, 12 Jul 2011 20:32:16 +0200
