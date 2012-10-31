@@ -323,6 +323,15 @@ EOF
 			;;
 	esac
 
+	if ls /usr/share/lxc/includes/* > /dev/null 2>&1
+	then
+		cd /usr/share/lxc/includes
+
+		find . | cpio -dmpu --no-preserve-owner "${_ROOTFS}"
+
+		cd "${OLDPWD}"
+	fi
+
 	if [ -n "${_LATE_COMMAND}" ]
 	then
 		Chroot "${_ROOTFS}" "${_LATE_COMMAND}"
