@@ -17,6 +17,7 @@ override_dh_auto_install:
 	mkdir -p debian/tmp/etc/lxc/auto
 	mkdir -p debian/tmp/etc/lxc/debconfig
 	mkdir -p debian/tmp/usr/share/lxc/cache
+	mkdir -p debian/tmp/usr/share/lxc/includes
 	mkdir -p debian/tmp/usr/share/lxc/packages
 	mkdir -p debian/tmp/var/log/lxc
 
