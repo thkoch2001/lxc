@@ -1,3 +1,20 @@
+lxc (0.8.0~rc1-14) unstable; urgency=low
+
+  * Removing suggests on lxctl.
+  * Updating todo file.
+  * Adding note about live-debconf requirement when building legacy
+    distributions.
+  * Adding note about veth not removed on container stop in readme.
+  * Disabling access to network devices in lxc config when no network is
+    configured throuhg lxc-debconfig.
+  * Running live-debconfig with the same debconf frontend and priorities
+    as the rest of the template, respecting any preseeds.
+  * Updating debconf variableswithin chrooted setups.
+  * Adding /usr/share/lxc/includes for including random content after
+    container creation.
+
+ -- Daniel Baumann <daniel.baumann@progress-linux.org>  Wed, 31 Oct 2012 15:31:16 +0100
+
 lxc (0.8.0~rc1-13) unstable; urgency=low
 
   * Suggesting a random MAC by default in lxc-debconfig.
