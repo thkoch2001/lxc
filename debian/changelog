@@ -13,7 +13,7 @@ lxc (0.8.0~rc1-14) unstable; urgency=low
   * Adding /usr/share/lxc/includes for including random content after
     container creation.
 
- -- Daniel Baumann <daniel.baumann@progress-linux.org>  Wed, 31 Oct 2012 15:31:16 +0100
+ -- Daniel Baumann <daniel.baumann@progress-technologies.net>  Wed, 31 Oct 2012 15:31:16 +0100
 
 lxc (0.8.0~rc1-13) unstable; urgency=low
 
