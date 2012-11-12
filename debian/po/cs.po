@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: lxc 0.8.0~rc1-5\n"
 "Report-Msgid-Bugs-To: lxc@packages.debian.org\n"
-"POT-Creation-Date: 2012-02-09 13:08+0100\n"
+"POT-Creation-Date: 2012-11-12 14:51+0100\n"
 "PO-Revision-Date: 2011-06-30 14:31+0200\n"
 "Last-Translator: Michal Simunek <michal.simunek@gmail.com>\n"
 "Language-Team: Czech <debian-l10n-czech@lists.debian.org>\n"
@@ -45,44 +45,15 @@ msgstr ""
 msgid "If unsure, choose yes (default)."
 msgstr "Nejste-li si jistí, zvolte ano (výchozí)."
 
-#. Type: select
-#. Description
-#: ../lxc.templates:3001
-msgid "Linux Container: Shutdown method"
-msgstr "Linuxový kontejner: Způsob ukončení"
-
-#. Type: select
-#. Description
-#: ../lxc.templates:3001
-msgid ""
-"Linux Containers can be shutdown in different ways. The stop method "
-"terminates all processes inside the container. The halt method initiates a "
-"shutdown, which takes longer and can have problems with containers that "
-"don't shutdown themselves properly."
-msgstr ""
-"Linuxové kontejnery lze ukončit různými způsoby. Způsob stop zabije všechny "
-"procesy uvnitř kontejneru. Způsob halt zinicializuje ukončení, které trvá "
-"delší dobu a může mít problémy s kontejnery, které se sami správně neukončí."
-
-#. Type: select
-#. Description
-#: ../lxc.templates:3001
-msgid ""
-"Unless you know that your containers don't shutdown properly, choose halt "
-"(default)."
-msgstr ""
-"Pokud nevíte, zda se vaše kontejnery správně ukončí, zvolte halt "
-"(výchozí)"
-
 #. Type: string
 #. Description
-#: ../lxc.templates:4001
+#: ../lxc.templates:3001
 msgid "LXC directory:"
 msgstr "Adresář pro LXC:"
 
 #. Type: string
 #. Description
-#: ../lxc.templates:4001
+#: ../lxc.templates:3001
 msgid ""
 "Please specify the directory that will be used to store the Linux Containers."
 msgstr ""
@@ -91,6 +62,6 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../lxc.templates:4001
+#: ../lxc.templates:3001
 msgid "If unsure, use /var/lib/lxc (default)."
 msgstr "Nejste-li si jistí, použijte /var/lib/lxc (výchozí)."

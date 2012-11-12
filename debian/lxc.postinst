@@ -11,9 +11,6 @@ case "${1}" in
 		db_get lxc/auto
 		LXC_AUTO="${RET}" # boolean
 
-		db_get lxc/shutdown
-		LXC_SHUTDOWN="${RET}" # select
-
 		db_get lxc/directory
 		LXC_DIRECTORY="${RET:-/var/lib/lxc}" # string (w/o empty)
 
@@ -76,25 +73,6 @@ EOF
 
 			ln -s "${LXC_DIRECTORY}" /var/lib/lxc
 		fi
-
-		# Handling lxc-shutdown alternative
-		update-alternatives --install \
-			/usr/bin/lxc-shutdown lxc-shutdown /usr/bin/lxc-stop 100 \
-			--slave /usr/share/man/man1/lxc-shutdown.1.gz lxc-shutdown.1.gz \
-				/usr/share/man/man1/lxc-stop.1.gz
-
-		update-alternatives --install \
-			/usr/bin/lxc-shutdown lxc-shutdown /usr/bin/lxc-halt 200 \
-			--slave /usr/share/man/man1/lxc-shutdown.1.gz lxc-shutdown.1.gz \
-				/usr/share/man/man1/lxc-halt.1.gz
-
-		# Migrate 0.7.5 to 0.8.0
-		if [ ! -e "${LXC_SHUTDOWN}" ] && [ -e "/usr/bin/lxc-${LXC_SHUTDOWN}" ]
-		then
-			LXC_SHUTDOWN="/usr/bin/lxc-${LXC_SHUTDOWN}"
-		fi
-
-		update-alternatives --quiet --set lxc-shutdown ${LXC_SHUTDOWN}
 		;;
 
 	abort-upgrade|abort-remove|abort-deconfigure)

@@ -4,9 +4,9 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: PACKAGE VERSION\n"
+"Project-Id-Version: lxc\n"
 "Report-Msgid-Bugs-To: lxc@packages.debian.org\n"
-"POT-Creation-Date: 2012-02-09 13:08+0100\n"
+"POT-Creation-Date: 2012-11-12 14:51+0100\n"
 "PO-Revision-Date: 2012-05-21 20:41+0100\n"
 "Last-Translator: Martin Bagge / brother <brother@bsnet.se>\n"
 "Language-Team: Swedish <debian-l10n-swedish@lists.debian.org>\n"
@@ -21,7 +21,7 @@ msgstr ""
 #. Description
 #: ../lxc.templates:1001
 msgid "Linux Containers: LXC setup"
-msgstr " Linux Containers: Inställningar för LXC"
+msgstr "Linux Containers: Inställningar för LXC"
 
 #. Type: boolean
 #. Description
@@ -47,60 +47,21 @@ msgstr ""
 msgid "If unsure, choose yes (default)."
 msgstr "Om du är osäker välj ja (standard)"
 
-#. Type: select
-#. Description
-#: ../lxc.templates:3001
-#| msgid "Linux Container: Stop method"
-msgid "Linux Container: Shutdown method"
-msgstr " Linux Container: Avstängningsmetod"
-
-#. Type: select
-#. Description
-#: ../lxc.templates:3001
-#| msgid ""
-#| "Linux Containers can be stopped in different ways. The stop method kills "
-#| "all processes inside the container. The halt method initiates a shutdown, "
-#| "which takes longer and can have problems with containers that don't "
-#| "shutdown themselves properly."
-msgid ""
-"Linux Containers can be shutdown in different ways. The stop method "
-"terminates all processes inside the container. The halt method initiates a "
-"shutdown, which takes longer and can have problems with containers that "
-"don't shutdown themselves properly."
-msgstr ""
-"Linux Containers kan stängas av på olika sätt. Metoden avstängning kommer "
-"att döda alla processer inuti containern. Halt-metoden påbörjar en "
-"nedstängning, detta tar längre tid och kan innebära problem med containers "
-"som inte stänger av sig korrekt själva."
-
-#. Type: select
-#. Description
-#: ../lxc.templates:3001
-msgid ""
-"Unless you know that your containers don't shutdown properly, choose halt "
-"(default)."
-msgstr ""
-"Såvida du inte vet att containers inte stänger av sig korrekt välj halt "
-"(standard)."
-
 #. Type: string
 #. Description
-#: ../lxc.templates:4001
+#: ../lxc.templates:3001
 msgid "LXC directory:"
 msgstr "Katalog för LXC:"
 
 #. Type: string
 #. Description
-#: ../lxc.templates:4001
+#: ../lxc.templates:3001
 msgid ""
 "Please specify the directory that will be used to store the Linux Containers."
 msgstr "Ange katalogen som ska användas för att lagra Linux Containers."
 
 #. Type: string
 #. Description
-#: ../lxc.templates:4001
+#: ../lxc.templates:3001
 msgid "If unsure, use /var/lib/lxc (default)."
 msgstr "Om du är osäker använd /var/lib/lxc (standard)."
-
-#~ msgid "If unsure, choose stop (default)."
-#~ msgstr "Om du är osäker välj stopp (standard)"

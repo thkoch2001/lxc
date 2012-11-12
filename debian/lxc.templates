@@ -12,20 +12,6 @@ _Description: Automatically start Linux Containers on boot?
  .
  If unsure, choose yes (default).
 
-Template: lxc/shutdown
-Type: select
-Choices: halt, stop
-Choices-C: /usr/bin/lxc-halt, /usr/bin/lxc-stop
-Default: halt
-_Description: Linux Container: Shutdown method
- Linux Containers can be shutdown in different ways. The stop method terminates
- all processes inside the container. The halt method initiates a shutdown,
- which takes longer and can have problems with containers that don't
- shutdown themselves properly.
- .
- Unless you know that your containers don't shutdown properly,
- choose halt (default).
-
 Template: lxc/directory
 Type: string
 Default: /var/lib/lxc
