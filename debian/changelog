@@ -1,3 +1,32 @@
+lxc (0.8.0-1) unstable; urgency=low
+
+  * Correcting email address in previous changelog entry.
+  * Merging upstream version 0.8.0.
+  * Building with apparmor support.
+  * Removing lxc-directories.patch, merged upstream.
+  * Rediffing lxc-configuration-path.patch.
+  * Removing lxc-create-template-name.patch, merged upstream.
+  * Removing doc-ip-address.patch, merged upstream.
+  * Rediffing and updating bash.patch.
+  * Removing lxc-netstat.patch, merged upstream.
+  * Rediffing lxc-debconfig.patch.
+  * Removing lxc-create-trap-name.patch, merged upstream.
+  * Removing lxc-clone-trap-name.patch, merged upstream.
+  * Removing lxc-console-escape.patch, merged upstream.
+  * Removing lxc-create-rootfs.patch, merged upstream.
+  * Removing lxc-setcap-paths.patch, not needed anymore after merging
+    lxc-directories.patch.
+  * Renumbering patches.
+  * Rebuilding manpages.
+  * Dropping conditional multiarch support, not needed anymore for
+    jessie and wheezy backports.
+  * Renaming progress mode to progress-linux to match the used naming
+    scheme.
+  * Dropping lxc-shutdown alternative for lxc-halt and lxc-stop as
+    upstream added an own lxc-shutdown command.
+
+ -- Daniel Baumann <daniel.baumann@progress-technologies.net>  Mon, 12 Nov 2012 14:19:43 +0100
+
 lxc (0.8.0~rc1-14) unstable; urgency=low
 
   * Removing suggests on lxctl.
