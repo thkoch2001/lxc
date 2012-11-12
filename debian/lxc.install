@@ -1,17 +1,9 @@
-#!/bin/sh
-
-set -e
-
-DEB_HOST_MULTIARCH="$(dpkg-architecture -qDEB_HOST_MULTIARCH || true)"
-
-cat << EOF
 etc
 usr/bin
-usr/lib/${DEB_HOST_MULTIARCH}/lxc/*.so.*
-usr/lib/${DEB_HOST_MULTIARCH}/lxc/lxc-*
-usr/lib/${DEB_HOST_MULTIARCH}/lxc/README
+usr/lib/*/lxc/*.so.*
+usr/lib/*/lxc/lxc-*
+usr/lib/*/lxc/README
 usr/share/doc
 usr/share/lxc
 usr/share/man
 var
-EOF
