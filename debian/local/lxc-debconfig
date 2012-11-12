@@ -153,41 +153,41 @@ Configure_system ()
 	done
 
 	case "${_MODE}" in
-		progress)
+		progress-linux)
 			_AREA="$(echo ${_ARCHIVE_AREAS} | sed -e 's|,| |g')"
 			_DIST="$(echo ${_DISTRIBUTION} | sed -e 's|-backports||')"
 
-			echo "deb ${_MIRROR} ${_DIST} ${_AREA}" > "${_ROOTFS}/etc/apt/sources.list.d/progress.list"
+			echo "deb ${_MIRROR} ${_DIST} ${_AREA}" > "${_ROOTFS}/etc/apt/sources.list.d/progress-linux.list"
 
 			for _REPO in ${_ARCHIVES}
 			do
 				case "${_REPO}" in
 					${_DIST}-staging)
-						echo "deb ${_MIRROR} ${_DIST}-staging ${_AREA}" >> "${_ROOTFS}/etc/apt/sources.list.d/progress.list"
+						echo "deb ${_MIRROR} ${_DIST}-staging ${_AREA}" >> "${_ROOTFS}/etc/apt/sources.list.d/progress-linux.list"
 						;;
 
 					${_DIST}-security)
-						echo "deb ${_MIRROR_SECURITY} ${_DIST}-security ${_AREA}" >> "${_ROOTFS}/etc/apt/sources.list.d/progress.list"
+						echo "deb ${_MIRROR_SECURITY} ${_DIST}-security ${_AREA}" >> "${_ROOTFS}/etc/apt/sources.list.d/progress-linux.list"
 						;;
 
 					${_DIST}-security-staging)
-						echo "deb ${_MIRROR_SECURITY} ${_DIST}-security-staging ${_AREA}" >> "${_ROOTFS}/etc/apt/sources.list.d/progress.list"
+						echo "deb ${_MIRROR_SECURITY} ${_DIST}-security-staging ${_AREA}" >> "${_ROOTFS}/etc/apt/sources.list.d/progress-linux.list"
 						;;
 
 					${_DIST}-updates)
-						echo "deb ${_MIRROR} ${_DIST}-updates ${_AREA}" >> "${_ROOTFS}/etc/apt/sources.list.d/progress.list"
+						echo "deb ${_MIRROR} ${_DIST}-updates ${_AREA}" >> "${_ROOTFS}/etc/apt/sources.list.d/progress-linux.list"
 						;;
 
 					${_DIST}-updates-staging)
-						echo "deb ${_MIRROR} ${_DIST}-updates-staging ${_AREA}" >> "${_ROOTFS}/etc/apt/sources.list.d/progress.list"
+						echo "deb ${_MIRROR} ${_DIST}-updates-staging ${_AREA}" >> "${_ROOTFS}/etc/apt/sources.list.d/progress-linux.list"
 						;;
 
 					${_DIST}-backports)
-						echo "deb ${_MIRROR_BACKPORTS} ${_DIST}-backports ${_AREA}" >> "${_ROOTFS}/etc/apt/sources.list.d/progress.list"
+						echo "deb ${_MIRROR_BACKPORTS} ${_DIST}-backports ${_AREA}" >> "${_ROOTFS}/etc/apt/sources.list.d/progress-linux.list"
 						;;
 
 					${_DIST}-backports-staging)
-						echo "deb ${_MIRROR_BACKPORTS} ${_DIST}-backports-staging ${_AREA}" >> "${_ROOTFS}/etc/apt/sources.list.d/progress.list"
+						echo "deb ${_MIRROR_BACKPORTS} ${_DIST}-backports-staging ${_AREA}" >> "${_ROOTFS}/etc/apt/sources.list.d/progress-linux.list"
 						;;
 				esac
 			done
@@ -357,7 +357,7 @@ Download_system ()
 			_INCLUDE="ifupdown,locales,libui-dialog-perl,dialog,isc-dhcp-client,netbase,net-tools,iproute,user-setup,openssh-server"
 			;;
 
-		progress)
+		progress-linux)
 			_INCLUDE="apt-utils,ifupdown,locales-all,libui-dialog-perl,dialog,isc-dhcp-client,netbase,net-tools,iproute,user-setup"
 			;;
 	esac
@@ -403,17 +403,17 @@ Download_system ()
 	echo "deb ${_PARENT_MIRROR} ${_PARENT_DIST} ${_PARENT_AREA}" > "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}.partial/etc/apt/sources.list.d/debian.list"
 
 	case "${_MODE}" in
-		progress)
+		progress-linux)
 			_AREA="$(echo ${_ARCHIVE_AREAS} | sed -e 's|,| |g')"
 			_DIST="$(echo ${_DISTRIBUTION} | sed -e 's|-backports||')"
 
-			echo "deb ${_MIRROR} ${_DIST} ${_AREA}" > "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}.partial/etc/apt/sources.list.d/progress.list"
+			echo "deb ${_MIRROR} ${_DIST} ${_AREA}" > "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}.partial/etc/apt/sources.list.d/progress-linux.list"
 
 			for _REPO in ${_ARCHIVES}
 			do
 				case "${_REPO}" in
 					${_DIST}-staging)
-						echo "deb ${_MIRROR} ${_DIST}-staging ${_AREA}" >> "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}.partial/etc/apt/sources.list.d/progress.list"
+						echo "deb ${_MIRROR} ${_DIST}-staging ${_AREA}" >> "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}.partial/etc/apt/sources.list.d/progress-linux.list"
 						;;
 				esac
 			done
@@ -424,18 +424,18 @@ Download_system ()
 					do
 						case "${_REPO}" in
 							${_DIST}-backports)
-								echo "deb ${_MIRROR_BACKPORTS} ${_DIST}-backports ${_AREA}" >> "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}.partial/etc/apt/sources.list.d/progress.list"
+								echo "deb ${_MIRROR_BACKPORTS} ${_DIST}-backports ${_AREA}" >> "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}.partial/etc/apt/sources.list.d/progress-linux.list"
 								;;
 
 							${_DIST}-backports-staging)
-								echo "deb ${_MIRROR_BACKPORTS} ${_DIST}-backports-staging ${_AREA}" >> "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}.partial/etc/apt/sources.list.d/progress.list"
+								echo "deb ${_MIRROR_BACKPORTS} ${_DIST}-backports-staging ${_AREA}" >> "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}.partial/etc/apt/sources.list.d/progress-linux.list"
 								;;
 						esac
 					done
 					;;
 			esac
 
-cat > "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}.partial/etc/apt/apt.conf.d/progress.conf" << EOF
+cat > "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}.partial/etc/apt/apt.conf.d/progress-linux.conf" << EOF
 Acquire::PDiffs "false";
 // Acquire::Language "none";
 APT::Clean-Installed "true";
@@ -445,7 +445,7 @@ APT::Get:Show-Upgraded "true";
 APT::Install-Recommends "false";
 EOF
 
-cat > "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}.partial/etc/apt/preferences.d/progress.pref" << EOF
+cat > "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}.partial/etc/apt/preferences.d/progress-linux.pref" << EOF
 Package: *
 Pin: release n=${_DIST}
 Pin-Priority: 999
@@ -461,7 +461,7 @@ EOF
 			case "${_DISTRIBUTION}" in
 				*-backports)
 
-cat >> "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}.partial/etc/apt/preferences.d/progress.pref" << EOF
+cat >> "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}.partial/etc/apt/preferences.d/progress-linux.pref" << EOF
 
 Package: *
 Pin: release n=${_DIST}-backports
@@ -472,7 +472,7 @@ EOF
 
 				*)
 
-cat >> "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}.partial/etc/apt/preferences.d/progress.pref" << EOF
+cat >> "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}.partial/etc/apt/preferences.d/progress-linux.pref" << EOF
 
 #Package: *
 #Pin: release n=${_DIST}-backports
@@ -694,7 +694,7 @@ lxc.cgroup.devices.allow                = c 1:5 rwm
 EOF
 
 case "${_MODE}" in
-	progress)
+	progress-linux)
 		_PROC_OPTIONS="nodev,noexec,nosuid,hidepid=2"
 		;;
 
