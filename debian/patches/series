@@ -1,7 +1,6 @@
 02-lxc-distclean.patch
 03-lxc-configuration-path.patch
 06-bash.patch
-07-lxc-netstat.patch
 08-lxc-debconfig.patch
 09-lxc-create-trap-name.patch
 10-lxc-clone-trap-name.patch
