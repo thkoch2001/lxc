@@ -2,5 +2,4 @@
 03-lxc-configuration-path.patch
 06-bash.patch
 08-lxc-debconfig.patch
-13-lxc-setcap-paths.patch
 14-lxc-destroy-symlinks.patch
