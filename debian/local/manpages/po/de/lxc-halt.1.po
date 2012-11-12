@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: lxc\n"
-"POT-Creation-Date: 2012-08-14 20:42+0300\n"
+"POT-Creation-Date: 2012-11-12 14:14+0100\n"
 "PO-Revision-Date: 2010-05-24 09:59+0300\n"
 "Last-Translator: Daniel Baumann <daniel.baumann@progress-technologies.net>\n"
 "Language-Team: none\n"
@@ -24,14 +24,14 @@ msgstr "LXC"
 #. type: TH
 #: en/lxc-debconfig.1:9 en/lxc-halt.1:9 en/lxc-list.1:9 en/lxc.1:9
 #, no-wrap
-msgid "2012-08-22"
-msgstr "22.08.2011"
+msgid "2012-11-12"
+msgstr "12.11.2012"
 
 #. type: TH
 #: en/lxc-debconfig.1:9 en/lxc-halt.1:9 en/lxc-list.1:9 en/lxc.1:9
 #, no-wrap
-msgid "0.8.0~rc1-10"
-msgstr "0.8.0~rc1-10"
+msgid "0.8.0-1"
+msgstr "0.8.0-1"
 
 #. type: TH
 #: en/lxc-debconfig.1:9 en/lxc-halt.1:9 en/lxc-list.1:9 en/lxc.1:9
