@@ -198,7 +198,13 @@ struct lxc_rootfs {
  * @tty_info   : tty data
  * @console    : console data
  * @ttydir     : directory (under /dev) in which to create console and ttys
+#if HAVE_APPARMOR
+ * @aa_profile : apparmor profile to switch to
+#endif
  */
+enum lxchooks {
+	LXCHOOK_PRESTART, LXCHOOK_MOUNT, LXCHOOK_START,
+	LXCHOOK_POSTSTOP, NUM_LXC_HOOKS};
 struct lxc_conf {
 	char *fstab;
 	int tty;
@@ -216,12 +222,23 @@ struct lxc_conf {
 	struct lxc_rootfs rootfs;
 	char *ttydir;
 	int close_all_fds;
+	struct lxc_list hooks[NUM_LXC_HOOKS];
+#if HAVE_APPARMOR
+	char *aa_profile;
+#endif
+#if HAVE_APPARMOR /* || HAVE_SELINUX || HAVE_SMACK */
+	int lsm_umount_proc;
+#endif
 };
+
+int run_lxc_hooks(const char *name, char *hook, struct lxc_conf *conf);
 
 /*
  * Initialize the lxc configuration structure
  */
 extern struct lxc_conf *lxc_conf_init(void);
+
+extern int pin_rootfs(const char *rootfs);
 
 extern int lxc_create_network(struct lxc_handler *handler);
 extern void lxc_delete_network(struct lxc_list *networks);

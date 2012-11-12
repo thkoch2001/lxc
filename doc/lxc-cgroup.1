@@ -3,34 +3,34 @@
 .\" <http://shell.ipoline.com/~elmert/comp/docbook2X/> 
 .\" Please send any bug reports, improvements, comments, patches, 
 .\" etc. to Steve Cheng <steve@ggi-project.org>.
-.TH "LXC-CGROUP" "1" "02 March 2012" "" ""
+.TH "LXC-CGROUP" "1" "11 November 2012" "" ""
 
 .SH NAME
 lxc-cgroup \- manage the control group associated with a container
 .SH SYNOPSIS
 
-\fBlxc-start \fI-n name\fB
-\fIsubsystem\fB [value]
-\fR
+\fBlxc-cgroup\fR \fB-n \fIname\fB\fR \fB\fIstate-object\fB\fR [ \fBvalue\fR ]
 
 .SH "DESCRIPTION"
 .PP
-\fBlxc-cgroup\fR get or set value from the control
-group associated with the
-container \fIname\fR\&. If
-no [value] is specified, the value of
-the \fIsubsystem\fR is displayed, otherwise
-it is set. The \fBlxc-cgroup\fR does not assume the
-correctness of the \fIsubsystem\fR name, it
-is up to the user to specify the
-right \fIsubsystem\fR name.
+\fBlxc-cgroup\fR gets or sets the value of a
+\fIstate-object\fR (e.g., 'cpuset.cpus')
+in the container's cgroup for the corresponding subsystem (e.g.,
+\&'cpuset'). If no [value] is specified, the
+current value of the \fIstate-object\fR is
+displayed; otherwise it is set.
+.PP
+Note that \fBlxc-cgroup\fR does not check that the
+\fIstate-object\fR is valid for the running
+kernel, or that the corresponding subsystem is contained in any
+mounted cgroup hierarchy.
 .SH "OPTIONS"
 .TP
-\fB   \fIsubsystem\fB \fR
-Specify the subsystem control group name.
+\fB   \fIstate-object\fB \fR
+Specify the state object name.
 .TP
 \fB   [value] \fR
-Specify the subsystem control group value to be set.
+Specify the value to assign to the state object.
 .SH "COMMON OPTIONS"
 .PP
 These options are common to most of lxc commands.

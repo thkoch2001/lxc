@@ -3,16 +3,13 @@
 .\" <http://shell.ipoline.com/~elmert/comp/docbook2X/> 
 .\" Please send any bug reports, improvements, comments, patches, 
 .\" etc. to Steve Cheng <steve@ggi-project.org>.
-.TH "LXC-PS" "1" "02 March 2012" "" ""
+.TH "LXC-PS" "1" "11 November 2012" "" ""
 
 .SH NAME
 lxc-ps \- list the processes belonging to a specific container.
 .SH SYNOPSIS
 
-\fBlxc-ps [--name name]
-[--lxc]
-[ps option]
-\fR
+\fBlxc-ps\fR [ \fB--name \fIname\fB\fR ] [ \fB--lxc\fR ] [ \fB-- ps option\fR ]
 
 .SH "DESCRIPTION"
 .PP
@@ -30,12 +27,12 @@ to be able to have the \fBlxc-ps\fR to find
 the container associated to processes.
 .SH "OPTIONS"
 .TP
-\fB   \fI--name NAME\fB \fR
-specify the container \fINAME\fR
+\fB   -n, --name \fIname\fB \fR
+specify the container \fIname\fR
 to limit the output to the processes belonging 
 to this container name.     
 .TP
-\fB   \fI--lxc\fB \fR
+\fB   --lxc \fR
 limit the output to the processes belonging 
 to all lxc containers.
 .TP

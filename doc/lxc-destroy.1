@@ -3,19 +3,24 @@
 .\" <http://shell.ipoline.com/~elmert/comp/docbook2X/> 
 .\" Please send any bug reports, improvements, comments, patches, 
 .\" etc. to Steve Cheng <steve@ggi-project.org>.
-.TH "LXC-DESTROY" "1" "02 March 2012" "" ""
+.TH "LXC-DESTROY" "1" "11 November 2012" "" ""
 
 .SH NAME
 lxc-destroy \- destroy a container.
 .SH SYNOPSIS
 
-\fBlxc-destroy \fI-n
-name\fB\fR
+\fBlxc-destroy\fR \fB-n \fIname\fB\fR [ \fB-f\fR ]
 
 .SH "DESCRIPTION"
 .PP
 \fBlxc-destroy\fR destroys the system object
 previously created by the \fBlxc-create\fR command.
+.SH "OPTIONS"
+.TP
+\fB   -f \fR
+If a container is running, stop it first.  If this option is
+not specified and the container is running, then
+\fBlxc-destroy\fR will be aborted.
 .SH "DIAGNOSTIC"
 .TP
 \fBThe container was not found\fR

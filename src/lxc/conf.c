@@ -62,6 +62,10 @@
 #include "lxc.h"	/* for lxc_cgroup_set() */
 #include "caps.h"       /* for lxc_caps_last_cap() */
 
+#if HAVE_APPARMOR
+#include <apparmor.h>
+#endif
+
 lxc_log_define(lxc_conf, lxc);
 
 #define MAXHWLEN    18
@@ -241,11 +245,25 @@ static int run_script(const char *name, const char *section,
 		return -1;
 	}
 
-	ret = sprintf(buffer, "%s %s %s", script, name, section);
+	ret = snprintf(buffer, size, "%s %s %s", script, name, section);
+	if (ret < 0 || ret >= size) {
+		ERROR("Script name too long");
+		free(buffer);
+		return -1;
+	}
 
 	va_start(ap, script);
-	while ((p = va_arg(ap, char *)))
-		ret += sprintf(buffer + ret, " %s", p);
+	while ((p = va_arg(ap, char *))) {
+		int len = size-ret;
+		int rc;
+		rc = snprintf(buffer + ret, len, " %s", p);
+		if (rc < 0 || rc >= len) {
+			free(buffer);
+			ERROR("Script args too long");
+			return -1;
+		}
+		ret += rc;
+	}
 	va_end(ap);
 
 	f = popen(buffer, "r");
@@ -265,8 +283,8 @@ static int run_script(const char *name, const char *section,
 
 	free(output);
 
-	if (pclose(f)) {
-		ERROR("Script exited on error");
+	if (pclose(f) == -1) {
+		SYSERROR("Script exited on error");
 		return -1;
 	}
 
@@ -391,7 +409,7 @@ static int mount_rootfs_file(const char *rootfs, const char *target)
 {
 	struct dirent dirent, *direntp;
 	struct loop_info64 loinfo;
-	int ret = -1, fd = -1;
+	int ret = -1, fd = -1, rc;
 	DIR *dir;
 	char path[MAXPATHLEN];
 
@@ -415,7 +433,10 @@ static int mount_rootfs_file(const char *rootfs, const char *target)
 		if (strncmp(direntp->d_name, "loop", 4))
 			continue;
 
-		sprintf(path, "/dev/%s", direntp->d_name);
+		rc = snprintf(path, MAXPATHLEN, "/dev/%s", direntp->d_name);
+		if (rc < 0 || rc >= MAXPATHLEN)
+			continue;
+
 		fd = open(path, O_RDWR);
 		if (fd < 0)
 			continue;
@@ -450,6 +471,54 @@ static int mount_rootfs_file(const char *rootfs, const char *target)
 static int mount_rootfs_block(const char *rootfs, const char *target)
 {
 	return mount_unknow_fs(rootfs, target, 0);
+}
+
+/*
+ * pin_rootfs
+ * if rootfs is a directory, then open ${rootfs}.hold for writing for the
+ * duration of the container run, to prevent the container from marking the
+ * underlying fs readonly on shutdown.
+ * return -1 on error.
+ * return -2 if nothing needed to be pinned.
+ * return an open fd (>=0) if we pinned it.
+ */
+int pin_rootfs(const char *rootfs)
+{
+	char absrootfs[MAXPATHLEN];
+	char absrootfspin[MAXPATHLEN];
+	struct stat s;
+	int ret, fd;
+
+	if (rootfs == NULL || strlen(rootfs) == 0)
+		return 0;
+
+	if (!realpath(rootfs, absrootfs)) {
+		SYSERROR("failed to get real path for '%s'", rootfs);
+		return -1;
+	}
+
+	if (access(absrootfs, F_OK)) {
+		SYSERROR("'%s' is not accessible", absrootfs);
+		return -1;
+	}
+
+	if (stat(absrootfs, &s)) {
+		SYSERROR("failed to stat '%s'", absrootfs);
+		return -1;
+	}
+
+	if (!__S_ISTYPE(s.st_mode, S_IFDIR))
+		return -2;
+
+	ret = snprintf(absrootfspin, MAXPATHLEN, "%s%s", absrootfs, ".hold");
+	if (ret >= MAXPATHLEN) {
+		SYSERROR("pathname too long for rootfs hold file");
+		return -1;
+	}
+
+	fd = open(absrootfspin, O_CREAT | O_RDWR, S_IWUSR|S_IRUSR);
+	INFO("opened %s as fd %d\n", absrootfspin, fd);
+	return fd;
 }
 
 static int mount_rootfs(const char *rootfs, const char *target)
@@ -532,7 +601,7 @@ static int setup_tty(const struct lxc_rootfs *rootfs,
 		}
 		if (ttydir) {
 			/* create dev/lxc/tty%d" */
-			snprintf(lxcpath, sizeof(lxcpath), "%s/dev/%s/tty%d",
+			ret = snprintf(lxcpath, sizeof(lxcpath), "%s/dev/%s/tty%d",
 				 rootfs->mount, ttydir, i + 1);
 			if (ret >= sizeof(lxcpath)) {
 				ERROR("pathname too long for ttys");
@@ -556,7 +625,11 @@ static int setup_tty(const struct lxc_rootfs *rootfs,
 				continue;
 			}
 
-			snprintf(lxcpath, sizeof(lxcpath), "%s/tty%d", ttydir, i+1);
+			ret = snprintf(lxcpath, sizeof(lxcpath), "%s/tty%d", ttydir, i+1);
+			if (ret >= sizeof(lxcpath)) {
+				ERROR("tty pathname too long");
+				return -1;
+			}
 			ret = symlink(lxcpath, path);
 			if (ret) {
 				SYSERROR("failed to create symlink for tty %d\n", i+1);
@@ -637,12 +710,17 @@ static int umount_oldrootfs(const char *oldrootfs)
 	void *cbparm[2];
 	struct lxc_list mountlist, *iterator;
 	int ok, still_mounted, last_still_mounted;
+	int rc;
 
 	/* read and parse /proc/mounts in old root fs */
 	lxc_list_init(&mountlist);
 
 	/* oldrootfs is on the top tree directory now */
-	snprintf(path, sizeof(path), "/%s", oldrootfs);
+	rc = snprintf(path, sizeof(path), "/%s", oldrootfs);
+	if (rc >= sizeof(path)) {
+		ERROR("rootfs name too long");
+		return -1;
+	}
 	cbparm[0] = &mountlist;
 
 	cbparm[1] = strdup(path);
@@ -651,7 +729,11 @@ static int umount_oldrootfs(const char *oldrootfs)
 		return -1;
 	}
 
-	snprintf(path, sizeof(path), "%s/proc/mounts", oldrootfs);
+	rc = snprintf(path, sizeof(path), "%s/proc/mounts", oldrootfs);
+	if (rc >= sizeof(path)) {
+		ERROR("container proc/mounts name too long");
+		return -1;
+	}
 
 	ok = lxc_file_for_each_line(path,
 				    setup_rootfs_pivot_root_cb, &cbparm);
@@ -705,6 +787,7 @@ static int setup_rootfs_pivot_root(const char *rootfs, const char *pivotdir)
 {
 	char path[MAXPATHLEN];
 	int remove_pivotdir = 0;
+	int rc;
 
 	/* change into new root fs */
 	if (chdir(rootfs)) {
@@ -713,10 +796,14 @@ static int setup_rootfs_pivot_root(const char *rootfs, const char *pivotdir)
 	}
 
 	if (!pivotdir)
-		pivotdir = "mnt";
+		pivotdir = "lxc_putold";
 
 	/* compute the full path to pivotdir under rootfs */
-	snprintf(path, sizeof(path), "%s/%s", rootfs, pivotdir);
+	rc = snprintf(path, sizeof(path), "%s/%s", rootfs, pivotdir);
+	if (rc >= sizeof(path)) {
+		ERROR("pivot dir name too long");
+		return -1;
+	}
 
 	if (access(path, F_OK)) {
 
@@ -939,7 +1026,11 @@ static int setup_ttydir_console(const struct lxc_rootfs *rootfs,
 	}
 
 	/* create symlink from rootfs/dev/console to 'lxc/console' */
-	snprintf(lxcpath, sizeof(lxcpath), "%s/console", ttydir);
+	ret = snprintf(lxcpath, sizeof(lxcpath), "%s/console", ttydir);
+	if (ret >= sizeof(lxcpath)) {
+		ERROR("lxc/console path too long");
+		return -1;
+	}
 	ret = symlink(lxcpath, path);
 	if (ret) {
 		SYSERROR("failed to create symlink for console");
@@ -962,6 +1053,31 @@ static int setup_console(const struct lxc_rootfs *rootfs,
 		return setup_dev_console(rootfs, console);
 
 	return setup_ttydir_console(rootfs, console, ttydir);
+}
+
+static int setup_kmsg(const struct lxc_rootfs *rootfs,
+		       const struct lxc_console *console)
+{
+	char kpath[MAXPATHLEN];
+	int ret;
+
+	ret = snprintf(kpath, sizeof(kpath), "%s/dev/kmsg", rootfs->mount);
+	if (ret < 0 || ret >= sizeof(kpath))
+		return -1;
+
+	ret = unlink(kpath);
+	if (ret && errno != ENOENT) {
+		SYSERROR("error unlinking %s\n", kpath);
+		return -1;
+	}
+
+	ret = symlink("console", kpath);
+	if (ret) {
+		SYSERROR("failed to create symlink for kmsg");
+		return -1;
+	}
+
+	return 0;
 }
 
 static int setup_cgroup(const char *name, struct lxc_list *cgroups)
@@ -1097,27 +1213,50 @@ static inline int mount_entry_on_systemfs(struct mntent *mntent)
 }
 
 static int mount_entry_on_absolute_rootfs(struct mntent *mntent,
-					  const struct lxc_rootfs *rootfs)
+					  const struct lxc_rootfs *rootfs,
+					  const char *lxc_name)
 {
 	char *aux;
 	char path[MAXPATHLEN];
 	unsigned long mntflags;
 	char *mntdata;
-	int ret = 0;
+	int r, ret = 0, offset;
 
 	if (parse_mntopts(mntent->mnt_opts, &mntflags, &mntdata) < 0) {
 		ERROR("failed to parse mount option '%s'", mntent->mnt_opts);
 		return -1;
 	}
 
+	/* if rootfs->path is a blockdev path, allow container fstab to
+	 * use /var/lib/lxc/CN/rootfs as the target prefix */
+	r = snprintf(path, MAXPATHLEN, "/var/lib/lxc/%s/rootfs", lxc_name);
+	if (r < 0 || r >= MAXPATHLEN)
+		goto skipvarlib;
+
+	aux = strstr(mntent->mnt_dir, path);
+	if (aux) {
+		offset = strlen(path);
+		goto skipabs;
+	}
+
+skipvarlib:
 	aux = strstr(mntent->mnt_dir, rootfs->path);
 	if (!aux) {
 		WARN("ignoring mount point '%s'", mntent->mnt_dir);
 		goto out;
 	}
+	offset = strlen(rootfs->path);
 
-	snprintf(path, MAXPATHLEN, "%s/%s", rootfs->mount,
-		 aux + strlen(rootfs->path));
+skipabs:
+
+	r = snprintf(path, MAXPATHLEN, "%s/%s", rootfs->mount,
+		 aux + offset);
+	if (r < 0 || r >= MAXPATHLEN) {
+		WARN("pathnme too long for '%s'", mntent->mnt_dir);
+		ret = -1;
+		goto out;
+	}
+
 
 	ret = mount_entry(mntent->mnt_fsname, path, mntent->mnt_type,
 			  mntflags, mntdata);
@@ -1141,7 +1280,11 @@ static int mount_entry_on_relative_rootfs(struct mntent *mntent,
 	}
 
         /* relative to root mount point */
-	snprintf(path, sizeof(path), "%s/%s", rootfs, mntent->mnt_dir);
+	ret = snprintf(path, sizeof(path), "%s/%s", rootfs, mntent->mnt_dir);
+	if (ret >= sizeof(path)) {
+		ERROR("path name too long");
+		return -1;
+	}
 
 	ret = mount_entry(mntent->mnt_fsname, path, mntent->mnt_type,
 			  mntflags, mntdata);
@@ -1151,7 +1294,8 @@ static int mount_entry_on_relative_rootfs(struct mntent *mntent,
 	return ret;
 }
 
-static int mount_file_entries(const struct lxc_rootfs *rootfs, FILE *file)
+static int mount_file_entries(const struct lxc_rootfs *rootfs, FILE *file,
+	const char *lxc_name)
 {
 	struct mntent *mntent;
 	int ret = -1;
@@ -1172,7 +1316,7 @@ static int mount_file_entries(const struct lxc_rootfs *rootfs, FILE *file)
 			continue;
 		}
 
-		if (mount_entry_on_absolute_rootfs(mntent, rootfs))
+		if (mount_entry_on_absolute_rootfs(mntent, rootfs, lxc_name))
 			goto out;
 	}
 
@@ -1183,7 +1327,8 @@ out:
 	return ret;
 }
 
-static int setup_mount(const struct lxc_rootfs *rootfs, const char *fstab)
+static int setup_mount(const struct lxc_rootfs *rootfs, const char *fstab,
+	const char *lxc_name)
 {
 	FILE *file;
 	int ret;
@@ -1197,13 +1342,14 @@ static int setup_mount(const struct lxc_rootfs *rootfs, const char *fstab)
 		return -1;
 	}
 
-	ret = mount_file_entries(rootfs, file);
+	ret = mount_file_entries(rootfs, file, lxc_name);
 
 	endmntent(file);
 	return ret;
 }
 
-static int setup_mount_entries(const struct lxc_rootfs *rootfs, struct lxc_list *mount)
+static int setup_mount_entries(const struct lxc_rootfs *rootfs, struct lxc_list *mount,
+	const char *lxc_name)
 {
 	FILE *file;
 	struct lxc_list *iterator;
@@ -1223,7 +1369,7 @@ static int setup_mount_entries(const struct lxc_rootfs *rootfs, struct lxc_list 
 
 	rewind(file);
 
-	ret = mount_file_entries(rootfs, file);
+	ret = mount_file_entries(rootfs, file, lxc_name);
 
 	fclose(file);
 	return ret;
@@ -1572,6 +1718,7 @@ static int setup_private_host_hw_addr(char *veth1)
 struct lxc_conf *lxc_conf_init(void)
 {
 	struct lxc_conf *new;
+	int i;
 
 	new = 	malloc(sizeof(*new));
 	if (!new) {
@@ -1591,6 +1738,14 @@ struct lxc_conf *lxc_conf_init(void)
 	lxc_list_init(&new->network);
 	lxc_list_init(&new->mount_list);
 	lxc_list_init(&new->caps);
+	for (i=0; i<NUM_LXC_HOOKS; i++)
+		lxc_list_init(&new->hooks[i]);
+#if HAVE_APPARMOR
+	new->aa_profile = NULL;
+#endif
+#if HAVE_APPARMOR /* || HAVE_SMACK || HAVE_SELINUX */
+	new->lsm_umount_proc = 0;
+#endif
 
 	return new;
 }
@@ -1604,7 +1759,11 @@ static int instanciate_veth(struct lxc_handler *handler, struct lxc_netdev *netd
 	if (netdev->priv.veth_attr.pair)
 		veth1 = netdev->priv.veth_attr.pair;
 	else {
-		snprintf(veth1buf, sizeof(veth1buf), "vethXXXXXX");
+		err = snprintf(veth1buf, sizeof(veth1buf), "vethXXXXXX");
+		if (err >= sizeof(veth1buf)) { /* can't *really* happen, but... */
+			ERROR("veth1 name too long");
+			return -1;
+		}
 		veth1 = mktemp(veth1buf);
 	}
 
@@ -1692,7 +1851,9 @@ static int instanciate_macvlan(struct lxc_handler *handler, struct lxc_netdev *n
 		return -1;
 	}
 
-	snprintf(peerbuf, sizeof(peerbuf), "mcXXXXXX");
+	err = snprintf(peerbuf, sizeof(peerbuf), "mcXXXXXX");
+	if (err >= sizeof(peerbuf))
+		return -1;
 
 	peer = mktemp(peerbuf);
 	if (!strlen(peer)) {
@@ -1739,7 +1900,11 @@ static int instanciate_vlan(struct lxc_handler *handler, struct lxc_netdev *netd
 		return -1;
 	}
 
-	snprintf(peer, sizeof(peer), "vlan%d", netdev->priv.vlan_attr.vid);
+	err = snprintf(peer, sizeof(peer), "vlan%d", netdev->priv.vlan_attr.vid);
+	if (err >= sizeof(peer)) {
+		ERROR("peer name too long");
+		return -1;
+	}
 
 	err = lxc_vlan_create(netdev->link, peer, netdev->priv.vlan_attr.vid);
 	if (err) {
@@ -1987,6 +2152,10 @@ void lxc_delete_tty(struct lxc_tty_info *tty_info)
 
 int lxc_setup(const char *name, struct lxc_conf *lxc_conf)
 {
+#if HAVE_APPARMOR /* || HAVE_SMACK || HAVE_SELINUX */
+	int mounted;
+#endif
+
 	if (setup_utsname(lxc_conf->utsname)) {
 		ERROR("failed to setup the utsname for '%s'", name);
 		return -1;
@@ -2002,13 +2171,18 @@ int lxc_setup(const char *name, struct lxc_conf *lxc_conf)
 		return -1;
 	}
 
-	if (setup_mount(&lxc_conf->rootfs, lxc_conf->fstab)) {
+	if (setup_mount(&lxc_conf->rootfs, lxc_conf->fstab, name)) {
 		ERROR("failed to setup the mounts for '%s'", name);
 		return -1;
 	}
 
-	if (setup_mount_entries(&lxc_conf->rootfs, &lxc_conf->mount_list)) {
+	if (setup_mount_entries(&lxc_conf->rootfs, &lxc_conf->mount_list, name)) {
 		ERROR("failed to setup the mount entries for '%s'", name);
+		return -1;
+	}
+
+	if (run_lxc_hooks(name, "mount", lxc_conf)) {
+		ERROR("failed to run mount hooks for container '%s'.", name);
 		return -1;
 	}
 
@@ -2022,10 +2196,30 @@ int lxc_setup(const char *name, struct lxc_conf *lxc_conf)
 		return -1;
 	}
 
+	if (setup_kmsg(&lxc_conf->rootfs, &lxc_conf->console)) {
+		ERROR("failed to setup kmsg for '%s'", name);
+		return -1;
+	}
+
 	if (setup_tty(&lxc_conf->rootfs, &lxc_conf->tty_info, lxc_conf->ttydir)) {
 		ERROR("failed to setup the ttys for '%s'", name);
 		return -1;
 	}
+
+#if HAVE_APPARMOR /* || HAVE_SMACK || HAVE_SELINUX */
+	INFO("rootfs path is .%s., mount is .%s.", lxc_conf->rootfs.path,
+		lxc_conf->rootfs.mount);
+	if (lxc_conf->rootfs.path == NULL || strlen(lxc_conf->rootfs.path) == 0)
+		mounted = 0;
+	else
+		mounted = lsm_mount_proc_if_needed(lxc_conf->rootfs.path, lxc_conf->rootfs.mount);
+	if (mounted == -1) {
+		SYSERROR("failed to mount /proc in the container.");
+		return -1;
+	} else if (mounted == 1) {
+		lxc_conf->lsm_umount_proc = 1;
+	}
+#endif
 
 	if (setup_pivot_root(&lxc_conf->rootfs)) {
 		ERROR("failed to set rootfs for '%s'", name);
@@ -2049,5 +2243,30 @@ int lxc_setup(const char *name, struct lxc_conf *lxc_conf)
 
 	NOTICE("'%s' is setup.", name);
 
+	return 0;
+}
+
+int run_lxc_hooks(const char *name, char *hook, struct lxc_conf *conf)
+{
+	int which = -1;
+	struct lxc_list *it;
+
+	if (strcmp(hook, "pre-start") == 0)
+		which = LXCHOOK_PRESTART;
+	else if (strcmp(hook, "mount") == 0)
+		which = LXCHOOK_MOUNT;
+	else if (strcmp(hook, "start") == 0)
+		which = LXCHOOK_START;
+	else if (strcmp(hook, "post-stop") == 0)
+		which = LXCHOOK_POSTSTOP;
+	else
+		return -1;
+	lxc_list_for_each(it, &conf->hooks[which]) {
+		int ret;
+		char *hookname = it->elem;
+		ret = run_script(name, "lxc", hookname, hook, NULL);
+		if (ret)
+			return ret;
+	}
 	return 0;
 }

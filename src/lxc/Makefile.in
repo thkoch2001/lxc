@@ -37,6 +37,7 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 so_PROGRAMS = liblxc.so$(EXEEXT)
+@ENABLE_APPARMOR_TRUE@am__append_1 = -DHAVE_APPARMOR
 bin_PROGRAMS = lxc-attach$(EXEEXT) lxc-unshare$(EXEEXT) \
 	lxc-stop$(EXEEXT) lxc-start$(EXEEXT) lxc-execute$(EXEEXT) \
 	lxc-monitor$(EXEEXT) lxc-wait$(EXEEXT) lxc-console$(EXEEXT) \
@@ -44,7 +45,7 @@ bin_PROGRAMS = lxc-attach$(EXEEXT) lxc-unshare$(EXEEXT) \
 	lxc-unfreeze$(EXEEXT) lxc-checkpoint$(EXEEXT) \
 	lxc-restart$(EXEEXT) lxc-kill$(EXEEXT)
 pkglibexec_PROGRAMS = lxc-init$(EXEEXT)
-@ENABLE_RPATH_TRUE@am__append_1 = -Wl,-rpath -Wl,$(libdir)
+@ENABLE_RPATH_TRUE@am__append_2 = -Wl,-rpath -Wl,$(libdir)
 subdir = src/lxc
 DIST_COMMON = $(pkginclude_HEADERS) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in $(srcdir)/lxc-checkconfig.in \
@@ -52,17 +53,17 @@ DIST_COMMON = $(pkginclude_HEADERS) $(srcdir)/Makefile.am \
 	$(srcdir)/lxc-destroy.in $(srcdir)/lxc-ls.in \
 	$(srcdir)/lxc-netstat.in $(srcdir)/lxc-ps.in \
 	$(srcdir)/lxc-setcap.in $(srcdir)/lxc-setuid.in \
-	$(srcdir)/lxc-version.in
+	$(srcdir)/lxc-shutdown.in $(srcdir)/lxc-version.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/config/acinclude.m4 \
-	$(top_srcdir)/config/linux.m4 $(top_srcdir)/configure.ac
+	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/src/config.h
 CONFIG_CLEAN_FILES = lxc-ps lxc-ls lxc-netstat lxc-checkconfig \
 	lxc-setcap lxc-setuid lxc-version lxc-create lxc-clone \
-	lxc-destroy
+	lxc-shutdown lxc-destroy
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)" "$(DESTDIR)$(pkglibexecdir)" \
 	"$(DESTDIR)$(sodir)" "$(DESTDIR)$(bindir)" \
@@ -82,10 +83,11 @@ am_liblxc_so_OBJECTS = liblxc_so-arguments.$(OBJEXT) \
 	liblxc_so-network.$(OBJEXT) liblxc_so-nl.$(OBJEXT) \
 	liblxc_so-rtnl.$(OBJEXT) liblxc_so-genl.$(OBJEXT) \
 	liblxc_so-caps.$(OBJEXT) liblxc_so-mainloop.$(OBJEXT) \
-	liblxc_so-af_unix.$(OBJEXT) liblxc_so-utmp.$(OBJEXT)
+	liblxc_so-af_unix.$(OBJEXT) liblxc_so-utmp.$(OBJEXT) \
+	liblxc_so-apparmor.$(OBJEXT)
 liblxc_so_OBJECTS = $(am_liblxc_so_OBJECTS)
 am__DEPENDENCIES_1 =
-liblxc_so_DEPENDENCIES = $(am__DEPENDENCIES_1)
+liblxc_so_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 liblxc_so_LINK = $(CCLD) $(liblxc_so_CFLAGS) $(CFLAGS) \
 	$(liblxc_so_LDFLAGS) $(LDFLAGS) -o $@
 am_lxc_attach_OBJECTS = lxc_attach.$(OBJEXT)
@@ -204,6 +206,7 @@ CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 ACLOCAL = @ACLOCAL@
 AMTAR = @AMTAR@
+APPARMOR_LIBS = @APPARMOR_LIBS@
 AUTOCONF = @AUTOCONF@
 AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
@@ -234,10 +237,9 @@ INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LDFLAGS = @LDFLAGS@
 LIBDIR = @LIBDIR@
+LIBEXECDIR = @LIBEXECDIR@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
-LINUX_DIR = @LINUX_DIR@
-LINUX_SRCARCH = @LINUX_SRCARCH@
 LOCALSTATEDIR = @LOCALSTATEDIR@
 LTLIBOBJS = @LTLIBOBJS@
 LXCINITDIR = @LXCINITDIR@
@@ -366,19 +368,18 @@ liblxc_so_SOURCES = \
 	mainloop.c mainloop.h \
 	af_unix.c af_unix.h \
 	\
-	utmp.c utmp.h
+	utmp.c utmp.h \
+	apparmor.c apparmor.h
 
-AM_CFLAGS = -I$(top_srcdir)/src \
-	-DLXCROOTFSMOUNT=\"$(LXCROOTFSMOUNT)\" \
-	-DLXCPATH=\"$(LXCPATH)\" \
-	-DLXCINITDIR=\"$(LXCINITDIR)\"
-
+AM_CFLAGS = -I$(top_srcdir)/src -DLXCROOTFSMOUNT=\"$(LXCROOTFSMOUNT)\" \
+	-DLXCPATH=\"$(LXCPATH)\" -DLXCINITDIR=\"$(LXCINITDIR)\" \
+	$(am__append_1)
 liblxc_so_CFLAGS = -fPIC -DPIC $(AM_CFLAGS)
 liblxc_so_LDFLAGS = \
 	-shared \
 	-Wl,-soname,liblxc.so.$(firstword $(subst ., ,$(VERSION)))
 
-liblxc_so_LDADD = -lutil $(CAP_LIBS)
+liblxc_so_LDADD = -lutil $(CAP_LIBS) $(APPARMOR_LIBS)
 bin_SCRIPTS = \
 	lxc-ps \
 	lxc-netstat \
@@ -389,10 +390,11 @@ bin_SCRIPTS = \
 	lxc-version \
 	lxc-create \
 	lxc-clone \
+	lxc-shutdown \
 	lxc-destroy
 
-AM_LDFLAGS = -Wl,-E $(am__append_1)
-LDADD = liblxc.so @CAP_LIBS@
+AM_LDFLAGS = -Wl,-E $(am__append_2)
+LDADD = liblxc.so @CAP_LIBS@ @APPARMOR_LIBS@
 lxc_attach_SOURCES = lxc_attach.c
 lxc_cgroup_SOURCES = lxc_cgroup.c
 lxc_checkpoint_SOURCES = lxc_checkpoint.c
@@ -460,6 +462,8 @@ lxc-version: $(top_builddir)/config.status $(srcdir)/lxc-version.in
 lxc-create: $(top_builddir)/config.status $(srcdir)/lxc-create.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 lxc-clone: $(top_builddir)/config.status $(srcdir)/lxc-clone.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+lxc-shutdown: $(top_builddir)/config.status $(srcdir)/lxc-shutdown.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 lxc-destroy: $(top_builddir)/config.status $(srcdir)/lxc-destroy.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
@@ -667,6 +671,7 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/liblxc_so-af_unix.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/liblxc_so-apparmor.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/liblxc_so-arguments.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/liblxc_so-attach.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/liblxc_so-caps.Po@am__quote@
@@ -1131,6 +1136,20 @@ liblxc_so-utmp.obj: utmp.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='utmp.c' object='liblxc_so-utmp.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(liblxc_so_CFLAGS) $(CFLAGS) -c -o liblxc_so-utmp.obj `if test -f 'utmp.c'; then $(CYGPATH_W) 'utmp.c'; else $(CYGPATH_W) '$(srcdir)/utmp.c'; fi`
+
+liblxc_so-apparmor.o: apparmor.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(liblxc_so_CFLAGS) $(CFLAGS) -MT liblxc_so-apparmor.o -MD -MP -MF $(DEPDIR)/liblxc_so-apparmor.Tpo -c -o liblxc_so-apparmor.o `test -f 'apparmor.c' || echo '$(srcdir)/'`apparmor.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/liblxc_so-apparmor.Tpo $(DEPDIR)/liblxc_so-apparmor.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='apparmor.c' object='liblxc_so-apparmor.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(liblxc_so_CFLAGS) $(CFLAGS) -c -o liblxc_so-apparmor.o `test -f 'apparmor.c' || echo '$(srcdir)/'`apparmor.c
+
+liblxc_so-apparmor.obj: apparmor.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(liblxc_so_CFLAGS) $(CFLAGS) -MT liblxc_so-apparmor.obj -MD -MP -MF $(DEPDIR)/liblxc_so-apparmor.Tpo -c -o liblxc_so-apparmor.obj `if test -f 'apparmor.c'; then $(CYGPATH_W) 'apparmor.c'; else $(CYGPATH_W) '$(srcdir)/apparmor.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/liblxc_so-apparmor.Tpo $(DEPDIR)/liblxc_so-apparmor.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='apparmor.c' object='liblxc_so-apparmor.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(liblxc_so_CFLAGS) $(CFLAGS) -c -o liblxc_so-apparmor.obj `if test -f 'apparmor.c'; then $(CYGPATH_W) 'apparmor.c'; else $(CYGPATH_W) '$(srcdir)/apparmor.c'; fi`
 install-pkgincludeHEADERS: $(pkginclude_HEADERS)
 	@$(NORMAL_INSTALL)
 	test -z "$(pkgincludedir)" || $(MKDIR_P) "$(DESTDIR)$(pkgincludedir)"
@@ -1268,8 +1287,8 @@ maintainer-clean-generic:
 	@echo "it deletes files that may require special tools to rebuild."
 clean: clean-am
 
-clean-am: clean-binPROGRAMS clean-generic clean-local \
-	clean-pkglibexecPROGRAMS clean-soPROGRAMS mostlyclean-am
+clean-am: clean-binPROGRAMS clean-generic clean-pkglibexecPROGRAMS \
+	clean-soPROGRAMS mostlyclean-am
 
 distclean: distclean-am
 	-rm -rf ./$(DEPDIR)
@@ -1342,22 +1361,22 @@ uninstall-am: uninstall-binPROGRAMS uninstall-binSCRIPTS \
 .MAKE: install-am install-strip
 
 .PHONY: CTAGS GTAGS all all-am check check-am clean clean-binPROGRAMS \
-	clean-generic clean-local clean-pkglibexecPROGRAMS \
-	clean-soPROGRAMS ctags distclean distclean-compile \
-	distclean-generic distclean-tags distdir dvi dvi-am html \
-	html-am info info-am install install-am install-binPROGRAMS \
-	install-binSCRIPTS install-data install-data-am install-dvi \
-	install-dvi-am install-exec install-exec-am install-exec-local \
-	install-html install-html-am install-info install-info-am \
-	install-man install-pdf install-pdf-am \
-	install-pkgincludeHEADERS install-pkglibexecPROGRAMS \
-	install-ps install-ps-am install-soPROGRAMS install-strip \
-	installcheck installcheck-am installdirs maintainer-clean \
-	maintainer-clean-generic mostlyclean mostlyclean-compile \
-	mostlyclean-generic pdf pdf-am ps ps-am tags uninstall \
-	uninstall-am uninstall-binPROGRAMS uninstall-binSCRIPTS \
-	uninstall-local uninstall-pkgincludeHEADERS \
-	uninstall-pkglibexecPROGRAMS uninstall-soPROGRAMS
+	clean-generic clean-pkglibexecPROGRAMS clean-soPROGRAMS ctags \
+	distclean distclean-compile distclean-generic distclean-tags \
+	distdir dvi dvi-am html html-am info info-am install \
+	install-am install-binPROGRAMS install-binSCRIPTS install-data \
+	install-data-am install-dvi install-dvi-am install-exec \
+	install-exec-am install-exec-local install-html \
+	install-html-am install-info install-info-am install-man \
+	install-pdf install-pdf-am install-pkgincludeHEADERS \
+	install-pkglibexecPROGRAMS install-ps install-ps-am \
+	install-soPROGRAMS install-strip installcheck installcheck-am \
+	installdirs maintainer-clean maintainer-clean-generic \
+	mostlyclean mostlyclean-compile mostlyclean-generic pdf pdf-am \
+	ps ps-am tags uninstall uninstall-am uninstall-binPROGRAMS \
+	uninstall-binSCRIPTS uninstall-local \
+	uninstall-pkgincludeHEADERS uninstall-pkglibexecPROGRAMS \
+	uninstall-soPROGRAMS
 
 
 install-exec-local: install-soPROGRAMS
@@ -1368,17 +1387,6 @@ install-exec-local: install-soPROGRAMS
 
 uninstall-local:
 	$(RM) $(DESTDIR)$(libdir)/liblxc.so*
-
-namespace.c: setns.h
-
-setns.h:
-	-$(CC) $(CPPFLAGS) -M -MT$@ $(LINUX_DIR)/arch/$(LINUX_SRCARCH)/include/asm/unistd.h >setns.P
-	-$(CPP) $(CPPFLAGS) -dM $(LINUX_DIR)/arch/$(LINUX_SRCARCH)/include/asm/unistd.h |grep setns > $@
-
-clean-local:
-	$(RM) setns.h setns.P
-
--include setns.P
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

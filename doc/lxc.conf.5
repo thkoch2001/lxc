@@ -3,7 +3,7 @@
 .\" <http://shell.ipoline.com/~elmert/comp/docbook2X/> 
 .\" Please send any bug reports, improvements, comments, patches, 
 .\" etc. to Steve Cheng <steve@ggi-project.org>.
-.TH "LXC.CONF" "5" "02 March 2012" "" ""
+.TH "LXC.CONF" "5" "11 November 2012" "" ""
 
 .SH NAME
 lxc.conf \- linux container configuration file
@@ -239,6 +239,22 @@ annoying messages on the console.
 \fB     lxc.tty \fR
 Specify the number of tty to make available to the
 container.
+.SS "CONSOLE DEVICES LOCATION"
+.PP
+LXC consoles are provided through Unix98 PTYs created on the
+host and bind-mounted over the expected devices in the container.
+By default, they are bind-mounted over \fI/dev/console\fR
+and \fI/dev/ttyN\fR\&.  This can prevent package upgrades
+in the guest.  Therefore you can specify a directory location (under
+\fI/dev\fR under which LXC will create the files and
+bind-mount over them.  These will then be symbolically linked to
+\fI/dev/console\fR and \fI/dev/ttyN\fR\&.
+A package upgrade can then succeed as it is able to remove and replace
+the symbolic links.
+.TP
+\fB     lxc.devttydir \fR
+Specify a directory under \fI/dev\fR
+under which to create the container console devices.
 .SS "MOUNT POINTS"
 .PP
 The mount points section specifies the different places to be
@@ -254,7 +270,7 @@ mount informations. If the rootfs is an image file or a
 device block and the fstab is used to mount a point
 somewhere in this rootfs, the path of the rootfs mount
 point should be prefixed with the
-\fI${libdir}/lxc/rootfs\fR default path or
+\fI/usr/lib/lxc/rootfs\fR default path or
 the value of \fBlxc.rootfs.mount\fR if
 specified.
 .TP
@@ -334,7 +350,7 @@ eth0.
 	lxc.network.link = br0
 	lxc.network.name = eth0
 	lxc.network.hwaddr = 4a:49:43:49:79:bf
-	lxc.network.ipv4 = 1.2.3.5/24 1.2.3.255
+	lxc.network.ipv4 = 10.2.3.5/24 10.2.3.255
 	lxc.network.ipv6 = 2003:db8:1:0:214:1234:fe0b:3597
       
 .fi
@@ -365,21 +381,21 @@ mounting some locations and a changing root file system.
 	lxc.network.flags = up
 	lxc.network.link = br0
 	lxc.network.hwaddr = 4a:49:43:49:79:bf
-	lxc.network.ipv4 = 1.2.3.5/24 1.2.3.255
+	lxc.network.ipv4 = 10.2.3.5/24 10.2.3.255
 	lxc.network.ipv6 = 2003:db8:1:0:214:1234:fe0b:3597
 	lxc.network.ipv6 = 2003:db8:1:0:214:5432:feab:3588
 	lxc.network.type = macvlan
 	lxc.network.flags = up
 	lxc.network.link = eth0
 	lxc.network.hwaddr = 4a:49:43:49:79:bd
-	lxc.network.ipv4 = 1.2.3.4/24
+	lxc.network.ipv4 = 10.2.3.4/24
 	lxc.network.ipv4 = 192.168.10.125/24
 	lxc.network.ipv6 = 2003:db8:1:0:214:1234:fe0b:3596
 	lxc.network.type = phys
 	lxc.network.flags = up
 	lxc.network.link = dummy0
 	lxc.network.hwaddr = 4a:49:43:49:79:ff
-	lxc.network.ipv4 = 1.2.3.6/24
+	lxc.network.ipv4 = 10.2.3.6/24
 	lxc.network.ipv6 = 2003:db8:1:0:214:1234:fe0b:3297
 	lxc.cgroup.cpuset.cpus = 0,1
 	lxc.cgroup.cpu.shares = 1234
