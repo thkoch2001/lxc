@@ -1,5 +1,5 @@
-02-lxc-distclean.patch
-03-lxc-configuration-path.patch
-06-bash.patch
-08-lxc-debconfig.patch
-14-lxc-destroy-symlinks.patch
+01-lxc-distclean.patch
+02-lxc-configuration-path.patch
+03-bash.patch
+04-lxc-debconfig.patch
+05-lxc-destroy-symlinks.patch
