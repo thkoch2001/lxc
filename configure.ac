@@ -1,7 +1,7 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-AC_INIT([lxc], [0.8.0-rc1])
+AC_INIT([lxc], [0.8.0])
 
 AC_CONFIG_SRCDIR([configure.ac])
 AC_CONFIG_AUX_DIR([config])
@@ -18,6 +18,11 @@ AC_ARG_ENABLE([rpath],
 
 AM_CONDITIONAL([ENABLE_RPATH], [test "x$enable_rpath" = "xyes"])
 
+AC_ARG_ENABLE([apparmor],
+	[AC_HELP_STRING([--enable-apparmor], [enable apparmor])],
+	[], [enable_apparmor=yes])
+AM_CONDITIONAL([ENABLE_APPARMOR], [test "x$enable_apparmor" = "xyes"])
+
 AC_ARG_ENABLE([doc],
 	[AC_HELP_STRING([--enable-doc], [make mans (require docbook2man installed) [default=auto]])],
 	[], [enable_doc=auto])
@@ -28,6 +33,11 @@ if test "x$enable_doc" = "xyes" -o "x$enable_doc" = "xauto"; then
 	test "x$have_docbook" = "xno" -a "x$enable_doc" = "xyes" && \
 		AC_MSG_ERROR([docbook2man required by man request, but not found])
 fi
+
+AM_COND_IF([ENABLE_APPARMOR],
+    [AC_CHECK_HEADER([sys/apparmor.h],[],[AC_MSG_ERROR([You must install the AppArmor development package in order to compile lxc])])
+     AC_CHECK_LIB([apparmor], [aa_change_profile],[],[AC_MSG_ERROR([You must install the AppArmor development package in order to compile lxc])])
+     AC_SUBST([APPARMOR_LIBS], [-lapparmor])])
 
 AM_CONDITIONAL([ENABLE_DOCBOOK], [test "x$have_docbook" = "xyes"])
 
@@ -40,6 +50,7 @@ AM_CONDITIONAL([ENABLE_EXAMPLES], [test "x$enable_examples" = "xyes"])
 AS_AC_EXPAND(PREFIX, $prefix)
 AS_AC_EXPAND(LIBDIR, $libdir)
 AS_AC_EXPAND(BINDIR, $bindir)
+AS_AC_EXPAND(LIBEXECDIR, $libexecdir)
 AS_AC_EXPAND(INCLUDEDIR, $includedir)
 AS_AC_EXPAND(SYSCONFDIR, $sysconfdir)
 AS_AC_EXPAND(DATADIR, $datadir)
@@ -59,19 +70,19 @@ AC_ARG_WITH([rootfs-path],
 	)], [], [with_rootfs_path=['${libdir}/lxc/rootfs']])
 
 AS_AC_EXPAND(LXC_GENERATE_DATE, "$(date)")
+AS_AC_EXPAND(LXCPATH, "${with_config_path}")
+AS_AC_EXPAND(LXCROOTFSMOUNT, "${with_rootfs_path}")
+AS_AC_EXPAND(LXCTEMPLATEDIR, ['${datadir}/lxc/templates'])
 
-AC_SUBST(LXCPATH, "${with_config_path}")
-AC_SUBST(LXCROOTFSMOUNT, "${with_rootfs_path}")
-AC_SUBST(LXCINITDIR, ['${libexecdir}/lxc'])
-AC_SUBST(LXCTEMPLATEDIR, ['${libdir}/lxc/templates'])
+AC_SUBST(LXCINITDIR, ['${libexecdir}'])
 
-AC_CHECK_HEADERS([linux/netlink.h linux/genetlink.h],
+AC_CHECK_HEADERS([linux/unistd.h linux/netlink.h linux/genetlink.h],
 				  [],
-				  AC_MSG_ERROR([netlink headers not found. Please install the linux kernel headers.]),
+				  AC_MSG_ERROR([Please install the Linux kernel headers.]),
 				  [#include <sys/socket.h>
 		 ])
 
-AC_CHECK_HEADERS([sys/capability.h], [], AC_MSG_ERROR([please install libcap-devel.]),
+AC_CHECK_HEADERS([sys/capability.h], [], AC_MSG_ERROR([Please install the libcap development files.]),
 [#include <sys/types.h>
 #include <sys/capability.h>])
 AC_CHECK_LIB(cap,cap_set_proc,caplib=yes,caplib=no)
@@ -90,8 +101,6 @@ AC_CHECK_DECLS([PR_CAPBSET_DROP], [], [], [#include <sys/prctl.h>])
 AC_CHECK_HEADERS([sys/signalfd.h])
 
 AC_PROG_GCC_TRADITIONAL
-
-AC_LINUX
 
 if test "x$GCC" = "xyes"; then
   CFLAGS="$CFLAGS -Wall"
@@ -160,6 +169,7 @@ AC_CONFIG_FILES([
 	src/lxc/lxc-version
 	src/lxc/lxc-create
 	src/lxc/lxc-clone
+	src/lxc/lxc-shutdown
 	src/lxc/lxc-destroy
 
 ])

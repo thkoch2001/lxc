@@ -21,8 +21,8 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 Name: lxc
-Version: 0.8.0-rc1
-Release: 1
+Version: 0.8.0
+Release: 1%{?dist}
 URL: http://lxc.sourceforge.net
 Source: http://dl.sourceforge.net/sourceforge/%{name}/%{name}-%{version}.tar.gz
 Summary: %{name} : Linux Container
@@ -52,7 +52,6 @@ Group:          System Environment/Libraries
 The %{name}-libs package contains libraries for running %{name} applications.
 
 %package devel
-Release: 1
 Summary: development library for %{name}
 Group: Development/Libraries
 
@@ -63,14 +62,13 @@ development of the linux containers.
 %prep
 %setup
 %build
-test "%{ksrc}" != "none" && args="--with-linuxdir=%{ksrc}"
 PATH=$PATH:/usr/sbin:/sbin %configure $args --disable-rpath
 make %{?_smp_mflags}
 
 %install
-%makeinstall
-
-find $RPM_BUILD_ROOT -type f -name '*.la' -exec rm -f {} ';'  
+rm -rf %{buildroot}
+make install DESTDIR=%{buildroot}
+find %{buildroot} -type f -name '*.la' -exec rm -f {} ';'
 
 %clean
 rm -rf %{buildroot}
@@ -83,6 +81,7 @@ rm -rf %{buildroot}
 %attr(4111,root,root) %{_bindir}/lxc-attach
 %attr(4111,root,root) %{_bindir}/lxc-create
 %attr(4111,root,root) %{_bindir}/lxc-clone
+%attr(4111,root,root) %{_bindir}/lxc-shutdown
 %attr(4111,root,root) %{_bindir}/lxc-start
 %attr(4111,root,root) %{_bindir}/lxc-netstat
 %attr(4111,root,root) %{_bindir}/lxc-unshare
@@ -91,20 +90,26 @@ rm -rf %{buildroot}
 %attr(4111,root,root) %{_bindir}/lxc-restart
 %{_mandir}/*
 %{_datadir}/doc/*
+%{_datadir}/lxc/*
 
 %files libs
 %defattr(-,root,root)
 %{_libdir}/*.so.*
 %{_libdir}/%{name}
-%attr(4555,root,root) %{_libdir}/%{name}/lxc-init
+%attr(4555,root,root) %{_libexecdir}/%{name}/lxc-init
 
 %files devel
 %defattr(-,root,root)
 %{_includedir}/%{name}/*
 %{_libdir}/*.so
-%{_datadir}/pkgconfig/*
+%{_libdir}/pkgconfig/*
 
 %changelog
+* Mon Sep 10 2012 Dwight Engen <dwight.engen@oracle.com> - Version 0.8.0
+- fix lxc-init moved to libexec
+- .pc moved to _libdir
+- package template files /usr/share/lxc/templates
+
 * Thu Sep  8 2011 Greg Kurz <gkurz@fr.ibm.com> - Version 0.7.5.1
 - fix installed files for rpmbuild
 - introduce lxc-libs package

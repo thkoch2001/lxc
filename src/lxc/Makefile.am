@@ -53,12 +53,17 @@ liblxc_so_SOURCES = \
 	mainloop.c mainloop.h \
 	af_unix.c af_unix.h \
 	\
-	utmp.c utmp.h
+	utmp.c utmp.h \
+	apparmor.c apparmor.h
 
 AM_CFLAGS=-I$(top_srcdir)/src \
 	-DLXCROOTFSMOUNT=\"$(LXCROOTFSMOUNT)\" \
 	-DLXCPATH=\"$(LXCPATH)\" \
 	-DLXCINITDIR=\"$(LXCINITDIR)\"
+
+if ENABLE_APPARMOR
+AM_CFLAGS += -DHAVE_APPARMOR
+endif
 
 liblxc_so_CFLAGS = -fPIC -DPIC $(AM_CFLAGS)
 
@@ -66,7 +71,7 @@ liblxc_so_LDFLAGS = \
 	-shared \
 	-Wl,-soname,liblxc.so.$(firstword $(subst ., ,$(VERSION)))
 
-liblxc_so_LDADD = -lutil $(CAP_LIBS)
+liblxc_so_LDADD = -lutil $(CAP_LIBS) $(APPARMOR_LIBS)
 
 bin_SCRIPTS = \
 	lxc-ps \
@@ -78,6 +83,7 @@ bin_SCRIPTS = \
 	lxc-version \
 	lxc-create \
 	lxc-clone \
+	lxc-shutdown \
 	lxc-destroy
 
 bin_PROGRAMS = \
@@ -104,7 +110,7 @@ AM_LDFLAGS = -Wl,-E
 if ENABLE_RPATH
 AM_LDFLAGS += -Wl,-rpath -Wl,$(libdir)
 endif
-LDADD=liblxc.so @CAP_LIBS@
+LDADD=liblxc.so @CAP_LIBS@ @APPARMOR_LIBS@
 
 lxc_attach_SOURCES = lxc_attach.c
 lxc_cgroup_SOURCES = lxc_cgroup.c
@@ -131,14 +137,3 @@ install-exec-local: install-soPROGRAMS
 
 uninstall-local:
 	$(RM) $(DESTDIR)$(libdir)/liblxc.so*
-
-namespace.c: setns.h
-
-setns.h:
-	-$(CC) $(CPPFLAGS) -M -MT$@ $(LINUX_DIR)/arch/$(LINUX_SRCARCH)/include/asm/unistd.h >setns.P
-	-$(CPP) $(CPPFLAGS) -dM $(LINUX_DIR)/arch/$(LINUX_SRCARCH)/include/asm/unistd.h |grep setns > $@
-
-clean-local:
-	$(RM) setns.h setns.P
-
--include setns.P
