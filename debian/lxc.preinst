@@ -1,0 +1,32 @@
+#!/bin/sh
+
+set -e
+
+case "${1}" in
+	install|upgrade)
+		# upgrade from 0.8.0~rc1 to 0.8.0
+		if [ -e /etc/alternatives/lxc-shutdown ]
+		then
+			update-alternatives --remove lxc-shutdown /usr/bin/lxc-stop
+			update-alternatives --remove lxc-shutdown /usr/bin/lxc-halt
+		fi
+
+		if [ -h /usr/bin/lxc-shutdown ]
+		then
+			rm -f /usr/bin/lxc-shutdown
+		fi
+		;;
+
+	abort-upgrade)
+
+		;;
+
+	*)
+		echo "preinst called with unknown argument \`$1'" >&2
+		exit 1
+		;;
+esac
+
+#DEBHELPER#
+
+exit 0

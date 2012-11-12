@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: lxc\n"
 "Report-Msgid-Bugs-To: lxc@packages.debian.org\n"
-"POT-Creation-Date: 2012-02-09 13:08+0100\n"
+"POT-Creation-Date: 2012-11-12 14:51+0100\n"
 "PO-Revision-Date: 2012-05-28 22:24+0100\n"
 "Last-Translator: Miguel Figueiredo <elmig@debianpt.org>\n"
 "Language-Team: Portuguese <traduz@debianpt.org>\n"
@@ -18,7 +18,6 @@ msgstr ""
 #. Type: title
 #. Description
 #: ../lxc.templates:1001
-#| msgid "Linux Containers (LXC) setup"
 msgid "Linux Containers: LXC setup"
 msgstr "Linux Containers: configuração de LXC"
 
@@ -31,9 +30,6 @@ msgstr "Iniciar automaticamente Linux Containers no arranque?"
 #. Type: boolean
 #. Description
 #: ../lxc.templates:2001
-#| msgid ""
-#| "Linux Containers can be automatically started during system boot and shut "
-#| "down on reboot or halt."
 msgid ""
 "Linux Containers that have their configuration files copied or symlinked to "
 "the /etc/lxc/auto directory can be automatically started during system boot, "
@@ -49,51 +45,15 @@ msgstr ""
 msgid "If unsure, choose yes (default)."
 msgstr "Em caso de dúvida, escolha sim (predefinido)."
 
-#. Type: select
-#. Description
-#: ../lxc.templates:3001
-#| msgid "Linux Container: Stop method"
-msgid "Linux Container: Shutdown method"
-msgstr "Linux Container: Método para desligar"
-
-#. Type: select
-#. Description
-#: ../lxc.templates:3001
-#| msgid ""
-#| "Linux Containers can be stopped in different ways. The stop method kills "
-#| "all processes inside the container. The halt method initiates a shutdown, "
-#| "which takes longer and can have problems with containers that don't "
-#| "shutdown themselves properly."
-msgid ""
-"Linux Containers can be shutdown in different ways. The stop method "
-"terminates all processes inside the container. The halt method initiates a "
-"shutdown, which takes longer and can have problems with containers that "
-"don't shutdown themselves properly."
-msgstr ""
-"Os Linux Containers podem ser desligados de várias formas. O método stop "
-"termina todos os processos dentro do container. O método halt inicia uma "
-"paragem, que demora mais e pode ter problemas com containers que não se "
-"desligam a eles próprios correctamente."
-
-#. Type: select
-#. Description
-#: ../lxc.templates:3001
-msgid ""
-"Unless you know that your containers don't shutdown properly, choose halt "
-"(default)."
-msgstr ""
-"A menos que saiba que os seus containers não se desligam convenientemente, "
-"por favor escolha halt (predefinido)."
-
 #. Type: string
 #. Description
-#: ../lxc.templates:4001
+#: ../lxc.templates:3001
 msgid "LXC directory:"
 msgstr "Directório do LXC:"
 
 #. Type: string
 #. Description
-#: ../lxc.templates:4001
+#: ../lxc.templates:3001
 msgid ""
 "Please specify the directory that will be used to store the Linux Containers."
 msgstr ""
@@ -102,9 +62,6 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../lxc.templates:4001
+#: ../lxc.templates:3001
 msgid "If unsure, use /var/lib/lxc (default)."
 msgstr "Em caso de dúvida, utilize /var/lib/lxc (predefinido)."
-
-#~ msgid "If unsure, choose stop (default)."
-#~ msgstr "Em caso de dúvida, escolha stop (pré-definido)."

@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: lxc 0.8.0~rc1-4\n"
 "Report-Msgid-Bugs-To: lxc@packages.debian.org\n"
-"POT-Creation-Date: 2012-02-09 13:08+0100\n"
+"POT-Creation-Date: 2012-11-12 14:51+0100\n"
 "PO-Revision-Date: 2012-05-21 21:39+0400\n"
 "Last-Translator: Yuri Kozlov <yuray@komyakino.ru>\n"
 "Language-Team: Russian <debian-l10n-russian@lists.debian.org>\n"
@@ -49,45 +49,15 @@ msgstr ""
 msgid "If unsure, choose yes (default)."
 msgstr "Если не уверены, ответьте утвердительно (по умолчанию)."
 
-#. Type: select
-#. Description
-#: ../lxc.templates:3001
-msgid "Linux Container: Shutdown method"
-msgstr "Linux Container: метод выключения"
-
-#. Type: select
-#. Description
-#: ../lxc.templates:3001
-msgid ""
-"Linux Containers can be shutdown in different ways. The stop method "
-"terminates all processes inside the container. The halt method initiates a "
-"shutdown, which takes longer and can have problems with containers that "
-"don't shutdown themselves properly."
-msgstr ""
-"Работу Linux Containers можно выключать разными способами. Метод stop "
-"завершает все процессы внутри контейнера. Метод halt запускает процесс "
-"выключения, который выполняется дольше и могут возникнуть проблемы с "
-"контейнерами, которые не могут самостоятельно выключиться правильно."
-
-#. Type: select
-#. Description
-#: ../lxc.templates:3001
-msgid ""
-"Unless you know that your containers don't shutdown properly, choose halt "
-"(default)."
-msgstr ""
-"Если вы знаете, что ваши контейнеры не выключаются корректно, выберите "
-"остановку (halt, по умолчанию)."
-
 #. Type: string
 #. Description
-#: ../lxc.templates:4001
+#: ../lxc.templates:3001
 msgid "LXC directory:"
 msgstr "Каталог LXC:"
 
 #. Type: string
 #. Description
-#: ../lxc.templates:4001
+#: ../lxc.templates:3001
 msgid ""
 "Please specify the directory that will be used to store the Linux Containers."
 msgstr ""
@@ -95,6 +65,6 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../lxc.templates:4001
+#: ../lxc.templates:3001
 msgid "If unsure, use /var/lib/lxc (default)."
 msgstr "Если не уверены, используйте /var/lib/lxc (по умолчанию)."

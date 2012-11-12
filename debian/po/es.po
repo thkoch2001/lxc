@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: lxc 0.8.0~rc1-4\n"
 "Report-Msgid-Bugs-To: lxc@packages.debian.org\n"
-"POT-Creation-Date: 2012-02-09 13:08+0100\n"
+"POT-Creation-Date: 2012-11-12 14:51+0100\n"
 "PO-Revision-Date: 2012-04-19 15:33+0200\n"
 "Last-Translator: Camaleón <noelamac@gmail.com>\n"
 "Language-Team: Debian Spanish <debian-l10n-spanish@lists.debian.org>\n"
@@ -46,46 +46,15 @@ msgstr ""
 msgid "If unsure, choose yes (default)."
 msgstr "Si no está seguro, seleccione «sí» (opción predeterminada)."
 
-#. Type: select
-#. Description
-#: ../lxc.templates:3001
-msgid "Linux Container: Shutdown method"
-msgstr "Contenedores Linux: Método de detención"
-
-#. Type: select
-#. Description
-#: ../lxc.templates:3001
-msgid ""
-"Linux Containers can be shutdown in different ways. The stop method "
-"terminates all processes inside the container. The halt method initiates a "
-"shutdown, which takes longer and can have problems with containers that "
-"don't shutdown themselves properly."
-msgstr ""
-"Los Contenedores Linux se pueden detener de diferentes formas. El método "
-"«detener» finaliza todos los procesos dentro del contenedor. El método "
-"«interrumpir» inicia una secuencia de cierre que lleva más tiempo y puede "
-"tener problemas con los contenedores que no se cierran correctamente por sí­ "
-"mismos."
-
-#. Type: select
-#. Description
-#: ../lxc.templates:3001
-msgid ""
-"Unless you know that your containers don't shutdown properly, choose halt "
-"(default)."
-msgstr ""
-"Seleccione «interrumpir» (opción predeterminada) excepto si sabe que sus "
-"contenedores no se van a cerrar correctamente."
-
 #. Type: string
 #. Description
-#: ../lxc.templates:4001
+#: ../lxc.templates:3001
 msgid "LXC directory:"
 msgstr "Directorio de LXC:"
 
 #. Type: string
 #. Description
-#: ../lxc.templates:4001
+#: ../lxc.templates:3001
 msgid ""
 "Please specify the directory that will be used to store the Linux Containers."
 msgstr ""
@@ -94,6 +63,6 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../lxc.templates:4001
+#: ../lxc.templates:3001
 msgid "If unsure, use /var/lib/lxc (default)."
 msgstr "Si no está seguro, utilice «/var/lib/lxc» (opción predeterminada)."

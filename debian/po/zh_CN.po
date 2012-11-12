@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: lxc-deconf VERSION\n"
 "Report-Msgid-Bugs-To: lxc@packages.debian.org\n"
-"POT-Creation-Date: 2012-02-09 13:08+0100\n"
+"POT-Creation-Date: 2012-11-12 14:51+0100\n"
 "PO-Revision-Date: 2011-11-07 16:15+0800\n"
 "Last-Translator: YunQiang Su <wzssyqa@gmail.com>\n"
 "Language-Team: Chinese (simplified)\n"
@@ -18,8 +18,6 @@ msgstr ""
 #. Type: title
 #. Description
 #: ../lxc.templates:1001
-#, fuzzy
-#| msgid "Linux Containers (LXC) setup"
 msgid "Linux Containers: LXC setup"
 msgstr "Linux Containers (LXC) 设置"
 
@@ -32,10 +30,6 @@ msgstr "引导时自动启动 Linux Containers"
 #. Type: boolean
 #. Description
 #: ../lxc.templates:2001
-#, fuzzy
-#| msgid ""
-#| "Linux Containers can be automatically started during system boot and shut "
-#| "down on reboot or halt."
 msgid ""
 "Linux Containers that have their configuration files copied or symlinked to "
 "the /etc/lxc/auto directory can be automatically started during system boot, "
@@ -48,47 +42,21 @@ msgstr "Linux Containers 可以在系统引导时自动启动，在重新引导�
 msgid "If unsure, choose yes (default)."
 msgstr ""
 
-#. Type: select
-#. Description
-#: ../lxc.templates:3001
-#, fuzzy
-#| msgid "Linux Containers (LXC) setup"
-msgid "Linux Container: Shutdown method"
-msgstr "Linux Containers (LXC) 设置"
-
-#. Type: select
-#. Description
-#: ../lxc.templates:3001
-msgid ""
-"Linux Containers can be shutdown in different ways. The stop method "
-"terminates all processes inside the container. The halt method initiates a "
-"shutdown, which takes longer and can have problems with containers that "
-"don't shutdown themselves properly."
-msgstr ""
-
-#. Type: select
-#. Description
-#: ../lxc.templates:3001
-msgid ""
-"Unless you know that your containers don't shutdown properly, choose halt "
-"(default)."
-msgstr ""
-
 #. Type: string
 #. Description
-#: ../lxc.templates:4001
+#: ../lxc.templates:3001
 msgid "LXC directory:"
 msgstr ""
 
 #. Type: string
 #. Description
-#: ../lxc.templates:4001
+#: ../lxc.templates:3001
 msgid ""
 "Please specify the directory that will be used to store the Linux Containers."
 msgstr ""
 
 #. Type: string
 #. Description
-#: ../lxc.templates:4001
+#: ../lxc.templates:3001
 msgid "If unsure, use /var/lib/lxc (default)."
 msgstr ""

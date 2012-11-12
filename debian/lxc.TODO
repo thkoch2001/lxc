@@ -1,5 +1,6 @@
 lxc:
   * add a lxc-config script similar to git-config.
+  * see how/if we can make use of upstreams lxc-shutdown instead of lxc-halt.
   * clear tty and enable them dynamically
   * enable console log by default and rotate them if necessary
   * add debconf multi-select for autostarts in /etc/lxc/auto
