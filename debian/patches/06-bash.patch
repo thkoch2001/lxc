@@ -2,8 +2,8 @@ Author: Daniel Baumann <daniel.baumann@progress-technologies.net>
 Description: Avoid using bashisms in lxc commands.
 
 diff -Naurp lxc.orig/src/lxc/lxc-checkconfig.in lxc/src/lxc/lxc-checkconfig.in
---- lxc.orig/src/lxc/lxc-checkconfig.in	2012-03-02 13:20:15.859239022 +0100
-+++ lxc/src/lxc/lxc-checkconfig.in	2012-03-09 12:50:18.485367724 +0100
+--- lxc.orig/src/lxc/lxc-checkconfig.in	2012-11-12 13:28:25.720114813 +0100
++++ lxc/src/lxc/lxc-checkconfig.in	2012-11-12 13:57:20.456716739 +0100
 @@ -1,37 +1,40 @@
 -#!/bin/bash
 +#!/bin/sh
@@ -44,21 +44,26 @@ diff -Naurp lxc.orig/src/lxc/lxc-checkconfig.in lxc/src/lxc/lxc-checkconfig.in
      else
 -	if [ ! -z "$mandatory" -a "$mandatory" = yes ]; then
 -	    $SETCOLOR_FAILURE && echo -e "required" && $SETCOLOR_NORMAL
+-	else
+-	    $SETCOLOR_WARNING && echo -e "missing" && $SETCOLOR_NORMAL
+-	fi
+-    fi
+-}
+-
+-if [ ! -f $CONFIG ]; then
 +	if [ ! -z "$mandatory" ] && [ "$mandatory" = yes ]; then
 +	    SETCOLOR_FAILURE && echo "required" && SETCOLOR_NORMAL
- 	else
--	    $SETCOLOR_WARNING && echo -e "missing" && $SETCOLOR_NORMAL
++ 	else
 +	    SETCOLOR_WARNING && echo "missing" && SETCOLOR_NORMAL
- 	fi
-     fi
- }
- 
--if [ ! -f $CONFIG ]; then
++ 	fi
++     fi
++ }
++ 
 +if [ ! -f "$CONFIG" ]; then
-     echo "Kernel config $CONFIG not found, looking in other places..."
+     echo "Kernel configuration not found at $CONFIG; searching..."
      KVER="`uname -r`"
      HEADERS_CONFIG="/lib/modules/$KVER/build/.config"
-@@ -53,13 +56,13 @@ if [ ! -f $CONFIG ]; then
+@@ -52,13 +55,13 @@ if [ ! -f $CONFIG ]; then
  fi
  
  echo "--- Namespaces ---"
@@ -79,7 +84,7 @@ diff -Naurp lxc.orig/src/lxc/lxc-checkconfig.in lxc/src/lxc/lxc-checkconfig.in
  echo
  echo "--- Control groups ---"
  
-@@ -70,42 +73,34 @@ print_cgroups() {
+@@ -69,42 +72,34 @@ print_cgroups() {
  
  CGROUP_MNT_PATH=`print_cgroups cgroup /proc/self/mounts | head -1`
  
@@ -140,8 +145,8 @@ diff -Naurp lxc.orig/src/lxc/lxc-checkconfig.in lxc/src/lxc/lxc-checkconfig.in
  echo
 -
 diff -Naurp lxc.orig/src/lxc/lxc-clone.in lxc/src/lxc/lxc-clone.in
---- lxc.orig/src/lxc/lxc-clone.in	2012-03-02 13:20:15.859239022 +0100
-+++ lxc/src/lxc/lxc-clone.in	2012-03-09 12:43:15.615270353 +0100
+--- lxc.orig/src/lxc/lxc-clone.in	2012-11-12 13:28:25.720114813 +0100
++++ lxc/src/lxc/lxc-clone.in	2012-11-12 13:56:39.916515988 +0100
 @@ -1,4 +1,4 @@
 -#!/bin/bash
 +#!/bin/sh
@@ -149,62 +154,125 @@ diff -Naurp lxc.orig/src/lxc/lxc-clone.in lxc/src/lxc/lxc-clone.in
  #
  # lxc: linux Container library
 diff -Naurp lxc.orig/src/lxc/lxc-create.in lxc/src/lxc/lxc-create.in
---- lxc.orig/src/lxc/lxc-create.in	2012-03-09 12:39:58.430294287 +0100
-+++ lxc/src/lxc/lxc-create.in	2012-03-09 12:41:35.350756130 +0100
+--- lxc.orig/src/lxc/lxc-create.in	2012-11-12 13:39:53.407524906 +0100
++++ lxc/src/lxc/lxc-create.in	2012-11-12 13:56:40.892520422 +0100
 @@ -1,4 +1,4 @@
 -#!/bin/bash
 +#!/bin/sh
  
  #
  # lxc: linux Container library
+@@ -139,7 +139,7 @@ done
+ wantedhelp=0
+ for var in "$@"
+ do
+-if [ "$var" = "-h" -o "$var" = "--help" ]; then
++if [ "$var" = "-h" ] || [ "$var" = "--help" ]; then
+     help
+     exit 1
+ fi
+@@ -186,7 +186,7 @@ fi
+ 
+ rootfs="$lxc_path/$lxc_name/rootfs"
+ 
+-if [ "$backingstore" = "_unset" -o "$backingstore" = "btrfs" ]; then
++if [ "$backingstore" = "_unset" ] || [ "$backingstore" = "btrfs" ]; then
+ # if no backing store was given, then see if btrfs would work
+     if which btrfs >/dev/null 2>&1 &&
+         btrfs filesystem df "$lxc_path/" >/dev/null 2>&1; then
 diff -Naurp lxc.orig/src/lxc/lxc-destroy.in lxc/src/lxc/lxc-destroy.in
---- lxc.orig/src/lxc/lxc-destroy.in	2012-03-02 13:20:15.859239022 +0100
-+++ lxc/src/lxc/lxc-destroy.in	2012-03-09 12:42:48.359136155 +0100
+--- lxc.orig/src/lxc/lxc-destroy.in	2012-11-12 13:28:25.720114813 +0100
++++ lxc/src/lxc/lxc-destroy.in	2012-11-12 13:56:41.796525204 +0100
 @@ -1,4 +1,4 @@
 -#!/bin/bash
 +#!/bin/sh
  
  #
  # lxc: linux Container library
-@@ -98,7 +98,7 @@ fi
- # deletion of others later.
- rootdev=`grep lxc.rootfs $lxc_path/$lxc_name/config 2>/dev/null | sed -e 's/^[^/]*/\//'`
- if [ ! -z "$rootdev" ]; then
--	if [ -b "$rootdev" -o -h "$rootdev" ]; then
-+	if [ -b "$rootdev" ] || [ -h "$rootdev" ]; then
- 		lvdisplay $rootdev > /dev/null 2>&1
- 		if [ $? -eq 0 ]; then
+@@ -116,7 +116,7 @@ if [ -n "$rootdev" ]; then
  			echo "removing backing store: $rootdev"
+ 			lvremove -f $rootdev
+ 		fi
+-	elif [ -h "$rootdev" -o -d "$rootdev" ]; then
++	elif [ -h "$rootdev" ] || [ -d "$rootdev" ]; then
+ 		if which btrfs >/dev/null 2>&1 &&
+ 		   btrfs subvolume list "$rootdev" >/dev/null 2>&1; then
+ 			btrfs subvolume delete "$rootdev"
 diff -Naurp lxc.orig/src/lxc/lxc-ls.in lxc/src/lxc/lxc-ls.in
---- lxc.orig/src/lxc/lxc-ls.in	2012-03-02 13:20:15.859239022 +0100
-+++ lxc/src/lxc/lxc-ls.in	2012-03-09 12:41:35.350756130 +0100
+--- lxc.orig/src/lxc/lxc-ls.in	2012-11-12 13:28:25.720114813 +0100
++++ lxc/src/lxc/lxc-ls.in	2012-11-12 13:57:28.524756889 +0100
 @@ -1,4 +1,4 @@
 -#!/bin/bash
 +#!/bin/sh
  
- localstatedir=@LOCALSTATEDIR@
- lxcpath=@LXCPATH@
+ #
+ # lxc: linux Container library
+@@ -61,7 +61,7 @@ get_parent_cgroup()
+ 
+ 		# Return the absolute path to the containers' parent cgroup
+ 		# (do not append '/lxc' if the hierarchy contains the 'ns' subsystem)
+-		if [[ ",$subsystems," == *,ns,* ]]; then
++		if [ ",$subsystems," = *,ns,* ]; then
+ 			parent_cgroup="${mountpoint}${init_cgroup%/}"
+ 		else
+ 			parent_cgroup="${mountpoint}${init_cgroup%/}/lxc"
 diff -Naurp lxc.orig/src/lxc/lxc-netstat.in lxc/src/lxc/lxc-netstat.in
---- lxc.orig/src/lxc/lxc-netstat.in	2012-03-02 13:20:15.859239022 +0100
-+++ lxc/src/lxc/lxc-netstat.in	2012-03-09 12:41:35.354756455 +0100
+--- lxc.orig/src/lxc/lxc-netstat.in	2012-11-12 13:28:25.720114813 +0100
++++ lxc/src/lxc/lxc-netstat.in	2012-11-12 13:59:03.261226608 +0100
 @@ -1,4 +1,4 @@
 -#!/bin/bash
 +#!/bin/sh
- # set -ex
  
- usage() {
-@@ -59,7 +59,7 @@ for i in "$cgroups"; do
-     cgroup_name=$(echo $i | awk ' { print $1 } ')
-     cgroup_path=$(echo $i | awk ' { print $3 } ')
+ #
+ # lxc: linux Container library
+@@ -58,7 +58,7 @@ get_parent_cgroup()
  
--    if [ "$cgroup_name" == "lxc" ]; then
-+    if [ "$cgroup_name" = "lxc" ]; then
-         break;
-     fi
+ 		# Return the absolute path to the containers' parent cgroup
+ 		# (do not append '/lxc' if the hierarchy contains the 'ns' subsystem)
+-		if [[ ",$subsystems," == *,ns,* ]]; then
++		if [ ",$subsystems," = *,ns,* ]; then
+ 			parent_cgroup="${mountpoint}${init_cgroup%/}"
+ 		else
+ 			parent_cgroup="${mountpoint}${init_cgroup%/}/lxc"
+@@ -119,7 +119,7 @@ fi
  
+ tmpdir=$(mktemp -d)
+ 
+-if [ -z "$tmpdir" -o ! -d "$tmpdir" ]; then
++if [ -z "$tmpdir" ] || [ ! -d "$tmpdir" ]; then
+ 	echo "$(basename $0): unable to create temporary directory" >&2
+ 	exit 1
+ fi
+diff -Naurp lxc.orig/src/lxc/lxc-ps.in lxc/src/lxc/lxc-ps.in
+--- lxc.orig/src/lxc/lxc-ps.in	2012-11-12 13:28:25.720114813 +0100
++++ lxc/src/lxc/lxc-ps.in	2012-11-12 13:58:48.877155967 +0100
+@@ -1,4 +1,4 @@
+-#!/bin/bash
++#!/bin/sh
+ 
+ #
+ # lxc: linux Container library
+@@ -61,7 +61,7 @@ get_parent_cgroup()
+ 
+ 		# Return the absolute path to the containers' parent cgroup
+ 		# (do not append '/lxc' if the hierarchy contains the 'ns' subsystem)
+-		if [[ ",$subsystems," == *,ns,* ]]; then
++		if [ ",$subsystems," = *,ns,* ]; then
+ 			parent_cgroup="${mountpoint}${init_cgroup%/}"
+ 		else
+ 			parent_cgroup="${mountpoint}${init_cgroup%/}/lxc"
+@@ -136,7 +136,7 @@ while read line; do
+ 
+ 	buffer=${line:0:$line_pid_end_position}
+ 	pid=${buffer##* }
+-	if [ "$list_container_processes" -eq "0" -o ! -z "${container_of_pid[pid]}" ]; then
++	if [ "$list_container_processes" -eq "0" ] || [ ! -z "${container_of_pid[pid]}" ]; then
+ 		printf "%-${container_field_width}s %s\n" "${container_of_pid[pid]}" "$line"
+ 	fi
+ done < <(ps "$@")
 diff -Naurp lxc.orig/src/lxc/lxc-setcap.in lxc/src/lxc/lxc-setcap.in
---- lxc.orig/src/lxc/lxc-setcap.in	2012-03-02 13:20:15.863239028 +0100
-+++ lxc/src/lxc/lxc-setcap.in	2012-03-09 12:41:35.354756455 +0100
+--- lxc.orig/src/lxc/lxc-setcap.in	2012-11-12 13:28:25.720114813 +0100
++++ lxc/src/lxc/lxc-setcap.in	2012-11-12 13:56:50.740569570 +0100
 @@ -1,4 +1,4 @@
 -#!/bin/bash
 +#!/bin/sh
@@ -212,17 +280,26 @@ diff -Naurp lxc.orig/src/lxc/lxc-setcap.in lxc/src/lxc/lxc-setcap.in
  #
  # lxc: linux Container library
 diff -Naurp lxc.orig/src/lxc/lxc-setuid.in lxc/src/lxc/lxc-setuid.in
---- lxc.orig/src/lxc/lxc-setuid.in	2012-03-02 13:20:15.863239028 +0100
-+++ lxc/src/lxc/lxc-setuid.in	2012-03-09 12:41:35.354756455 +0100
+--- lxc.orig/src/lxc/lxc-setuid.in	2012-11-12 13:28:25.724114837 +0100
++++ lxc/src/lxc/lxc-setuid.in	2012-11-12 13:56:53.344582295 +0100
 @@ -1,4 +1,4 @@
 -#!/bin/bash
 +#!/bin/sh
  
  #
  # lxc: linux Container library
+diff -Naurp lxc.orig/src/lxc/lxc-shutdown.in lxc/src/lxc/lxc-shutdown.in
+--- lxc.orig/src/lxc/lxc-shutdown.in	2012-11-12 13:28:25.724114837 +0100
++++ lxc/src/lxc/lxc-shutdown.in	2012-11-12 13:56:57.316602038 +0100
+@@ -1,4 +1,4 @@
+-#!/bin/bash
++#!/bin/sh
+ 
+ # (C) Copyright Canonical 2011,2012
+ 
 diff -Naurp lxc.orig/src/lxc/lxc-version.in lxc/src/lxc/lxc-version.in
---- lxc.orig/src/lxc/lxc-version.in	2011-10-25 14:02:11.000000000 +0200
-+++ lxc/src/lxc/lxc-version.in	2012-03-09 12:41:35.354756455 +0100
+--- lxc.orig/src/lxc/lxc-version.in	2012-11-12 13:28:23.488103745 +0100
++++ lxc/src/lxc/lxc-version.in	2012-11-12 13:57:01.784624211 +0100
 @@ -1,3 +1,3 @@
 -#!/bin/bash
 +#!/bin/sh
