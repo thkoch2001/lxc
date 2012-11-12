@@ -7,11 +7,17 @@
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
+/* Define to 1 if you have the `apparmor' library (-lapparmor). */
+#undef HAVE_LIBAPPARMOR
+
 /* Define to 1 if you have the <linux/genetlink.h> header file. */
 #undef HAVE_LINUX_GENETLINK_H
 
 /* Define to 1 if you have the <linux/netlink.h> header file. */
 #undef HAVE_LINUX_NETLINK_H
+
+/* Define to 1 if you have the <linux/unistd.h> header file. */
+#undef HAVE_LINUX_UNISTD_H
 
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H

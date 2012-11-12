@@ -3,15 +3,13 @@
 .\" <http://shell.ipoline.com/~elmert/comp/docbook2X/> 
 .\" Please send any bug reports, improvements, comments, patches, 
 .\" etc. to Steve Cheng <steve@ggi-project.org>.
-.TH "LXC-CREATE" "1" "02 March 2012" "" ""
+.TH "LXC-CREATE" "1" "11 November 2012" "" ""
 
 .SH NAME
 lxc-create \- creates a container
 .SH SYNOPSIS
 
-\fBlxc-create \fI-n name\fB
-[-f config_file]
-[-t template]\fR
+\fBlxc-create\fR \fB-n \fIname\fB\fR [ \fB-f \fIconfig_file\fB\fR ] [ \fB-t \fItemplate\fB\fR ] [ \fB-B \fIbackingstore\fB\fR ] [ \fB-- \fItemplate-options\fB\fR ]
 
 .SH "DESCRIPTION"
 .PP
@@ -21,7 +19,7 @@ user information. The identifier \fIname\fR
 is used to specify the container to be used with the different
 lxc commands.
 .PP
-The object is a directory created in \fI${localstatedir}/lib/lxc\fR
+The object is a directory created in \fI/var/lib/lxc\fR
 and identified by its name.
 .PP
 The object is the definition of the different resources an
@@ -42,8 +40,32 @@ and isolation functionalities for the container.
 \&'template' is the short name of an existing 'lxc-template'
 script that is called by lxc-create,
 eg. busybox, debian, fedora, ubuntu or sshd.
-Refer to the examples in \fI${libdir}/lxc/templates\fR
+Refer to the examples in \fI/usr/share/lxc/templates\fR
 for details of the expected script structure.
+.TP
+\fB   -B \fIbackingstore\fB \fR
+\&'backingstore' is one of 'none', 'lvm', or 'btrfs'.  The
+default is 'none', meaning that the container root filesystem
+will be a directory under \fI/var/lib/lxc/container/rootfs\fR\&.
+The option 'btrfs' need not be specified as it will be used
+automatically if the \fI/var/lib/lxc\fR filesystem is found to
+be btrfs.  If backingstore is 'lvm', then an lvm block device will be
+used and the following further options are available:
+\fI--lvname lvname1\fR will create an LV
+named \fIlvname1\fR rather than the default, which
+is the container name.  \fI--vgname vgname1\fR
+will create the LV in volume group \fIvgname1\fR
+rather than the default, \fIlxc\fR\&.
+\fI--fstype FSTYPE\fR will create an FSTYPE
+filesystem on the LV, rather than the default, which is ext4.
+\fI--fssize SIZE\fR will create a LV (and
+filesystem) of size SIZE rather than the default, which is 1G.
+.TP
+\fB   -- \fItemplate-options\fB \fR
+This will pass \fItemplate-options\fR to the
+template as arguments.  To see the list of options supported by
+the template, you can run
+\fBlxc-create -t TEMPLATE -h\fR\&.
 .SH "DIAGNOSTIC"
 .TP
 \fBThe container already exists\fR

@@ -126,6 +126,7 @@ int signalfd(int fd, const sigset_t *mask, int flags)
 #include "console.h"
 #include "sync.h"
 #include "namespace.h"
+#include "apparmor.h"
 
 lxc_log_define(lxc_start, lxc);
 
@@ -345,6 +346,7 @@ struct lxc_handler *lxc_init(const char *name, struct lxc_conf *conf)
 
 	handler->conf = conf;
 
+	apparmor_handler_init(handler);
 	handler->name = strdup(name);
 	if (!handler->name) {
 		ERROR("failed to allocate memory");
@@ -355,6 +357,11 @@ struct lxc_handler *lxc_init(const char *name, struct lxc_conf *conf)
 	if (lxc_set_state(name, handler, STARTING)) {
 		ERROR("failed to set state '%s'", lxc_state2str(STARTING));
 		goto out_free_name;
+	}
+
+	if (run_lxc_hooks(name, "pre-start", conf)) {
+		ERROR("failed to run pre-start hooks for container '%s'.", name);
+		goto out_aborting;
 	}
 
 	if (lxc_create_tty(name, conf)) {
@@ -400,6 +407,9 @@ void lxc_fini(const char *name, struct lxc_handler *handler)
 	 */
 	lxc_set_state(name, handler, STOPPING);
 	lxc_set_state(name, handler, STOPPED);
+
+	if (run_lxc_hooks(name, "post-stop", handler->conf))
+		ERROR("failed to run post-stop hooks for container '%s'.", name);
 
 	/* reset mask set by setup_signal_fd */
 	if (sigprocmask(SIG_SETMASK, &handler->oldmask, NULL))
@@ -503,21 +513,25 @@ static int do_start(void *data)
 	if (lxc_sync_barrier_parent(handler, LXC_SYNC_CONFIGURE))
 		return -1;
 
-	if (must_drop_cap_sys_boot()) {
+	if (handler->conf->need_utmp_watch) {
 		if (prctl(PR_CAPBSET_DROP, CAP_SYS_BOOT, 0, 0, 0)) {
 			SYSERROR("failed to remove CAP_SYS_BOOT capability");
 			return -1;
 		}
-		handler->conf->need_utmp_watch = 1;
 		DEBUG("Dropped cap_sys_boot\n");
-	} else {
-		DEBUG("Not dropping cap_sys_boot or watching utmp\n");
-		handler->conf->need_utmp_watch = 0;
 	}
 
 	/* Setup the container, ip, names, utsname, ... */
 	if (lxc_setup(handler->name, handler->conf)) {
 		ERROR("failed to setup the container");
+		goto out_warn_father;
+	}
+
+	if (apparmor_load(handler) < 0)
+		goto out_warn_father;
+
+	if (run_lxc_hooks(handler->name, "start", handler->conf)) {
+		ERROR("failed to run start hooks for container '%s'.", handler->name);
 		goto out_warn_father;
 	}
 
@@ -538,6 +552,7 @@ int lxc_spawn(struct lxc_handler *handler)
 	int clone_flags;
 	int failed_before_rename = 0;
 	const char *name = handler->name;
+	int pinfd;
 
 	if (lxc_sync_init(handler))
 		return -1;
@@ -565,6 +580,17 @@ int lxc_spawn(struct lxc_handler *handler)
 			lxc_sync_fini(handler);
 			return -1;
 		}
+	}
+
+	/*
+	 * if the rootfs is not a blockdev, prevent the container from
+	 * marking it readonly.
+	 */
+
+	pinfd = pin_rootfs(handler->conf->rootfs.path);
+	if (pinfd == -1) {
+		ERROR("failed to pin the container's rootfs");
+		goto out_abort;
 	}
 
 	/* Create a process in a new set of namespaces */
@@ -609,6 +635,10 @@ int lxc_spawn(struct lxc_handler *handler)
 	}
 
 	lxc_sync_fini(handler);
+
+	if (pinfd >= 0)
+		close(pinfd);
+
 	return 0;
 
 out_delete_net:
@@ -634,6 +664,13 @@ int __lxc_start(const char *name, struct lxc_conf *conf,
 	}
 	handler->ops = ops;
 	handler->data = data;
+
+	if (must_drop_cap_sys_boot()) {
+		DEBUG("Dropping cap_sys_boot\n");
+	} else {
+		DEBUG("Not dropping cap_sys_boot or watching utmp\n");
+		handler->conf->need_utmp_watch = 0;
+	}
 
 	err = lxc_spawn(handler);
 	if (err) {
