@@ -41,9 +41,9 @@ override_dh_auto_install:
 	ln -s lxc-debconfig debian/tmp/usr/share/lxc/templates/lxc-debian
 	ln -s lxc-debconfig.d debian/tmp/usr/share/lxc/templates/lxc-debian.d
 
-	# adding progress template symlink
-	ln -s lxc-debconfig debian/tmp/usr/share/lxc/templates/lxc-progress
-	ln -s lxc-debconfig.d debian/tmp/usr/share/lxc/templates/lxc-progress.d
+	# adding progress-linux template symlink
+	ln -s lxc-debconfig debian/tmp/usr/share/lxc/templates/lxc-progress-linux
+	ln -s lxc-debconfig.d debian/tmp/usr/share/lxc/templates/lxc-progress-linux.d
 
 	# removing currently unsupported lxc-ubuntu until lxc-debconfig also supports ubuntu
 	rm -f debian/tmp/usr/share/lxc/templates/lxc-ubuntu

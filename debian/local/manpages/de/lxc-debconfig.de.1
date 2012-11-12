@@ -22,7 +22,7 @@ erstellen
 [\-\-debconf\-frontend \fIDEBCONF_FRONTEND\fP] [\-\-debconf\-priority
 \fIDEBCONF_PRIORITÄT\fP] [\-\-preseed\-file \fIPRESEED_DATEI\fP]
 .PP
-\fBlxc\-create\fP \-t progress \-n|\-\-name \fICONTAINER\fP \-\- [\-\-apt\-recommends]
+\fBlxc\-create\fP \-t progress\-linux \-n|\-\-name \fICONTAINER\fP \-\- [\-\-apt\-recommends]
 [\-\-debconf\-frontend \fIDEBCONF_FRONTEND\fP] [\-\-debconf\-priority
 \fIDEBCONF_PRIORITÄT\fP] [\-\-preseed\-file \fIPRESEED_DATEI\fP]
 
@@ -32,10 +32,10 @@ erstellen. \fBlxc\-debconfig\fP ist ein solches Template Skript um Debian und
 Debian basierte Container zu erstellen.
 .PP
 \fBlxc\-debconfig\fP kann durch lxc\-create(1) in drei Modi aufgerufen werden:
-debconf, debian und progress. Im debconf Modus wird momentan auf den debian
-Modus zurückgefallen. Im debian Modus können Debian GNU/Linux Container
-erstellt werden. Im progress Modus können Progress Linux Container erstellt
-werden.
+debconf, debian und progress\-linux. Im debconf Modus wird momentan auf den
+debian Modus zurückgefallen. Im debian Modus können Debian GNU/Linux
+Container erstellt werden. Im progress\-linux Modus können Progress Linux
+Container erstellt werden.
 .PP
 
 .SH OPTIONEN

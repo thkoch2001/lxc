@@ -30,7 +30,7 @@ Distribution ()
 				db_fset lxc-debconfig/distribution seen false
 				;;
 
-			progress)
+			progress-linux)
 				db_subst lxc-debconfig/distribution CHOICES "Progress Linux 1.0 (artax), Progress Linux 1.9 (artax-backports), Progress Linux 2.0 (baureo), Progress Linux 2.9 (baureo-backports), Progress Linux 3.0 (charon), Progress Linux 3.9 (charon-backports)"
 				db_subst lxc-debconfig/distribution CHOICES_C "artax, artax-backports, baureo, baureo-backports, charon, charon-backports"
 
@@ -59,7 +59,7 @@ Parent_distribution ()
 	if [ -z "${_PARENT_DISTRIBUTION}" ]
 	then
 		case "${_MODE}" in
-			progress)
+			progress-linux)
 				case "${_DISTRIBUTION}" in
 					artax*)
 						_PARENT_DISTRIBUTION="squeeze"
@@ -142,7 +142,7 @@ Archives ()
 				esac
 				;;
 
-			progress)
+			progress-linux)
 				db_subst lxc-debconfig/archives CHOICES "Progress (staging), Progress Security, Progress Security (staging), Progress Updates, Progress Updates (staging), Progress Backports, Progress Backports (staging)"
 				db_subst lxc-debconfig/archives CHOICES_C "${_DISTRIBUTION}-staging, ${_DISTRIBUTION}-security, ${_DISTRIBUTION}-security-staging, ${_DISTRIBUTION}-updates, ${_DISTRIBUTION}-updates-staging, ${_DISTRIBUTION}-backports, ${_DISTRIBUTION}-backports-staging"
 
@@ -173,7 +173,7 @@ Parent_archives ()
 	if [ -z "${_PARENT_ARCHIVES}" ]
 	then
 		case "${_MODE}" in
-			progress)
+			progress-linux)
 				db_subst lxc-debconfig/parent-archives CHOICES "Debian Security, Debian Updates , Debian Backports, Debian Proposed Updates"
 				db_subst lxc-debconfig/parent-archives CHOICES_C "${_DISTRIBUTION}-security, ${_DISTRIBUTION}-updates, ${_DISTRIBUTION}-backports, ${_DISTRIBUTION}-proposed-updates"
 
@@ -200,7 +200,7 @@ Parent_archives ()
 		if [ -z "${_PARENT_ARCHIVES}" ]
 		then
 			case "${_MODE}" in
-				progress)
+				progress-linux)
 					_PARENT_ARCHIVES="${_DISTRIBUTION}-security, ${_DISTRIBUTION}-updates, ${_DISTRIBUTION}-backports"
 					;;
 
@@ -230,7 +230,7 @@ Mirror ()
 				db_fset lxc-debconfig/mirror seen false
 				;;
 
-			progress)
+			progress-linux)
 				db_set lxc-debconfig/mirror http://cdn.archive.progress-linux.org/progress/
 				db_fset lxc-debconfig/mirror seen false
 				;;
@@ -250,7 +250,7 @@ Mirror ()
 					_MIRROR="http://http.debian.net/debian/"
 					;;
 
-				progress)
+				progress-linux)
 					_MIRROR="http://cdn.archive.progress-linux.org/progress/"
 					;;
 			esac
@@ -357,7 +357,7 @@ Parent_mirror ()
 	if [ -z "${_PARENT_MIRROR}" ]
 	then
 		case "${_MODE}" in
-			progress)
+			progress-linux)
 				db_set lxc-debconfig/parent-mirror http://ftp.debian.org/debian/
 				db_fset lxc-debconfig/parent-mirror seen false
 
@@ -378,7 +378,7 @@ Parent_mirror ()
 		if [ -z "${_PARENT_MIRROR}" ]
 		then
 			case "${_MODE}" in
-				progress)
+				progress-linux)
 					_PARENT_MIRROR="http://ftp.debian.org/debian/"
 					;;
 
@@ -401,7 +401,7 @@ Parent_mirror_security ()
 	if [ -z "${_PARENT_MIRROR_SECURITY}" ]
 	then
 		case "${_MODE}" in
-			progress)
+			progress-linux)
 				db_set lxc-debconfig/parent-mirror-security http://security.debian.org/
 				db_fset lxc-debconfig/parent-mirror-security seen false
 
@@ -422,7 +422,7 @@ Parent_mirror_security ()
 		if [ -z "${_PARENT_MIRROR_SECURITY}" ]
 		then
 			case "${_MODE}" in
-				progress)
+				progress-linux)
 					_PARENT_MIRROR_SECURITY="http://security.debian.org/"
 					;;
 
@@ -445,7 +445,7 @@ Parent_mirror_backports ()
 	if [ -z "${_PARENT_MIRROR_BACKPORTS}" ]
 	then
 		case "${_MODE}" in
-			progress)
+			progress-linux)
 				db_set lxc-debconfig/parent-mirror-backports http://backports.debian.org/debian-backports/
 				db_fset lxc-debconfig/parent-mirror-backports seen false
 
@@ -466,7 +466,7 @@ Parent_mirror_backports ()
 		if [ -z "${_PARENT_MIRROR_BACKPORTS}" ]
 		then
 			case "${_MODE}" in
-				progress)
+				progress-linux)
 					_PARENT_MIRROR_BACKPORTS="http://backports.debian.org/debian-backports/"
 					;;
 
@@ -489,7 +489,7 @@ Archive_areas ()
 	if [ -z "${_ARCHIVE_AREAS}" ]
 	then
 		case "${_MODE}" in
-			progress)
+			progress-linux)
 				db_subst lxc-debconfig/archive-areas CHOICES "main, contrib, non-free"
 
 				db_set lxc-debconfig/archive-areas "main, contrib, non-free"
@@ -518,7 +518,7 @@ Archive_areas ()
 					_ARCHIVE_AREAS="main"
 					;;
 
-				progress)
+				progress-linux)
 					_ARCHIVE_AREAS="main, contrib, non-free"
 					;;
 			esac
@@ -539,7 +539,7 @@ Parent_archive_areas ()
 	if [ -z "${_PARENT_ARCHIVE_AREAS}" ]
 	then
 		case "${_MODE}" in
-			progress)
+			progress-linux)
 				db_subst lxc-debconfig/parent-archive-areas CHOICES "main, contrib, non-free"
 
 				db_set lxc-debconfig/parent-archive-areas "main, contrib, non-free"
@@ -564,7 +564,7 @@ Parent_archive_areas ()
 		if [ -z "${_PARENT_ARCHIVE_AREAS}" ]
 		then
 			case "${_MODE}" in
-				progress)
+				progress-linux)
 					_PARENT_ARCHIVE_AREAS="main, contrib, non-free"
 					;;
 
