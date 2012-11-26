@@ -99,7 +99,7 @@ case "${1}" in
 	stop)
 		log_daemon_msg "Stopping Linux Containers"
 
-		Lxc halt
+		Lxc shutdown -t 10
 		;;
 
 	restart|force-reload)
