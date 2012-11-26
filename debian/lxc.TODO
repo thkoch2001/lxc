@@ -1,6 +1,7 @@
 lxc:
+  * add native systemd job to complement sysvinit initscript.
+  * add debconf question about ipv4 forward enabling.
   * add a lxc-config script similar to git-config.
-  * see how/if we can make use of upstreams lxc-shutdown instead of lxc-halt.
   * clear tty and enable them dynamically
   * enable console log by default and rotate them if necessary
   * add debconf multi-select for autostarts in /etc/lxc/auto
@@ -11,7 +12,6 @@ lxc:
   * add debconf question to ask for level of mac conflict check
   * support 'all' in lxc convenience wrapper
   * add a lxc-reboot command
-  * add a timeout to lxc-halt after which the container is forcefully stopped
   * since the required kernel patches will not make it to wheezy,
     add a watchdog so that containers are started again after a reboot/halt
   * add lxc-console script as valid shell so that that unprivleged users can
@@ -21,6 +21,7 @@ lxc:
   * update lxc bash-completion to cover newer commands too
 
 lxc-debconfig:
+  * create lxc configs 'dynamically' by calling lxc-cgroup
   * make /usr/share/lxc/includes or somesuch for local includes (e.g. certs)
   * for some reason the Internal_options don't make it to debconf.default;
     probably because the 'if db_get ...' constructs don't work with set -e.
