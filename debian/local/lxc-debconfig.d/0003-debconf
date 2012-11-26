@@ -37,6 +37,14 @@ Distribution ()
 				db_set lxc-debconfig/distribution baureo
 				db_fset lxc-debconfig/distribution seen false
 				;;
+
+			ubuntu)
+				db_subst lxc-debconfig/distribution CHOICES "Ubuntu 13.04 \"Raring Ringtail\""
+				db_subst lxc-debconfig/distribution CHOICES_C "raring"
+
+				db_set lxc-debconfig/distribution raring
+				db_fset lxc-debconfig/distribution seen false
+				;;
 		esac
 
 		db_settitle lxc-debconfig/title
@@ -149,6 +157,14 @@ Archives ()
 				db_set lxc-debconfig/archives "${_DISTRIBUTION}-security, ${_DISTRIBUTION}-updates, ${_DISTRIBUTION}-backports"
 				db_fset lxc-debconfig/archives seen false
 				;;
+
+			ubuntu)
+				db_subst lxc-debconfig/archives CHOICES "Ubuntu Security, Ubuntu Updates, Ubuntu Backports, Ubuntu Proposed Updates"
+				db_subst lxc-debconfig/archives CHOICES_C "${_DISTRIBUTION}-security, ${_DISTRIBUTION}-updates, ${_DISTRIBUTION}-backports, ${_DISTRIBUTION}-proposed"
+
+				db_set lxc-debconfig/archives "${_DISTRIBUTION}-security, ${_DISTRIBUTION}-updates"
+				db_fset lxc-debconfig/archives seen false
+				;;
 		esac
 
 		db_settitle lxc-debconfig/title
@@ -234,6 +250,11 @@ Mirror ()
 				db_set lxc-debconfig/mirror http://cdn.archive.progress-linux.org/progress/
 				db_fset lxc-debconfig/mirror seen false
 				;;
+
+			ubuntu)
+				db_set lxc-debconfig/mirror http://archive.ubuntu.com/ubuntu/
+				db_fset lxc-debconfig/mirror seen false
+				;;
 		esac
 
 		db_settitle lxc-debconfig/title
@@ -252,6 +273,10 @@ Mirror ()
 
 				progress-linux)
 					_MIRROR="http://cdn.archive.progress-linux.org/progress/"
+					;;
+
+				ubuntu)
+					_MIRROR="http://archive.ubuntu.com/ubuntu/"
 					;;
 			esac
 		fi
@@ -496,6 +521,13 @@ Archive_areas ()
 				db_fset lxc-debconfig/archive-areas seen false
 				;;
 
+			ubuntu)
+				db_subst lxc-debconfig/archive-areas CHOICES "main, restricted, universe, multiverse"
+
+				db_set lxc-debconfig/archive-areas "main, restricted"
+				db_fset lxc-debconfig/archive-areas seen false
+				;;
+
 			*)
 				db_subst lxc-debconfig/archive-areas CHOICES "main, contrib, non-free"
 
@@ -520,6 +552,10 @@ Archive_areas ()
 
 				progress-linux)
 					_ARCHIVE_AREAS="main, contrib, non-free"
+					;;
+
+				ubuntu)
+					_ARCHIVE_AREAS="main, restricted"
 					;;
 			esac
 		fi
