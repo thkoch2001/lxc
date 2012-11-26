@@ -3,3 +3,4 @@
 03-bash.patch
 04-lxc-debconfig.patch
 05-lxc-destroy-symlinks.patch
+06-lxc-clone-mac.patch
