@@ -1,3 +1,20 @@
+lxc (0.8.0-2) unstable; urgency=low
+
+  * Adding patch to use debian essential stuff rather than openssl to
+    generate random mac address in lxc-clone.
+  * Adding rsync to suggests (Closes: #693932).
+  * Adding Brazilian Portugese debconf translations from Adriano Rafael
+    Gomes <adrianorg@gmail.com> (Closes: #693381).
+  * Adding patch from Serge Hallyn <serge.hallyn@ubuntu.com> to not fail
+    on failure to link kmsg (Closes: #694472).
+  * Using lxc-shutdown in initscript rather than lxc-halt (Closes:
+    #694337).
+  * Using flock without -n in lxc-debconfig.
+  * Updating todo file.
+  * Replacing lxc-ubuntu with lxc-debconfig.
+
+ -- Daniel Baumann <daniel.baumann@progress-technologies.net>  Mon, 26 Nov 2012 21:43:10 +0100
+
 lxc (0.8.0-1) unstable; urgency=low
 
   * Correcting email address in previous changelog entry.
