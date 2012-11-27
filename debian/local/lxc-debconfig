@@ -522,7 +522,8 @@ Copy_system ()
 	then
 		# system cache in the form of a directory
 		echo -n "Copying system cache to ${_ROOTFS}..."
-		cp -a "/usr/share/lxc/cache/${_MODE}/${_DISTRIBUTION}_${_ARCHITECTURE}" "${_ROOTFS}" || return 1
+		mkdir -p "${_ROOTFS}"
+		(tar -C "/usr/share/lxc/cache/${_MODE}/${_DISTRIBUTION}_${_ARCHITECTURE}" -c . | tar -C "${_ROOTFS}" -x) || return 1
 	elif ls "/usr/share/lxc/cache/${_MODE}/${_DISTRIBUTION}_${_ARCHITECTURE}".* > /dev/null 2>&1
 	then
 		# system cache in the form of a tarball
@@ -546,7 +547,8 @@ Copy_system ()
 
 		# make a local copy of the minimal system
 		echo -n "Copying local cache to ${_ROOTFS}..."
-		cp -a "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}" "${_ROOTFS}" || return 1
+		mkdir -p "${_ROOTFS}"
+		(tar -C "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}" -c . | tar -C "${_ROOTFS}" -x) || return 1
 	fi
 
 	# Add local repositories configured from preseed file
