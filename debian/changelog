@@ -1,3 +1,11 @@
+lxc (0.8.0-3) unstable; urgency=low
+
+  * Using tar to copy bootstrapped systems to target, thanks to Marc
+    Fournier <marc.fournier@camptocamp.com> (Closes: #683837, #687767).
+  * Temporarily keeping lxc-ps as a bash script (Closes: #694448).
+
+ -- Daniel Baumann <daniel.baumann@progress-technologies.net>  Wed, 28 Nov 2012 12:09:02 +0100
+
 lxc (0.8.0-2) unstable; urgency=low
 
   * Adding patch to use debian essential stuff rather than openssl to
