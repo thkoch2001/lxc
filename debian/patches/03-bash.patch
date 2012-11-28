@@ -246,12 +246,6 @@ diff -Naurp lxc.orig/src/lxc/lxc-netstat.in lxc/src/lxc/lxc-netstat.in
 diff -Naurp lxc.orig/src/lxc/lxc-ps.in lxc/src/lxc/lxc-ps.in
 --- lxc.orig/src/lxc/lxc-ps.in	2012-11-12 13:28:25.720114813 +0100
 +++ lxc/src/lxc/lxc-ps.in	2012-11-12 13:58:48.877155967 +0100
-@@ -1,4 +1,4 @@
--#!/bin/bash
-+#!/bin/sh
- 
- #
- # lxc: linux Container library
 @@ -61,7 +61,7 @@ get_parent_cgroup()
  
  		# Return the absolute path to the containers' parent cgroup
