@@ -33,7 +33,10 @@ LXC_AUTO="${LXC_AUTO:-true}"
 
 Lxc ()
 {
-	_PROGRAM="${@}"
+	_PROGRAM="${1}"
+	shift
+
+	_OPTIONS="${@}"
 
 	# no containers available
 	if ! ls /etc/lxc/auto/* > /dev/null 2>&1
@@ -72,7 +75,7 @@ Lxc ()
 				then
 					log_progress_msg "${_CONTAINER}"
 
-					lxc-start -n ${_CONTAINER} -f ${_CONFIG} -d
+					lxc-start -n ${_CONTAINER} -f ${_CONFIG} -d ${_OPTIONS}
 				else
 					log_progress_msg "${_CONTAINER} (skip)"
 				fi
@@ -81,7 +84,7 @@ Lxc ()
 			*)
 				log_progress_msg "${_CONTAINER}"
 
-				lxc ${_PROGRAM} ${_CONTAINER}
+				lxc ${_PROGRAM} ${_CONTAINER} ${_OPTIONS}
 				;;
 		esac
 	done
