@@ -1,3 +1,10 @@
+lxc (0.8.0-4) unstable; urgency=low
+
+  * Updating initscript to handle variables in its internal lxc loop
+    function (Closes: #695098).
+
+ -- Daniel Baumann <daniel.baumann@progress-technologies.net>  Wed, 05 Dec 2012 13:06:41 +0100
+
 lxc (0.8.0-3) unstable; urgency=low
 
   * Using tar to copy bootstrapped systems to target, thanks to Marc
