@@ -289,7 +289,7 @@ live-debconfig live-debconfig/selinux/enable boolean false
 EOF
 
 	# Initialize live-debconfig debconf database
-	Chroot "${_ROOTFS}" "live-debconfig --noscripts"
+	Chroot "${_ROOTFS}" "live-debconfig --nodebconfig"
 
 	# Apply preseed information
 	Chroot "${_ROOTFS}" "DEBCONF_SYSTEMRC=/var/lib/live/debconfig/systemrc debconf-set-selections preseed.cfg"
