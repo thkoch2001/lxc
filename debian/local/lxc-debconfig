@@ -551,7 +551,7 @@ Copy_system ()
 		(tar -C "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}" -c . | tar -C "${_ROOTFS}" -x) || return 1
 	fi
 
-	# Add local repositories configured from preseed file
+	# Add local archives configured from preseed file
 	if ls "${_TMPDIR}/sources.list.d"/*.list > /dev/null 2>&1
 	then
 		cp "${_TMPDIR}/sources.list.d"/*.list "${_ROOTFS}/etc/apt/sources.list.d"

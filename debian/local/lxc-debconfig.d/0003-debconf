@@ -636,24 +636,24 @@ Packages ()
 	export _PACKAGES
 }
 
-Local_repositories ()
+Local_archives ()
 {
 	_NUMBER="0"
 
-	while db_get lxc-debconfig/local${_NUMBER}/repository && [ "${RET}" ]
+	while db_get lxc-debconfig/archives${_NUMBER}/repository && [ "${RET}" ]
 	do
 		mkdir -p "${_TMPDIR}/sources.list.d"
 
 		_REPOSITORY="${RET#deb }"
 
-		_LIST="local${_NUMBER}.list"
-		if db_get lxc-debconfig/local${_NUMBER}/list
+		_LIST="archive${_NUMBER}.list"
+		if db_get lxc-debconfig/archives${_NUMBER}/list
 		then
 			_LIST="$(basename ${RET} .list).list"
 		fi
 
 		_COMMENT=""
-		if db_get lxc-debconfig/local${_NUMBER}/comment
+		if db_get lxc-debconfig/archives${_NUMBER}/comment
 		then
 			_COMMENT="${RET}"
 
@@ -662,13 +662,13 @@ Local_repositories ()
 
 		echo "deb ${_REPOSITORY}" >> "${_TMPDIR}/sources.list.d/${_LIST}"
 
-		if db_get lxc-debconfig/local${_NUMBER}/source && [ "$RET" = true ]
+		if db_get lxc-debconfig/archives${_NUMBER}/source && [ "$RET" = true ]
 		then
 			echo "deb-src ${_REPOSITORY}" >> "${_TMPDIR}/sources.list.d/${_LIST}"
 		fi
 
 		_KEY=""
-		if db_get lxc-debconfig/local${_NUMBER}/key
+		if db_get lxc-debconfig/archives${_NUMBER}/key
 		then
 			_KEY="${RET}"
 
@@ -953,7 +953,7 @@ Archive_areas
 Parent_archive_areas
 
 Packages
-Local_repositories
+Local_archives
 
 Root_password
 Network
