@@ -681,7 +681,7 @@ Local_repositories ()
 
 Root_password ()
 {
-	if db_get passwd/root-password
+	if db_get live-debconfig/passwd/root-password
 	then
 		_ROOT_PASSWORD="${RET}" # string (w/o empty)
 	fi
@@ -691,14 +691,14 @@ Root_password ()
 		# Create a random password as suggestion for the user
 		_RANDOM_PASSWORD="$(dd if=/dev/urandom bs=6 count=1 2> /dev/null | base64)"
 
-		db_set passwd/root-password ${_RANDOM_PASSWORD}
-		db_fset passwd/root-password seen false
+		db_set live-debconfig/passwd/root-password ${_RANDOM_PASSWORD}
+		db_fset live-debconfig/passwd/root-password seen false
 
 		db_settitle lxc-debconfig/title
-		db_input high passwd/root-password || true
+		db_input high live-debconfig/passwd/root-password || true
 		db_go
 
-		db_get passwd/root-password
+		db_get live-debconfig/passwd/root-password
 		_ROOT_PASSWORD="${RET}"
 
 		if [ -z "${_ROOT_PASSWORD}" ]
