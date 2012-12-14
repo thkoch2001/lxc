@@ -717,11 +717,11 @@ Network ()
 {
 	_NUMBER="0"
 
-	while db_get live-debconfig/ifupdown/eth${_NUMBER}-method && [ "${RET}" ]
+	while db_get live-debconfig/ifupdown/eth${_NUMBER}-ipv4-method && [ "${RET}" ]
 	do
-		if db_get live-debconfig/ifupdown/eth${_NUMBER}-comment
+		if db_get live-debconfig/ifupdown/eth${_NUMBER}-ipv4-comment
 		then
-			eval LXC_DEBCONFIG_ETH${_NUMBER}_COMMENT="\"${RET}\"" # string (w/)
+			eval LXC_DEBCONFIG_ETH${_NUMBER}_IPV4_COMMENT="\"${RET}\"" # string (w/)
 		fi
 
 		if db_get lxc-debconfig/eth${_NUMBER}-bridge
@@ -790,8 +790,8 @@ Network ()
 
 	for _NUMBER in $(seq 0 ${LXC_DEBCONFIG_ETH_NUMBER})
 	do
-		eval _COMMENT="$`echo LXC_DEBCONFIG_ETH${_NUMBER}_COMMENT`"
-		echo "LXC_DEBCONFIG_ETH${_NUMBER}_COMMENT=\"${_COMMENT}\"" >> "${_TMPDIR}/debconf.default"
+		eval _COMMENT="$`echo LXC_DEBCONFIG_ETH${_NUMBER}_IPV4_COMMENT`"
+		echo "LXC_DEBCONFIG_ETH${_NUMBER}_IPV4_COMMENT=\"${_COMMENT}\"" >> "${_TMPDIR}/debconf.default"
 
 		eval _BRIDGE="$`echo LXC_DEBCONFIG_ETH${_NUMBER}_BRIDGE`"
 		echo "LXC_DEBCONFIG_ETH${_NUMBER}_BRIDGE=\"${_BRIDGE}\"" >> "${_TMPDIR}/debconf.default"
