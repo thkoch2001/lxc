@@ -89,15 +89,6 @@ diff -Naurp lxc.orig/src/lxc/lxc-ps.in lxc/src/lxc/lxc-ps.in
          printf "%-${container_field_width}s %s\n" "${container_of_pid[pid]}" "$line"
      fi
  done < <(ps "$@")
-diff -Naurp lxc.orig/src/lxc/lxc-setcap.in lxc/src/lxc/lxc-setcap.in
---- lxc.orig/src/lxc/lxc-setcap.in	2012-11-12 13:28:25.720114813 +0100
-+++ lxc/src/lxc/lxc-setcap.in	2012-11-12 13:56:50.740569570 +0100
-@@ -1,4 +1,4 @@
--#!/bin/bash
-+#!/bin/sh
- 
- #
- # lxc: linux Container library
 diff -Naurp lxc.orig/src/lxc/lxc-setuid.in lxc/src/lxc/lxc-setuid.in
 --- lxc.orig/src/lxc/lxc-setuid.in	2012-11-12 13:28:25.724114837 +0100
 +++ lxc/src/lxc/lxc-setuid.in	2012-11-12 13:56:53.344582295 +0100
