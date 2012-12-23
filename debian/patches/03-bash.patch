@@ -10,33 +10,6 @@ diff -Naurp lxc.orig/src/lxc/lxc-clone.in lxc/src/lxc/lxc-clone.in
  
  #
  # lxc: linux Container library
-diff -Naurp lxc.orig/src/lxc/lxc-create.in lxc/src/lxc/lxc-create.in
---- lxc.orig/src/lxc/lxc-create.in	2012-11-12 13:39:53.407524906 +0100
-+++ lxc/src/lxc/lxc-create.in	2012-11-12 13:56:40.892520422 +0100
-@@ -1,4 +1,4 @@
--#!/bin/bash
-+#!/bin/sh
- 
- #
- # lxc: linux Container library
-@@ -139,7 +139,7 @@ done
- wantedhelp=0
- for var in "$@"
- do
--if [ "$var" = "-h" -o "$var" = "--help" ]; then
-+if [ "$var" = "-h" ] || [ "$var" = "--help" ]; then
-     help
-     exit 1
- fi
-@@ -186,7 +186,7 @@ fi
- 
- rootfs="$lxc_path/$lxc_name/rootfs"
- 
--if [ "$backingstore" = "_unset" -o "$backingstore" = "btrfs" ]; then
-+if [ "$backingstore" = "_unset" ] || [ "$backingstore" = "btrfs" ]; then
- # if no backing store was given, then see if btrfs would work
-     if which btrfs >/dev/null 2>&1 &&
-         btrfs filesystem df "$lxc_path/" >/dev/null 2>&1; then
 diff -Naurp lxc.orig/src/lxc/lxc-destroy.in lxc/src/lxc/lxc-destroy.in
 --- lxc.orig/src/lxc/lxc-destroy.in	2012-11-12 13:28:25.720114813 +0100
 +++ lxc/src/lxc/lxc-destroy.in	2012-11-12 13:56:41.796525204 +0100
