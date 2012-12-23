@@ -270,6 +270,9 @@ EOF
 
 	# Preseed live-debconfig
 cat > "${_ROOTFS}/preseed.cfg" << EOF
+# multiselect
+live-debconfig live-debconfig/multiselect multiselect hostname, ifupdown, sysvinit, util-linux, selinux, openssh-server
+
 # ifupdown
 live-debconfig live-debconfig/ifupdown/lo-enable boolean false
 
@@ -297,7 +300,7 @@ EOF
 	rm -f "${_ROOTFS}/preseed.cfg"
 
 	# Run live-debconfig
-	Chroot "${_ROOTFS}" "DEBIAN_FRONTEND=${_DEBCONF_FRONTEND:-dialog} DEBIAN_PRIORITY=${_DEBCONF_PRIORITY:-high} live-debconfig --debconfig=hostname,ifupdown,sysvinit,util-linux,selinux,openssh-server"
+	Chroot "${_ROOTFS}" "DEBIAN_FRONTEND=${_DEBCONF_FRONTEND:-dialog} DEBIAN_PRIORITY=${_DEBCONF_PRIORITY:-high} live-debconfig --debconfig"
 
 	# Install additional packages
 	if [ -n "${_PACKAGES}" ]
