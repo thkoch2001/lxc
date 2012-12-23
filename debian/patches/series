@@ -3,4 +3,3 @@
 04-lxc-debconfig.patch
 05-lxc-destroy-symlinks.patch
 06-lxc-clone-mac.patch
-07-lxc-kmsg.patch
