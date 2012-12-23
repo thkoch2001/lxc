@@ -11,23 +11,30 @@ diff -Naurp lxc.orig/src/lxc/lxc-clone.in lxc/src/lxc/lxc-clone.in
  #
  # lxc: linux Container library
 diff -Naurp lxc.orig/src/lxc/lxc-destroy.in lxc/src/lxc/lxc-destroy.in
---- lxc.orig/src/lxc/lxc-destroy.in	2012-11-12 13:28:25.720114813 +0100
-+++ lxc/src/lxc/lxc-destroy.in	2012-11-12 13:56:41.796525204 +0100
+--- lxc.orig/src/lxc/lxc-destroy.in	2012-12-23 08:47:47.124062280 +0100
++++ lxc/src/lxc/lxc-destroy.in	2012-12-23 08:53:32.312142244 +0100
 @@ -1,4 +1,4 @@
 -#!/bin/bash
 +#!/bin/sh
  
  #
  # lxc: linux Container library
-@@ -116,7 +116,7 @@ if [ -n "$rootdev" ]; then
- 			echo "removing backing store: $rootdev"
- 			lvremove -f $rootdev
- 		fi
--	elif [ -h "$rootdev" -o -d "$rootdev" ]; then
-+	elif [ -h "$rootdev" ] || [ -d "$rootdev" ]; then
- 		if which btrfs >/dev/null 2>&1 &&
- 		   btrfs subvolume list "$rootdev" >/dev/null 2>&1; then
- 			btrfs subvolume delete "$rootdev"
+@@ -111,13 +111,13 @@ fi
+ # else, ignore it. We'll support deletion of others later.
+ rootdev=`grep lxc.rootfs $lxc_path/$lxc_name/config 2>/dev/null | sed -e 's/^[^/]*/\//'`
+ if [ -n "$rootdev" ]; then
+-    if [ -b "$rootdev" -o -h "$rootdev" ]; then
++    if [ -b "$rootdev"] || [ -h "$rootdev" ]; then
+         lvdisplay $rootdev > /dev/null 2>&1
+         if [ $? -eq 0 ]; then
+             echo "removing backing store: $rootdev"
+             lvremove -f $rootdev
+         fi
+-    elif [ -h "$rootdev" -o -d "$rootdev" ]; then
++    elif [ -h "$rootdev"] || [ -d "$rootdev" ]; then
+         if which btrfs >/dev/null 2>&1 &&
+            btrfs subvolume list "$rootdev" >/dev/null 2>&1; then
+             btrfs subvolume delete "$rootdev"
 diff -Naurp lxc.orig/src/lxc/lxc-ls.in lxc/src/lxc/lxc-ls.in
 --- lxc.orig/src/lxc/lxc-ls.in	2012-11-12 13:28:25.720114813 +0100
 +++ lxc/src/lxc/lxc-ls.in	2012-11-12 13:57:28.524756889 +0100
