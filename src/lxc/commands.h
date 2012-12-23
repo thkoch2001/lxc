@@ -28,6 +28,7 @@ enum {
 	LXC_COMMAND_STOP,
 	LXC_COMMAND_STATE,
 	LXC_COMMAND_PID,
+	LXC_COMMAND_CLONE_FLAGS,
 	LXC_COMMAND_MAX,
 };
 
@@ -48,6 +49,7 @@ struct lxc_command {
 };
 
 extern pid_t get_init_pid(const char *name);
+extern int lxc_get_clone_flags(const char *name);
 
 extern int lxc_command(const char *name, struct lxc_command *command,
 			int *stopped);
@@ -58,6 +60,7 @@ extern int lxc_command_connected(const char *name, struct lxc_command *command,
 struct lxc_epoll_descr;
 struct lxc_handler;
 
+extern int lxc_command_init(const char *name, struct lxc_handler *handler);
 extern int lxc_command_mainloop_add(const char *name, struct lxc_epoll_descr *descr,
 				    struct lxc_handler *handler);
 
