@@ -1,4 +1,3 @@
-01-lxc-distclean.patch
 02-lxc-configuration-path.patch
 03-bash.patch
 04-lxc-debconfig.patch
