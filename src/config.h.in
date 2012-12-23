@@ -1,5 +1,8 @@
 /* src/config.h.in.  Generated from configure.ac by autoheader.  */
 
+/* Python3 is available */
+#undef ENABLE_PYTHON
+
 /* Define to 1 if you have the declaration of `PR_CAPBSET_DROP', and to 0 if
    you don't. */
 #undef HAVE_DECL_PR_CAPBSET_DROP
@@ -9,6 +12,9 @@
 
 /* Define to 1 if you have the `apparmor' library (-lapparmor). */
 #undef HAVE_LIBAPPARMOR
+
+/* Define to 1 if you have the `seccomp' library (-lseccomp). */
+#undef HAVE_LIBSECCOMP
 
 /* Define to 1 if you have the <linux/genetlink.h> header file. */
 #undef HAVE_LINUX_GENETLINK_H
@@ -21,6 +27,9 @@
 
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
+
+/* Define to 1 if the system has the type `scmp_filter_ctx'. */
+#undef HAVE_SCMP_FILTER_CTX
 
 /* Define to 1 if you have the <stdint.h> header file. */
 #undef HAVE_STDINT_H
