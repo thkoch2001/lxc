@@ -274,6 +274,10 @@ cat > "${_ROOTFS}/preseed.cfg" << EOF
 # multiselect
 live-debconfig live-debconfig/multiselect multiselect hostname, ifupdown, sysvinit, util-linux, selinux, openssh-server
 
+# passwd
+live-debconfig live-debconfig/passwd/root-password string ${_ROOT_PASSWORD}
+live-debconfig live-debconfig/passwd/root-password-again string ${_ROOT_PASSWORD}
+
 # ifupdown
 live-debconfig live-debconfig/ifupdown/lo-enable boolean false
 
@@ -306,21 +310,12 @@ EOF
 		Chroot "${_ROOTFS}" "apt-get --yes install ${_PACKAGES}"
 	fi
 
-	# Configure user-setup
-
-cat > "${_ROOTFS}/preseed.cfg" << EOF
-user-setup passwd/root-password string ${_ROOT_PASSWORD}
-user-setup passwd/root-password-again string ${_ROOT_PASSWORD}
-EOF
-
-	Chroot "${_ROOTFS}" "debconf-set-selections preseed.cfg"
-	Chroot "${_ROOTFS}" "/usr/lib/user-setup/user-setup-apply"
-
-	rm -f "${_ROOTFS}/preseed.cfg"
-
 	case "${_ROOT_RANDOM_PASSWORD}" in
 		true)
-			echo "P: Setting root password to ${_ROOT_PASSWORD}"
+			if ! grep -qs -E '^ *live-debconfig live-debconfig/passwd/root-password' "${_PRESEED_FILE}"
+			then
+				echo "P: Setting root password to ${_ROOT_PASSWORD}"
+			fi
 			;;
 	esac
 
@@ -355,11 +350,11 @@ Download_system ()
 
 	case "${_MODE}" in
 		debian)
-			_INCLUDE="ifupdown,locales,libui-dialog-perl,dialog,isc-dhcp-client,netbase,net-tools,iproute,user-setup,openssh-server"
+			_INCLUDE="ifupdown,locales,libui-dialog-perl,dialog,isc-dhcp-client,netbase,net-tools,iproute,openssh-server"
 			;;
 
 		progress-linux)
-			_INCLUDE="apt-utils,ifupdown,locales-all,libui-dialog-perl,dialog,isc-dhcp-client,netbase,net-tools,iproute,user-setup"
+			_INCLUDE="apt-utils,ifupdown,locales-all,libui-dialog-perl,dialog,isc-dhcp-client,netbase,net-tools,iproute"
 			;;
 	esac
 
