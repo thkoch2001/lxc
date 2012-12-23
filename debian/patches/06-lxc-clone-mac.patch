@@ -4,14 +4,14 @@ Description:
  in lxc-clone.
 
 diff -Naurp lxc.orig/src/lxc/lxc-clone.in lxc/src/lxc/lxc-clone.in
---- lxc.orig/src/lxc/lxc-clone.in	2012-11-23 10:29:42.008080821 +0100
-+++ lxc/src/lxc/lxc-clone.in	2012-11-26 20:08:22.589917565 +0100
+--- lxc.orig/src/lxc/lxc-clone.in	2012-12-23 09:05:31.296318441 +0100
++++ lxc/src/lxc/lxc-clone.in	2012-12-23 09:07:09.792340894 +0100
 @@ -273,7 +273,7 @@ mv ${c} ${c}.old
  (
  while read line; do
- 	if [ "${line:0:18}" = "lxc.network.hwaddr" ]; then
--		echo "lxc.network.hwaddr= 00:16:3e:$(openssl rand -hex 3| sed 's/\(..\)/\1:/g; s/.$//')"
-+		echo "lxc.network.hwaddr= 00:16:3e$(dd bs=1 count=3 if=/dev/urandom 2> /dev/null | hexdump -v -e '/1 ":%02X"')"
- 	else
- 		echo "$line"
- 	fi
+     if [ "${line:0:18}" = "lxc.network.hwaddr" ]; then
+-        echo "lxc.network.hwaddr= 00:16:3e:$(openssl rand -hex 3| sed 's/\(..\)/\1:/g; s/.$//')"
++        echo "lxc.network.hwaddr= 00:16:3e$(dd bs=1 count=3 if=/dev/urandom 2> /dev/null | hexdump -v -e '/1 ":%02X"')"
+     else
+         echo "$line"
+     fi
