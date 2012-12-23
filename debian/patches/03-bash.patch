@@ -35,24 +35,6 @@ diff -Naurp lxc.orig/src/lxc/lxc-destroy.in lxc/src/lxc/lxc-destroy.in
          if which btrfs >/dev/null 2>&1 &&
             btrfs subvolume list "$rootdev" >/dev/null 2>&1; then
              btrfs subvolume delete "$rootdev"
-diff -Naurp lxc.orig/src/lxc/lxc-ls.in lxc/src/lxc/lxc-ls.in
---- lxc.orig/src/lxc/lxc-ls.in	2012-11-12 13:28:25.720114813 +0100
-+++ lxc/src/lxc/lxc-ls.in	2012-11-12 13:57:28.524756889 +0100
-@@ -1,4 +1,4 @@
--#!/bin/bash
-+#!/bin/sh
- 
- #
- # lxc: linux Container library
-@@ -61,7 +61,7 @@ get_parent_cgroup()
- 
- 		# Return the absolute path to the containers' parent cgroup
- 		# (do not append '/lxc' if the hierarchy contains the 'ns' subsystem)
--		if [[ ",$subsystems," == *,ns,* ]]; then
-+		if [ ",$subsystems," = *,ns,* ]; then
- 			parent_cgroup="${mountpoint}${init_cgroup%/}"
- 		else
- 			parent_cgroup="${mountpoint}${init_cgroup%/}/lxc"
 diff -Naurp lxc.orig/src/lxc/lxc-netstat.in lxc/src/lxc/lxc-netstat.in
 --- lxc.orig/src/lxc/lxc-netstat.in	2012-11-12 13:28:25.720114813 +0100
 +++ lxc/src/lxc/lxc-netstat.in	2012-11-12 13:59:03.261226608 +0100
