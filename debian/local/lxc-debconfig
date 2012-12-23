@@ -269,12 +269,7 @@ EOF
 	fi
 
 	# Preseed live-debconfig
-	if [ -e "${_PRESEED_FILE}" ]
-	then
-		grep -E '^ *live-debconfig' "${_PRESEED_FILE}" > "${_ROOTFS}/preseed.cfg"
-	fi
-
-cat >> "${_ROOTFS}/preseed.cfg" << EOF
+cat > "${_ROOTFS}/preseed.cfg" << EOF
 # ifupdown
 live-debconfig live-debconfig/ifupdown/lo-enable boolean false
 
@@ -287,6 +282,11 @@ live-debconfig live-debconfig/util-linux/hwclockaccess boolean false
 # selinux
 live-debconfig live-debconfig/selinux/enable boolean false
 EOF
+
+	if [ -e "${_PRESEED_FILE}" ]
+	then
+		grep -E '^ *live-debconfig' "${_PRESEED_FILE}" >> "${_ROOTFS}/preseed.cfg"
+	fi
 
 	# Initialize live-debconfig debconf database
 	Chroot "${_ROOTFS}" "live-debconfig --nodebconfig"
