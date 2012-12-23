@@ -63,25 +63,31 @@ diff -Naurp lxc.orig/src/lxc/lxc-netstat.in lxc/src/lxc/lxc-netstat.in
      exit 1
  fi
 diff -Naurp lxc.orig/src/lxc/lxc-ps.in lxc/src/lxc/lxc-ps.in
---- lxc.orig/src/lxc/lxc-ps.in	2012-11-12 13:28:25.720114813 +0100
-+++ lxc/src/lxc/lxc-ps.in	2012-11-12 13:58:48.877155967 +0100
+--- lxc.orig/src/lxc/lxc-ps.in	2012-12-23 08:54:49.560160061 +0100
++++ lxc/src/lxc/lxc-ps.in	2012-12-23 09:02:14.708268697 +0100
+@@ -1,4 +1,4 @@
+-#!/bin/bash
++#!/bin/sh
+ 
+ #
+ # lxc: linux Container library
 @@ -61,7 +61,7 @@ get_parent_cgroup()
  
- 		# Return the absolute path to the containers' parent cgroup
- 		# (do not append '/lxc' if the hierarchy contains the 'ns' subsystem)
--		if [[ ",$subsystems," == *,ns,* ]]; then
-+		if [ ",$subsystems," = *,ns,* ]; then
- 			parent_cgroup="${mountpoint}${init_cgroup%/}"
- 		else
- 			parent_cgroup="${mountpoint}${init_cgroup%/}/lxc"
+         # Return the absolute path to the containers' parent cgroup
+         # (do not append '/lxc' if the hierarchy contains the 'ns' subsystem)
+-        if [[ ",$subsystems," == *,ns,* ]]; then
++        if [[ ",$subsystems," = *,ns,* ]]; then
+             parent_cgroup="${mountpoint}${init_cgroup%/}"
+         else
+             parent_cgroup="${mountpoint}${init_cgroup%/}/lxc"
 @@ -136,7 +136,7 @@ while read line; do
  
- 	buffer=${line:0:$line_pid_end_position}
- 	pid=${buffer##* }
--	if [ "$list_container_processes" -eq "0" -o ! -z "${container_of_pid[pid]}" ]; then
-+	if [ "$list_container_processes" -eq "0" ] || [ ! -z "${container_of_pid[pid]}" ]; then
- 		printf "%-${container_field_width}s %s\n" "${container_of_pid[pid]}" "$line"
- 	fi
+     buffer=${line:0:$line_pid_end_position}
+     pid=${buffer##* }
+-    if [ "$list_container_processes" -eq "0" -o ! -z "${container_of_pid[pid]}" ]; then
++    if [ "$list_container_processes" -eq "0" ] || [ ! -z "${container_of_pid[pid]}" ]; then
+         printf "%-${container_field_width}s %s\n" "${container_of_pid[pid]}" "$line"
+     fi
  done < <(ps "$@")
 diff -Naurp lxc.orig/src/lxc/lxc-setcap.in lxc/src/lxc/lxc-setcap.in
 --- lxc.orig/src/lxc/lxc-setcap.in	2012-11-12 13:28:25.720114813 +0100
