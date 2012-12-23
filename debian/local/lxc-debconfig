@@ -291,11 +291,8 @@ EOF
 		grep -E '^ *live-debconfig' "${_PRESEED_FILE}" >> "${_ROOTFS}/preseed.cfg"
 	fi
 
-	# Initialize live-debconfig debconf database
-	Chroot "${_ROOTFS}" "live-debconfig --nodebconfig"
-
 	# Apply preseed information
-	Chroot "${_ROOTFS}" "DEBCONF_SYSTEMRC=/var/lib/live/debconfig/systemrc debconf-set-selections preseed.cfg"
+	Chroot "${_ROOTFS}" "live-debconfig-set-selections preseed.cfg"
 
 	rm -f "${_ROOTFS}/preseed.cfg"
 
