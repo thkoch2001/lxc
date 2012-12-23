@@ -1,3 +1,46 @@
+lxc (0.9.0~alpha2-1) unstable; urgency=low
+
+  * Correcting wrong example in local lxc(1) manpage.
+  * Updating live-debconfig initialization for version 4.0~a11.
+  * Updating reference to future passwd support in live-debconfig within
+    lxc-debconfig.
+  * Renaming local archive preseed values for consistency with live-build.
+  * Updating some leftovers from eth to eth-ipv4 renaming (in preparation
+    for ipv6).
+  * Merging upstream version 0.9.0~alpha2.
+  * Dropping lxc-distclean.patch, solved upstream.
+  * Dropping lxc-checkconfig modifications in bash.patch, not worth the
+    constant hassle when new upstream releases appear.
+  * Dropping lxc-create modifications in bash.patch, merged upstream.
+  * Rediffing lxc-destroy modifications in bash.patch.
+  * Removing lxc-ls modifications from bash.patch, lxc-ls is python now.
+  * Rediffing lxc-netstat modifications in bash.patch.
+  * Rediffing lxc-ps modifications in bash.patch.
+  * Dropping lxc-setcap modifications in bash.patch, merged upstream.
+  * Dropping lxc-setuid modifications in bash.patch, merged upstream.
+  * Dropping lxc-version modifications in bash.patch, merged upstream.
+  * Rediffing lxc-debconfig.patch.
+  * Rediffing lxc-destroy-symlinks.patch.
+  * Rediffing lxc-clone-mac.patch.
+  * Removing lxc-kmsg.patch, included upstream.
+  * Renumbering patches.
+  * Updating docbook build-depends for new upstream.
+  * Updating date and version headers in local manpages.
+  * Updating example preseed files for pretty-much final preseed layout
+    for jessie (additions only, no renames).
+  * Prefering local preseeding of live-debconfig over the automatic one
+    from lxc-debconfig.
+  * Changing live-debconfig invokation to also work with locally preseeded
+    live-debconfig script multiselect.
+  * Simplifying live-debconfig preseeding initialization by using live-
+    debconfig-set-selections.
+  * Adding note about late reconfiguring all packages of priority
+    essential.
+  * Using live-debconfigs passwd script for user creation rather than too
+    limited user-setup from debian-installer.
+
+ -- Daniel Baumann <daniel.baumann@progress-technologies.net>  Sun, 23 Dec 2012 10:31:55 +0100
+
 lxc (0.8.0-5) unstable; urgency=low
 
   * Updating live-debconfig initialization for version 4.0~a10.
