@@ -49,7 +49,7 @@ diff -Naurp lxc.orig/src/lxc/lxc-netstat.in lxc/src/lxc/lxc-netstat.in
          # Return the absolute path to the containers' parent cgroup
          # (do not append '/lxc' if the hierarchy contains the 'ns' subsystem)
 -        if [[ ",$subsystems," == *,ns,* ]]; then
-+        if [[ ",$subsystems," = *,ns,* ]]; then
++        if [ ",$subsystems," = *,ns,* ]; then
              parent_cgroup="${mountpoint}${init_cgroup%/}"
          else
              parent_cgroup="${mountpoint}${init_cgroup%/}/lxc"
@@ -76,10 +76,19 @@ diff -Naurp lxc.orig/src/lxc/lxc-ps.in lxc/src/lxc/lxc-ps.in
          # Return the absolute path to the containers' parent cgroup
          # (do not append '/lxc' if the hierarchy contains the 'ns' subsystem)
 -        if [[ ",$subsystems," == *,ns,* ]]; then
-+        if [[ ",$subsystems," = *,ns,* ]]; then
++        if [ ",$subsystems," = *,ns,* ]; then
              parent_cgroup="${mountpoint}${init_cgroup%/}"
          else
              parent_cgroup="${mountpoint}${init_cgroup%/}/lxc"
+@@ -123,7 +123,7 @@ done
+ declare -i line_pid_end_position
+ while read line; do
+     if [ -z "$line_pid_end_position" ]; then
+-        if [[ "$line" != *" PID"* ]]; then
++        if [ "$line" != *" PID"* ]; then
+             echo "$(basename $0): no PID column found in \`ps' output" >&2
+             exit 1
+         fi
 @@ -136,7 +136,7 @@ while read line; do
  
      buffer=${line:0:$line_pid_end_position}
