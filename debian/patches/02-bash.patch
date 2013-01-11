@@ -33,14 +33,14 @@ diff -Naurp lxc.orig/src/lxc/lxc-destroy.in lxc/src/lxc/lxc-destroy.in
  rootdev=`grep lxc.rootfs $lxc_path/$lxc_name/config 2>/dev/null | sed -e 's/^[^/]*/\//'`
  if [ -n "$rootdev" ]; then
 -    if [ -b "$rootdev" -o -h "$rootdev" ]; then
-+    if [ -b "$rootdev"] || [ -h "$rootdev" ]; then
++    if [ -b "$rootdev" ] || [ -h "$rootdev" ]; then
          lvdisplay $rootdev > /dev/null 2>&1
          if [ $? -eq 0 ]; then
              echo "removing backing store: $rootdev"
              lvremove -f $rootdev
          fi
 -    elif [ -h "$rootdev" -o -d "$rootdev" ]; then
-+    elif [ -h "$rootdev"] || [ -d "$rootdev" ]; then
++    elif [ -h "$rootdev" ] || [ -d "$rootdev" ]; then
          if which btrfs >/dev/null 2>&1 &&
             btrfs subvolume list "$rootdev" >/dev/null 2>&1; then
              btrfs subvolume delete "$rootdev"
