@@ -312,7 +312,15 @@ EOF
 			;;
 	esac
 
-	# Install additional packages
+	# FIXME: Install additional packages after live-debconfig has been run.
+	# This is suboptimal, ideally we should install all packages but not run the maintainer scripts,
+	# then run live-debconfig, and run the maintainer scripts. This way, live-debconfig would see
+	# all the installed packages and could skip those scripts entirely when a certain package is not
+	# installed. Unfortunately, that is not possible in any reasonable way with apt-get.
+	# FTR: The only known workaround for now would be to first apt-get install --download-only all
+	# packages, then unpack them with dpkg, run live-debconfig, and dpkg --configure them.
+	# For the time being, it's better to have live-debconfig see no packages at all and be run before
+	# packages are installed, than the other way around.
 	if [ -n "${_PACKAGES}" ]
 	then
 		Chroot "${_ROOTFS}" "apt-get --yes install ${_PACKAGES}"
