@@ -22,10 +22,12 @@
 
 Warnings ()
 {
-	case "${_DISTRIBUTION}" in
-		squeeze*|wheezy*)
-			if ! ls /usr/share/lxc/packages/live-debconfig_*.deb > /dev/null 2>&1
-			then
+	case "${LXC_DEBCONFIG_WITH_LIVE_DEBCONFIG}" in
+		true)
+			case "${_DISTRIBUTION}" in
+				squeeze*|wheezy*)
+					if ! ls /usr/share/lxc/packages/live-debconfig_*.deb > /dev/null 2>&1
+					then
 
 cat << EOF
 WARNING: This version of the lxc-debconfig template requires the live-debconfig
@@ -40,8 +42,10 @@ system will fail.
 Press enter to continue nevertheless, or Ctrl-c to abort..
 EOF
 
-				read WAITING
-			fi
+						read WAITING
+					fi
+					;;
+			esac
 			;;
 	esac
 }
@@ -257,19 +261,21 @@ EOF
 		Chroot "${_ROOTFS}" "DEBIAN_FRONTEND=noninteractive DEBIAN_PRIORITY=criticial dpkg-reconfigure tzdata"
 	fi
 
-	# Install live-debconfig
-	if ls /usr/share/lxc/packages/live-debconfig_*.deb > /dev/null 2>&1
-	then
-		# Install local live-debconfig package
-		cp -L /usr/share/lxc/packages/live-debconfig_*.deb "${_ROOTFS}"
-		Chroot "${_ROOTFS}" "dpkg -i $(basename ${_ROOTFS}/live-debconfig_*.deb)"
-		rm -f "${_ROOTFS}"/live-debconfig_*.deb
-	else
-		# Install remote live-debconfig package
-		Chroot "${_ROOTFS}" "apt-get install --yes live-debconfig"
-	fi
+	case "${LXC_DEBCONFIG_WITH_LIVE_DEBCONFIG}" in
+		true)
+			# Install live-debconfig
+			if ls /usr/share/lxc/packages/live-debconfig_*.deb > /dev/null 2>&1
+			then
+				# Install local live-debconfig package
+				cp -L /usr/share/lxc/packages/live-debconfig_*.deb "${_ROOTFS}"
+				Chroot "${_ROOTFS}" "dpkg -i $(basename ${_ROOTFS}/live-debconfig_*.deb)"
+				rm -f "${_ROOTFS}"/live-debconfig_*.deb
+			else
+				# Install remote live-debconfig package
+				Chroot "${_ROOTFS}" "apt-get install --yes live-debconfig"
+			fi
 
-	# Preseed live-debconfig
+			# Preseed live-debconfig
 cat > "${_ROOTFS}/preseed.cfg" << EOF
 # multiselect
 live-debconfig live-debconfig/multiselect multiselect hostname, ifupdown, sysvinit, util-linux, selinux, openssh-server
@@ -291,18 +297,20 @@ live-debconfig live-debconfig/util-linux/hwclockaccess boolean false
 live-debconfig live-debconfig/selinux/enable boolean false
 EOF
 
-	if [ -e "${_PRESEED_FILE}" ]
-	then
-		grep -E '^ *live-debconfig' "${_PRESEED_FILE}" >> "${_ROOTFS}/preseed.cfg"
-	fi
+			if [ -e "${_PRESEED_FILE}" ]
+			then
+				grep -E '^ *live-debconfig' "${_PRESEED_FILE}" >> "${_ROOTFS}/preseed.cfg"
+			fi
 
-	# Apply preseed information
-	Chroot "${_ROOTFS}" "live-debconfig-set-selections preseed.cfg"
+			# Apply preseed information
+			Chroot "${_ROOTFS}" "live-debconfig-set-selections preseed.cfg"
 
-	rm -f "${_ROOTFS}/preseed.cfg"
+			rm -f "${_ROOTFS}/preseed.cfg"
 
-	# Run live-debconfig
-	Chroot "${_ROOTFS}" "DEBIAN_FRONTEND=${_DEBCONF_FRONTEND:-dialog} DEBIAN_PRIORITY=${_DEBCONF_PRIORITY:-high} live-debconfig --debconfig"
+			# Run live-debconfig
+			Chroot "${_ROOTFS}" "DEBIAN_FRONTEND=${_DEBCONF_FRONTEND:-dialog} DEBIAN_PRIORITY=${_DEBCONF_PRIORITY:-high} live-debconfig --debconfig"
+			;;
+	esac
 
 	# Install additional packages
 	if [ -n "${_PACKAGES}" ]
@@ -846,6 +854,14 @@ Usage ()
 
 	return 0
 }
+
+for _CONFFILE in /etc/default/lxc /etc/default/lxc.d/*
+do
+	if [ -e "${_CONFFILE}" ]
+	then
+		. "${_CONFFILE}" || true
+	fi
+done
 
 _OPTIONS="$(getopt -o d:hp:n:c -l apt-recommends:,debconf-frontend:,debconf-priority:,distribution:,preseed-file:,help,path:,name:,clean -- "$@")"
 
