@@ -4,14 +4,20 @@ set -e
 
 . /usr/share/debconf/confmodule
 
-_CONFFILE="/etc/default/lxc"
-
 case "${1}" in
 	configure)
-		if [ -e "${_CONFFILE}" ]
+		for _CONFFILE in /etc/default/lxc /etc/default/lxc.d/*
+		do
+			if [ -e "${_CONFFILE}" ]
+			then
+				. "${_CONFFILE}" || true
+			fi
+		done
+
+		_CONFFILE="/etc/default/lxc"
+
+		if [ ! -e "${_CONFFILE}" ]
 		then
-			. "${_CONFFILE}" || true
-		else
 
 cat > "${_CONFFILE}" << EOF
 # /etc/default/lxc

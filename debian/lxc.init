@@ -24,10 +24,13 @@ PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin
 
 . /lib/lsb/init-functions
 
-if [ -f /etc/default/lxc ]
-then
-	. /etc/default/lxc
-fi
+for _CONFFILE in /etc/default/lxc /etc/default/lxc.d/*
+do
+	if [ -e /etc/default/lxc ]
+	then
+		. /etc/default/lxc || true
+	fi
+done
 
 LXC_AUTO="${LXC_AUTO:-true}"
 
