@@ -797,6 +797,15 @@ EOF
 
 		if [ -n "${_VETH}" ]
 		then
+			if [ $(echo ${_VETH} | wc -c) -gt 16 ]
+			then
+				_VETH_OLD="${_VETH}"
+				_VETH="$(echo ${_VETH} | cut -b 1-15)"
+
+				echo "W: veth names must be maximum 15 characters long (IFNAMSIZ limit on linux)."
+				echo "I: Automatically shortening ${_VETH_OLD} to ${_VETH}."
+			fi
+
 			echo "lxc.network.veth.pair                   = ${_VETH}" >> "${_PATH}/config"
 		fi
 
