@@ -837,6 +837,11 @@ Auto ()
 
 Internal_options ()
 {
+	if dbg_get lxc-debconfig/lxc-debconfig-with-live-debconfig
+	then
+		LXC_DEBCONFIG_WITH_LIVE_DEBCONFIG="${RET}" # boolean
+	fi
+
 	if db_get lxc-debconfig/apt-recommends
 	then
 		_APT_RECOMMENDS="${RET}" # boolean (w/ empty)
