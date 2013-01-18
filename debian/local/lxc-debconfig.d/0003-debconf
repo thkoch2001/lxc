@@ -837,7 +837,7 @@ Auto ()
 
 Internal_options ()
 {
-	if dbg_get lxc-debconfig/lxc-debconfig-with-live-debconfig
+	if db_get lxc-debconfig/lxc-debconfig-with-live-debconfig
 	then
 		LXC_DEBCONFIG_WITH_LIVE_DEBCONFIG="${RET}" # boolean
 	fi
