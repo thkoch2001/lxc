@@ -278,7 +278,7 @@ EOF
 			# Preseed live-debconfig
 cat > "${_ROOTFS}/preseed.cfg" << EOF
 # multiselect
-live-debconfig live-debconfig/multiselect multiselect hostname, ifupdown, sysvinit, util-linux, selinux, openssh-server
+live-debconfig live-debconfig/scripts multiselect hostname, ifupdown, sysvinit, util-linux, selinux, openssh-server
 
 # passwd
 live-debconfig live-debconfig/passwd/root-password string ${_ROOT_PASSWORD}
