@@ -1,11 +1,11 @@
 # German translations for lxc package
-# Copyright (C) 2006-2012 Daniel Baumann <daniel.baumann@progress-technologies.net>
+# Copyright (C) 2006-2013 Daniel Baumann <daniel.baumann@progress-technologies.net>
 # This file is distributed under the same license as the lxc package.
 #
 msgid ""
 msgstr ""
 "Project-Id-Version: lxc\n"
-"POT-Creation-Date: 2012-12-23 09:20+0100\n"
+"POT-Creation-Date: 2013-01-18 15:25+0100\n"
 "PO-Revision-Date: 2010-05-24 09:59+0300\n"
 "Last-Translator: Daniel Baumann <daniel.baumann@progress-technologies.net>\n"
 "Language-Team: none\n"
@@ -24,8 +24,8 @@ msgstr "LXC"
 #. type: TH
 #: en/lxc-debconfig.1:9 en/lxc-halt.1:9 en/lxc-list.1:9 en/lxc.1:9
 #, no-wrap
-msgid "2012-12-23"
-msgstr "26.11.2012"
+msgid "2013-01-18"
+msgstr ""
 
 #. type: TH
 #: en/lxc-debconfig.1:9 en/lxc-halt.1:9 en/lxc-list.1:9 en/lxc.1:9
