@@ -144,7 +144,16 @@ Archives ()
 						db_subst lxc-debconfig/archives CHOICES "Debian Security, Debian Updates, Debian Backports, Debian Proposed Updates"
 						db_subst lxc-debconfig/archives CHOICES_C "${_DISTRIBUTION}-security, ${_DISTRIBUTION}-updates, ${_DISTRIBUTION}-backports, ${_DISTRIBUTION}-proposed-updates"
 
-						db_set lxc-debconfig/archives "${_DISTRIBUTION}-security, ${_DISTRIBUTION}-updates, ${_DISTRIBUTION}-backports"
+						case "${_PARENT_DISTRIBUTION}" in
+							wheezy)
+								db_set lxc-debconfig/archives "${_DISTRIBUTION}-security, ${_DISTRIBUTION}-updates"
+								;;
+
+							*)
+								db_set lxc-debconfig/archives "${_DISTRIBUTION}-security, ${_DISTRIBUTION}-updates, ${_DISTRIBUTION}-backports"
+								;;
+						esac
+
 						db_fset lxc-debconfig/archives seen false
 						;;
 				esac
