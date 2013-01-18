@@ -276,18 +276,9 @@ EOF
 			fi
 
 			# Preseed live-debconfig
-			_SCRIPTS=""
-
-			for _SCRIPT in hostname ifupdown sysvinit util-linux selinux openssh-server
-			do
-				_SCRIPTS="${_SCRIPTS} /lib/live/debconfig/$(basename ${_ROOTFS}/lib/live/debconfig/????-${_SCRIPT}),"
-			done
-
-			_SCRIPTS="$(echo ${_SCRIPTS} | sed -e 's|,$||')"
-
 cat > "${_ROOTFS}/preseed.cfg" << EOF
 # multiselect
-live-debconfig live-debconfig/scripts multiselect ${_SCRIPTS}
+live-debconfig live-debconfig/scripts multiselect hostname, ifupdown, sysvinit, util-linux, selinux, openssh-server
 
 # passwd
 live-debconfig live-debconfig/passwd/root-password string ${_ROOT_PASSWORD}
