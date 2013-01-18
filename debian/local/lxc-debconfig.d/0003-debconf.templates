@@ -98,7 +98,7 @@ Default:
 Description: Packages
  Packages.
 
-Template: passwd/root-password
+Template: live-debconfig/passwd/root-password
 Type: string
 Default:
 Description: Root password
