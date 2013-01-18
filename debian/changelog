@@ -1,3 +1,41 @@
+lxc (0.9.0~alpha2-2) unstable; urgency=low
+
+  * Updating bash.patch (Closes: #696921).
+  * Correcting mirror typo in preseed example files.
+  * Adding suggests to live-config-doc.
+  * Introducing LXC_DEBCONFIG_WITH_LIVE_DEBCONFIG variable in
+    /etc/default/lxc in order to allow the local admin to not use live-
+    debconfig to configure the chroot but do whatever he wants to do
+    instead (be it manually configuring it, or running late-commands via
+    lxc-debconf).
+  * Adding support for /etc/default/lxc.d/* files which overwrite
+    definitions in /etc/default/lxc if used.
+  * Automatically shortening veth names exceeding 15 characters to match
+    limitations in linux for the interface name lenghts.
+  * Updating bash patch to set shell to /bin/bash in lxc-checkconfig.
+  * Disallowing access to /dev/fuse in the default config, but keep it
+    commented in the config file so the local admin can enable it easily.
+  * Adding commented entries in config for loop device nodes.
+  * Adding patch to correct path to lxc-init in the sshd template (Closes:
+    #697267).
+  * Correcting harmless typo in bash patch regarding if statements in lxc-
+    destroy.
+  * Adding comment about the problem of running live-debconfig before
+    packages have been installed.
+  * Temporarily don't enable backports on wheezy by default as the debian-
+    backports repositores for wheezy are not available yet.
+  * Correcting spelling typo in fieldname for live-debconfigs script
+    selection.
+  * Correcting wrong preseed value for live-debconfig scripts that need to
+    be dereferenced.
+  * Also support internal preseeding for lxc-debconfig-with-live-
+    debconfig, not just the global switch via /etc/default.
+  * Updating live-debconfig run command for version 4.0~a14-1.
+  * Updating copyright file for packaging files.
+  * Updating year in copyright notices for 2013.
+
+ -- Daniel Baumann <daniel.baumann@progress-technologies.net>  Fri, 18 Jan 2013 15:28:46 +0100
+
 lxc (0.9.0~alpha2-1) unstable; urgency=low
 
   * Correcting wrong example in local lxc(1) manpage.
