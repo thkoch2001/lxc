@@ -7,8 +7,8 @@ Files: *
 Copyright: 2007-2012 IBM Corporation
 License: GPL-2+
 
-Files: *
-Copyright: 2011-2012 Daniel Baumann <daniel@debian.org>
+Files: debian/*
+Copyright: 2011-2013 Daniel Baumann <daniel@debian.org>
 License: GPL-2+
 
 License: GPL-2+
