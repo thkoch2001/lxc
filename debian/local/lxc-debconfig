@@ -317,7 +317,7 @@ EOF
 			rm -f "${_ROOTFS}/preseed.cfg"
 
 			# Run live-debconfig
-			Chroot "${_ROOTFS}" "DEBIAN_FRONTEND=${_DEBCONF_FRONTEND:-dialog} DEBIAN_PRIORITY=${_DEBCONF_PRIORITY:-high} live-debconfig --debconfig"
+			Chroot "${_ROOTFS}" "DEBIAN_FRONTEND=${_DEBCONF_FRONTEND:-dialog} DEBIAN_PRIORITY=${_DEBCONF_PRIORITY:-high} live-debconfig"
 			;;
 	esac
 
