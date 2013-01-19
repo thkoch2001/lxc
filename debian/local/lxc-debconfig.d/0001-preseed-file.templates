@@ -7,9 +7,13 @@ Type: string
 Default:
 Description: Enter (optional) preseed file to use:
  Preseed file anyone?
+ .
+ If you do not want to use a preseed file, leave this question empty.
 
 Template: lxc-debconfig/preseed-files
 Type: select
 Default: custom
 Choices: ${CHOICES}
 Description: Choose an existing preseed config
+ If you do not want to use a preseed file, choose custom and don't
+ specify a preseed file.
