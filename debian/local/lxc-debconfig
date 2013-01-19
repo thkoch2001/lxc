@@ -323,7 +323,15 @@ EOF
 	# packages are installed, than the other way around.
 	if [ -n "${_PACKAGES}" ]
 	then
-		Chroot "${_ROOTFS}" "apt-get --yes install ${_PACKAGES}"
+		case "${_DEBCONF_FRONTEND}" in
+			noninteractive)
+				Chroot "${_ROOTFS}" apt-get --option Dpkg::Options::="--force-overwrite" --option Dpkg::Options::="--force-confold" --yes install ${_PACKAGES}
+				;;
+
+			*)
+				Chroot "${_ROOTFS}" "apt-get --yes install ${_PACKAGES}"
+				;;
+		esac
 	fi
 
 	case "${_ROOT_RANDOM_PASSWORD}" in
