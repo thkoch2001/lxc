@@ -690,36 +690,39 @@ Local_archives ()
 
 Root_password ()
 {
-	if db_get live-debconfig/passwd/root-password
+	if ! db_get live-debconfig/passwd/root-password-crypted
 	then
-		_ROOT_PASSWORD="${RET}" # string (w/o empty)
-	fi
-
-	if [ -z "${_ROOT_PASSWORD}" ]
-	then
-		# Create a random password as suggestion for the user
-		_RANDOM_PASSWORD="$(dd if=/dev/urandom bs=6 count=1 2> /dev/null | base64)"
-
-		db_set live-debconfig/passwd/root-password ${_RANDOM_PASSWORD}
-		db_fset live-debconfig/passwd/root-password seen false
-
-		db_settitle lxc-debconfig/title
-		db_input high live-debconfig/passwd/root-password || true
-		db_go
-
-		db_get live-debconfig/passwd/root-password
-		_ROOT_PASSWORD="${RET}"
+		if db_get live-debconfig/passwd/root-password
+		then
+			_ROOT_PASSWORD="${RET}" # string (w/o empty)
+		fi
 
 		if [ -z "${_ROOT_PASSWORD}" ]
 		then
-			# User did set not set a password, falling back to random password
-			_ROOT_PASSWORD="${_RANDOM_PASSWORD}"
+			# Create a random password as suggestion for the user
+			_RANDOM_PASSWORD="$(dd if=/dev/urandom bs=6 count=1 2> /dev/null | base64)"
 
-			echo "_ROOT_RANDOM_PASSWORD=\"true\"" >> "${_TMPDIR}/debconf.default"
+			db_set live-debconfig/passwd/root-password ${_RANDOM_PASSWORD}
+			db_fset live-debconfig/passwd/root-password seen false
+
+			db_settitle lxc-debconfig/title
+			db_input high live-debconfig/passwd/root-password || true
+			db_go
+
+			db_get live-debconfig/passwd/root-password
+			_ROOT_PASSWORD="${RET}"
+
+			if [ -z "${_ROOT_PASSWORD}" ]
+			then
+				# User did set not set a password, falling back to random password
+				_ROOT_PASSWORD="${_RANDOM_PASSWORD}"
+
+				echo "_ROOT_RANDOM_PASSWORD=\"true\"" >> "${_TMPDIR}/debconf.default"
+			fi
 		fi
-	fi
 
-	echo "_ROOT_PASSWORD=\"${_ROOT_PASSWORD}\"" >> "${_TMPDIR}/debconf.default"
+		echo "_ROOT_PASSWORD=\"${_ROOT_PASSWORD}\"" >> "${_TMPDIR}/debconf.default"
+	fi
 }
 
 Network ()

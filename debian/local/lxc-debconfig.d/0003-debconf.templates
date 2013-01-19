@@ -104,6 +104,12 @@ Default:
 Description: Root password
  Root password.
 
+Template: live-debconfig/passwd/root-password-crypted
+Type: string
+Default:
+Description: Root password (crypted)
+ Root password (crypted).
+
 Template: lxc-debconfig/eth0-bridge
 Type: string
 Default:
