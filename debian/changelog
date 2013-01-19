@@ -1,3 +1,16 @@
+lxc (0.9.0~alpha2-4) unstable; urgency=low
+
+  * Updating example preseeding file for lxc-debconfig.
+  * Don't show root password dialog when crypted root password via live-
+    debconfig has been preseeded.
+  * Enforcing keeping of old configuration files on dpkg when installing
+    packages after live-debconfig and using noninteractive debconf
+    frontend.
+  * Before reworking the initial preseed file selection, let's improve the
+    wording a bit for those that do not want to use a preseed file at all.
+
+ -- Daniel Baumann <daniel.baumann@progress-technologies.net>  Sat, 19 Jan 2013 07:59:45 +0100
+
 lxc (0.9.0~alpha2-3) unstable; urgency=low
 
   * Correcting spelling typo when getting lxc-debconfig/lxc-debconfig-
