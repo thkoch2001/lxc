@@ -1,3 +1,13 @@
+lxc (0.9.0~alpha2-5) unstable; urgency=low
+
+  * Updating standards to version 3.9.4.
+  * Dropping dpkg-source compression levels.
+  * Dropping bash.patch, not worth the hassle (Closes: #698730).
+  * Renumbering patches.
+  * Updating version in local files.
+
+ -- Daniel Baumann <daniel.baumann@progress-technologies.net>  Thu, 24 Jan 2013 19:59:16 +0100
+
 lxc (0.9.0~alpha2-4) unstable; urgency=low
 
   * Updating example preseeding file for lxc-debconfig.
