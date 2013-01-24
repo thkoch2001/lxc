@@ -6,7 +6,7 @@ Uploaders: Jonas Genannt <jonas.genannt@capi2name.de>
 Build-Depends:
  debhelper (>= 9), autotools-dev, docbook2x, libapparmor-dev, libcap-dev,
  linux-libc-dev
-Standards-Version: 3.9.3
+Standards-Version: 3.9.4
 Homepage: http://lxc.sourceforge.net/
 
 Package: lxc
