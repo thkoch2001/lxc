@@ -721,11 +721,11 @@ EOF
 
 case "${_MODE}" in
 	progress-linux)
-		_PROC_OPTIONS="nodev,noexec,nosuid,hidepid=2"
+		_PROC_OPTIONS="ro,nodev,noexec,nosuid,hidepid=2"
 		;;
 
 	*)
-		_PROC_OPTIONS="nodev,noexec,nosuid"
+		_PROC_OPTIONS="ro,nodev,noexec,nosuid"
 		;;
 esac
 
