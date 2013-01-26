@@ -14,7 +14,7 @@ Architecture: linux-any
 Pre-Depends: multiarch-support
 Depends: ${misc:Depends}, ${shlibs:Depends}
 Recommends: debootstrap | cdebootstrap, libcap2-bin
-Suggests: live-debconfig-doc, rsync
+Suggests: live-debconfig-doc, gpgv, debian-keyring, rsync
 Conflicts: cgroup-bin
 Description: Linux Containers userspace tools
  Containers are insulated areas inside a system, which have their own namespace

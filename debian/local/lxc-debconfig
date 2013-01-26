@@ -519,10 +519,27 @@ EOF
 
 			for _KEY in ${_KEYS}
 			do
-				wget "${_MIRROR}/project/keys/archive-key-${_KEY}.asc" -O "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}.partial/key.asc"
+				echo "P: Fetching archive-key ${_KEY}..."
+
+				wget -q "${_MIRROR}/project/keys/archive-key-${_KEY}.asc" -O "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}.partial/key.asc"
+				wget -q "${_MIRROR}/project/keys/archive-key-${_KEY}.asc.sig" -O "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}.partial/key.asc.sig"
+
+				if [ -e /usr/bin/gpgv ] && [ -e /usr/share/keyrings/debian-keyring.gpg ]
+				then
+					echo "I: Verifying archive-key ${_KEY} against debian-keyring..."
+
+					/usr/bin/gpgv --quiet --keyring /usr/share/keyrings/debian-keyring.gpg "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}.partial/key.asc.sig" "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}.partial/key.asc" > /dev/null 2>&1 || { echo "E: archive-key ${_KEY} has invalid signature."; return 1;}
+				else
+					echo "W: Skipping archive-key ${_KEY} verification, either gpgv or debian-keyring not available..."
+				fi
+
+				echo "P: Importing archive-key ${_KEY}..."
+
 				Chroot "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}.partial" "apt-key add key.asc"
 				rm -f "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}.partial/key.asc"
 			done
+
+			Chroot "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}.partial" "apt-get update"
 			;;
 	esac
 
