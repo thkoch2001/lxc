@@ -512,8 +512,8 @@ EOF
 					_KEYS="2.0-baureo-automatic 2.0-baureo-stable"
 					;;
 
-				charon)
-					_KEYS="3.0-charon-automatic 3.0-charon-stable"
+				chairon)
+					_KEYS="3.0-chairon-automatic 3.0-chairon-stable"
 					;;
 			esac
 

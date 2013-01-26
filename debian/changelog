@@ -219,7 +219,7 @@ lxc (0.8.0~rc1-12) unstable; urgency=low
   * Updating todo file.
   * Adding support for jessie in lxc-debconfig.
   * Completing support for baureo and baureo-backports in lxc-debconfig.
-  * Adding support for charon and charon-backports in lxc-debconfig.
+  * Adding support for chairon and chairon-backports in lxc-debconfig.
   * Setting debian default distribution to wheezy in lxc-debconfig.
   * Setting progress default distribution to baureo in lxc-debconfig.
   * Correcting debconf fieldnames for bridge and mac in lxc-debconfig
