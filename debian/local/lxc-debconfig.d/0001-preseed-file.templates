@@ -2,6 +2,12 @@ Template: lxc-debconfig/title
 Type: title
 Description: Linux Container (LXC)
 
+Template: lxc-debconfig/preseed-files
+Type: select
+Default: none
+Choices: ${CHOICES}
+Description: Choose a preseed config, enter a custom one, or use no preseed file at all.
+
 Template: lxc-debconfig/preseed-file
 Type: string
 Default:
@@ -9,11 +15,3 @@ Description: Enter (optional) preseed file to use:
  Preseed file anyone?
  .
  If you do not want to use a preseed file, leave this question empty.
-
-Template: lxc-debconfig/preseed-files
-Type: select
-Default: custom
-Choices: ${CHOICES}
-Description: Choose an existing preseed config
- If you do not want to use a preseed file, choose custom and don't
- specify a preseed file.

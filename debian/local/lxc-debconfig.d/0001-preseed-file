@@ -19,11 +19,11 @@ then
 	db_fset lxc-debconfig/preseed-file seen true
 elif ls /etc/lxc/debconfig/* > /dev/null 2>&1
 then
-	_PRESEED_FILES="$(for _FILE in $(ls /etc/lxc/debconfig/*); do echo -n "$(basename ${_FILE}), "; done)"
+	_PRESEED_FILES="$(for _FILE in $(ls /etc/lxc/debconfig/*); do echo -n "$(basename ${_FILE}), "; done | sed -e 's|, $||')"
 
 	if [ -n "${_PRESEED_FILES}" ]
 	then
-		db_subst lxc-debconfig/preseed-files CHOICES "${_PRESEED_FILES}custom"
+		db_subst lxc-debconfig/preseed-files CHOICES "none, custom, , ${_PRESEED_FILES}"
 
 		db_settitle lxc-debconfig/title
 		db_input high lxc-debconfig/preseed-files || true
@@ -32,24 +32,35 @@ then
 		db_get lxc-debconfig/preseed-files
 		_PRESEED_FILE="${RET}" # select
 
-		if [ "${_PRESEED_FILE}" != "custom" ]
-		then
-			# user specified preseed file through debconf select
-			db_set lxc-debconfig/preseed-file "/etc/lxc/debconfig/${_PRESEED_FILE}"
-			db_fset lxc-debconfig/preseed-file seen true
-		fi
+		case "${_PRESEED_FILE}" in
+			none|custom)
+				;;
+
+			*)
+				# user specified preseed file through debconf select
+				db_set lxc-debconfig/preseed-file "/etc/lxc/debconfig/${_PRESEED_FILE}"
+				db_fset lxc-debconfig/preseed-file seen true
+				;;
+		esac
 	fi
 fi
 
-# ask user for a preseed file
-db_settitle lxc-debconfig/title
-db_input high lxc-debconfig/preseed-file || true
-db_go
+case "${_PRESEED_FILE}" in
+	none)
+		;;
 
-db_get lxc-debconfig/preseed-file
-_PRESEED_FILE="${RET}" # string (w/ empty)
+	*)
+		# ask user for a preseed file
+		db_settitle lxc-debconfig/title
+		db_input high lxc-debconfig/preseed-file || true
+		db_go
 
-echo "_PRESEED_FILE=\"${_PRESEED_FILE}\"" >> "${_TMPDIR}/debconf.default"
-export _PRESEED_FILE
+		db_get lxc-debconfig/preseed-file
+		_PRESEED_FILE="${RET}" # string (w/ empty)
+
+		echo "_PRESEED_FILE=\"${_PRESEED_FILE}\"" >> "${_TMPDIR}/debconf.default"
+		export _PRESEED_FILE
+		;;
+esac
 
 db_stop
