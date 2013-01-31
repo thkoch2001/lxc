@@ -3,3 +3,4 @@
 03-lxc-destroy-symlinks.patch
 04-lxc-clone-mac.patch
 05-lxc-init-path.patch
+06-bash.patch
