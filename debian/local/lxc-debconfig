@@ -537,6 +537,7 @@ EOF
 
 				Chroot "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}.partial" "apt-key add key.asc"
 				rm -f "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}.partial/key.asc"
+				rm -f "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}.partial/key.asc.sig"
 			done
 
 			Chroot "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}.partial" "apt-get update"
