@@ -746,9 +746,11 @@ case "${_MODE}" in
 		;;
 esac
 
+_SYSFS_OPTIONS="ro"
+
 cat >> "${_PATH}/config" << EOF
 lxc.mount.entry                         = proc proc proc ${_PROC_OPTIONS} 0 0
-lxc.mount.entry                         = sysfs sys sysfs defaults,ro 0 0
+lxc.mount.entry                         = sysfs sys sysfs ${_SYSFS_OPTIONS} 0 0
 EOF
 
 	# Adding preseeded mount entries
