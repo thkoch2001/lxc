@@ -2,8 +2,8 @@ Author: Daniel Baumann <daniel.baumann@progress-technologies.net>
 Description: Also removing auto symlink when destroying containers.
 
 diff -Naurp lxc.orig/src/lxc/lxc-destroy.in lxc/src/lxc/lxc-destroy.in
---- lxc.orig/src/lxc/lxc-destroy.in	2012-12-23 09:11:08.408400746 +0100
-+++ lxc/src/lxc/lxc-destroy.in	2012-12-23 09:11:38.428408460 +0100
+--- lxc.orig/src/lxc/lxc-destroy.in
++++ lxc/src/lxc/lxc-destroy.in
 @@ -130,3 +130,6 @@ fi
  
  # recursively remove the container to remove old container configuration
