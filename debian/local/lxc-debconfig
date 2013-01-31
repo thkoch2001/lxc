@@ -354,12 +354,22 @@ EOF
 
 	if [ -n "${_LATE_COMMAND}" ]
 	then
-		Chroot "${_ROOTFS}" "${_LATE_COMMAND}"
+		echo "${_LATE_COMMAND}" > "${_ROOTFS}/.late-command"
+
+		Chroot "${_ROOTFS}" "sh /.late-command"
+
+		rm -f "${_ROOTFS}/.late-command"
 	fi
 
 	if [ -n "${_LATE_HOST_COMMAND}" ]
 	then
-		${_LATE_HOST_COMMAND}
+		echo "${_LATE_HOST_COMMAND}" > "${_ROOTFS}/.late-host-command"
+
+		cd "${_ROOTFS}"
+		sh "${_ROOTFS}/.late-host-command"
+		cd "${OLDPWD}"
+
+		rm -f "${_ROOTFS}/.late-host-command"
 	fi
 
 	Cleanup_system "${_ROOTFS}"
