@@ -1,6 +1,6 @@
-01-lxc-configuration-path.patch
-02-lxc-debconfig.patch
-03-lxc-destroy-symlinks.patch
-04-lxc-clone-mac.patch
-05-lxc-init-path.patch
-06-bash.patch
+0001-lxc-configuration-path.patch
+0002-lxc-debconfig.patch
+0003-lxc-destroy-symlinks.patch
+0004-lxc-clone-mac.patch
+0005-lxc-init-path.patch
+0006-bash.patch
