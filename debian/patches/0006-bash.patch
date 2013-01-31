@@ -4,8 +4,8 @@ Description:
  next upstream release (Closes: #698956).
 
 diff -Naurp lxc.orig/src/lxc/lxc-checkconfig.in lxc/src/lxc/lxc-checkconfig.in
---- lxc.orig/src/lxc/lxc-checkconfig.in	2013-01-11 13:25:44.994874183 +0100
-+++ lxc/src/lxc/lxc-checkconfig.in	2013-01-31 06:23:44.122794378 +0100
+--- lxc.orig/src/lxc/lxc-checkconfig.in
++++ lxc/src/lxc/lxc-checkconfig.in
 @@ -1,4 +1,4 @@
 -#!/bin/sh
 +#!/bin/bash

@@ -4,8 +4,8 @@ Description:
  in lxc-clone.
 
 diff -Naurp lxc.orig/src/lxc/lxc-clone.in lxc/src/lxc/lxc-clone.in
---- lxc.orig/src/lxc/lxc-clone.in	2012-12-23 09:05:31.296318441 +0100
-+++ lxc/src/lxc/lxc-clone.in	2012-12-23 09:07:09.792340894 +0100
+--- lxc.orig/src/lxc/lxc-clone.in
++++ lxc/src/lxc/lxc-clone.in
 @@ -273,7 +273,7 @@ mv ${c} ${c}.old
  (
  while read line; do

@@ -2,8 +2,8 @@ Author: Daniel Baumann <daniel.baumann@progress-technologies.net>
 Description: Correcting path to lxc-init in the sshd template (Closes: #697267).
 
 diff -Naurp lxc.orig/templates/lxc-sshd.in lxc/templates/lxc-sshd.in
---- lxc.orig/templates/lxc-sshd.in	2013-01-11 13:13:30.818757816 +0100
-+++ lxc/templates/lxc-sshd.in	2013-01-11 13:22:19.158841307 +0100
+--- lxc.orig/templates/lxc-sshd.in
++++ lxc/templates/lxc-sshd.in
 @@ -170,7 +170,7 @@ fi
  
  if [ $0 == "/sbin/init" ]; then
