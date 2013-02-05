@@ -22,6 +22,8 @@
 
 #set -e
 
+umask 0022
+
 Warnings ()
 {
 	case "${LXC_DEBCONFIG_WITH_LIVE_DEBCONFIG}" in
