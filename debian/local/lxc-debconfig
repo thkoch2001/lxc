@@ -20,6 +20,8 @@
 ## can be found in /usr/share/common-licenses/GPL-3 file.
 
 
+#set -e
+
 Warnings ()
 {
 	case "${LXC_DEBCONFIG_WITH_LIVE_DEBCONFIG}" in
