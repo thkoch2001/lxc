@@ -702,9 +702,19 @@ EOF
 
 	_CAPABILITIES="${_CAPABILITIES:-mac_admin mac_override sys_admin sys_boot sys_module}"
 
+	case "${_CAPABILITIES}" in
+		none)
+			_COMMENTED="#"
+			_CAPABILITIES="mac_admin mac_override sys_admin sys_boot sys_module"
+			;;
+		*)
+			_COMMENTED=""
+			;;
+	esac
+
 	for _CAPABILITY in ${_CAPABILITIES}
 	do
-		echo "lxc.cap.drop                            = ${_CAPABILITY}" >> "${_PATH}/config"
+		echo "${_COMMENTED}lxc.cap.drop                            = ${_CAPABILITY}" >> "${_PATH}/config"
 	done
 
 cat >> "${_PATH}/config" << EOF
