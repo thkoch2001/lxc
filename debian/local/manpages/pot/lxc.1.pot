@@ -7,7 +7,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: lxc VERSION\n"
-"POT-Creation-Date: 2013-01-24 19:57+0100\n"
+"POT-Creation-Date: 2013-02-07 13:12+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -25,13 +25,13 @@ msgstr ""
 #. type: TH
 #: en/lxc-debconfig.1:9 en/lxc-halt.1:9 en/lxc-list.1:9 en/lxc.1:9
 #, no-wrap
-msgid "2013-01-24"
+msgid "2013-02-07"
 msgstr ""
 
 #. type: TH
 #: en/lxc-debconfig.1:9 en/lxc-halt.1:9 en/lxc-list.1:9 en/lxc.1:9
 #, no-wrap
-msgid "0.9.0~alpha2-5"
+msgid "0.9.0~alpha2-8"
 msgstr ""
 
 #. type: TH
