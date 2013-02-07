@@ -700,7 +700,7 @@ lxc.pts                                 = 1024
 ## Capabilities
 EOF
 
-	_CAPABILITIES="${_CAPABILITIES:-mac_admin mac_override sys_admin sys_module}"
+	_CAPABILITIES="${_CAPABILITIES:-mac_admin mac_override sys_admin sys_boot sys_module}"
 
 	for _CAPABILITY in ${_CAPABILITIES}
 	do
