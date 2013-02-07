@@ -1,3 +1,10 @@
+lxc (0.9.0~alpha2-9) unstable; urgency=low
+
+  * Dropping audit_control, audit_write, linux_immutable, setpcap,
+    sys_pacct, sys_rawio, and sys_time capabilities by default too.
+
+ -- Daniel Baumann <daniel.baumann@progress-technologies.net>  Thu, 07 Feb 2013 14:33:35 +0100
+
 lxc (0.9.0~alpha2-8) unstable; urgency=low
 
   * Added commented set -e in lxc-debconfig as reminder to support that at
