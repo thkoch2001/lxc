@@ -1,3 +1,17 @@
+lxc (0.9.0~alpha2-8) unstable; urgency=low
+
+  * Added commented set -e in lxc-debconfig as reminder to support that at
+    some point.
+  * Setting umask to 0022 by default within lxc-debconfig, thanks to Ivan
+    Vilata i Balaguer <ivan@selidor.net> (Closes: #699816).
+  * Dropping sys_boot capability by default too.
+  * Still adding commented entries about capabilties to be dropped in lxc
+    config for reference purpose even when no capability is actualy
+    dropped.
+  * Updating manpage date and version numbers.
+
+ -- Daniel Baumann <daniel.baumann@progress-technologies.net>  Thu, 07 Feb 2013 13:14:35 +0100
+
 lxc (0.9.0~alpha2-7) unstable; urgency=low
 
   * Updating example preseeding files for live-debconfig 4.0~a17-1.
