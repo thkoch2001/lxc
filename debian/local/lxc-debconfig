@@ -700,12 +700,12 @@ lxc.pts                                 = 1024
 ## Capabilities
 EOF
 
-	_CAPABILITIES="${_CAPABILITIES:-mac_admin mac_override sys_admin sys_boot sys_module}"
+	_CAPABILITIES="${_CAPABILITIES:-audit_control audit_write linux_immutable mac_admin mac_override setpcap sys_admin sys_boot sys_module sys_pacct sys_rawio sys_time}"
 
 	case "${_CAPABILITIES}" in
 		none)
 			_COMMENTED="#"
-			_CAPABILITIES="mac_admin mac_override sys_admin sys_boot sys_module"
+			_CAPABILITIES="audit_control audit_write linux_immutable mac_admin mac_override setpcap sys_admin sys_boot sys_module sys_pacct sys_rawio sys_time"
 			;;
 		*)
 			_COMMENTED=""
