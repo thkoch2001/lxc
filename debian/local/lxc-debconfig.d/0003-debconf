@@ -889,6 +889,23 @@ Internal_options ()
 
 	echo "_CAPABILITIES=\"${_CAPABILITIES}\"" >> "${_TMPDIR}/debconf.default"
 
+	if db_get lxc-debconfig/initsystem
+	then
+		_INITSYSTEM="${RET}" # string (w/o empty)
+	fi
+
+	case "${_MODE}" in
+		progress-linux)
+			_INITSYSTEM="${_INITSYSTEM:-systemd}"
+			;;
+
+		*)
+			_INITSYSTEM="${_INITSYSTEM:-sysvinit}"
+			;;
+	esac
+
+	echo "_INITSYSTEM=\"${_INITSYSTEM}\"" >> "${_TMPDIR}/debconf.default"
+
 	_NUMBER="0"
 
 	while db_get lxc-debconfig/mount${_NUMBER}/entry && [ "${RET}" ]
