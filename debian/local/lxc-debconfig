@@ -282,7 +282,7 @@ EOF
 			# Preseed live-debconfig
 cat > "${_ROOTFS}/preseed.cfg" << EOF
 # multiselect
-live-debconfig live-debconfig/scripts multiselect hostname, ifupdown, sysvinit, util-linux, selinux, openssh-server
+live-debconfig live-debconfig/scripts multiselect hostname, ifupdown, ${_INITSYSTEM}, util-linux, selinux, openssh-server
 
 # passwd
 live-debconfig live-debconfig/passwd/root-password string ${_ROOT_PASSWORD}
@@ -291,8 +291,8 @@ live-debconfig live-debconfig/passwd/root-password-again string ${_ROOT_PASSWORD
 # ifupdown
 live-debconfig live-debconfig/ifupdown/lo-enable boolean false
 
-# sysvinit
-live-debconfig live-debconfig/sysvinit/lxc-enable boolean true
+# ${_INITSYSTEM}
+live-debconfig live-debconfig/${_INITSYSTEM}/lxc-enable boolean true
 
 # util-linux
 live-debconfig live-debconfig/util-linux/hwclockaccess boolean false
@@ -389,10 +389,24 @@ Download_system ()
 	case "${_MODE}" in
 		debian)
 			_INCLUDE="ifupdown,locales,libui-dialog-perl,dialog,isc-dhcp-client,netbase,net-tools,iproute,openssh-server"
+			_EXCLUDE=""
 			;;
 
 		progress-linux)
 			_INCLUDE="apt-utils,ifupdown,locales-all,libui-dialog-perl,dialog,isc-dhcp-client,netbase,net-tools,iproute"
+			_EXCLUDE=""
+			;;
+	esac
+
+	case "${_INITSYSTEM}" in
+		systemd)
+			_INCLUDE="--include=systemd,${_INCLUDE}"
+			_EXCLUDE="--exclude=sysvinit,${_EXCLUDE}"
+			;;
+
+		*)
+			_INCLUDE="--include=${_INCLUDE}"
+			_EXCLUDE=""
 			;;
 	esac
 
@@ -411,14 +425,14 @@ Download_system ()
 	if [ -x "$(which cdebootstrap 2>/dev/null)" ]
 	then
 		cdebootstrap --arch=${_ARCHITECTURE} \
-			--flavour=minimal --include=bzip2,${_INCLUDE} \
+			--flavour=minimal ${_INCLUDE} ${_EXCLUDE} \
 			${_PARENT_DISTRIBUTION} "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}.partial" ${_PARENT_MIRROR}
 
 		Chroot "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}.partial" "dpkg --purge cdebootstrap-helper-rc.d"
 	elif [ -x "$(which debootstrap 2>/dev/null)" ]
 	then
 		debootstrap --verbose --arch=${_ARCHITECTURE} --components=${_PARENT_ARCHIVE_AREAS} \
-			--variant=minbase --include=bzip2,${_INCLUDE} \
+			--variant=minbase ${_INCLUDE} ${_EXCLUDE} \
 			${_PARENT_DISTRIBUTION} "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}.partial" ${_PARENT_MIRROR}
 	fi
 
@@ -555,6 +569,15 @@ EOF
 			done
 
 			Chroot "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}.partial" "apt-get update"
+			;;
+	esac
+
+	# Fixup bootstrapping deficiencies with skipping essential packages.. (FIXME)
+	case "${_INITSYSTEM}" in
+		systemd)
+			Chroot "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}.partial" dpkg --force-remove-essential --purge sysvinit
+			Chroot "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}.partial" apt-get install --yes systemd-sysv
+			Chroot "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}.partial" apt-get clean
 			;;
 	esac
 
