@@ -817,8 +817,15 @@ EOF
 			echo "lxc.mount.entry                         = ${_ENTRY}" >> "${_PATH}/config"
 
 			# Create directories
-			_DIRECTORIES="$(echo ${_ENTRY} | awk '{ print $1, $2 }')"
-			mkdir -p ${_DIRECTORIES}
+			_SOURCE="$(echo ${_ENTRY} | awk '{ print $1 }')"
+			_TARGET="$(echo ${_ENTRY} | awk '{ print $2 }')"
+
+			if [ -f "${_SOURCE}" ]
+			then
+				mkdir -p "$(dirname ${_TARGET})"
+			else
+				mkdir -p "${_TARGET}"
+			fi
 		fi
 	done
 
