@@ -51,6 +51,7 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
+@ENABLE_TESTS_TRUE@@IS_BIONIC_FALSE@am__append_1 = -lpthread
 @ENABLE_TESTS_TRUE@bin_PROGRAMS = lxc-test-containertests$(EXEEXT) \
 @ENABLE_TESTS_TRUE@	lxc-test-locktests$(EXEEXT) \
 @ENABLE_TESTS_TRUE@	lxc-test-startone$(EXEEXT) \
@@ -59,7 +60,8 @@ host_triplet = @host@
 @ENABLE_TESTS_TRUE@	lxc-test-createtest$(EXEEXT) \
 @ENABLE_TESTS_TRUE@	lxc-test-shutdowntest$(EXEEXT) \
 @ENABLE_TESTS_TRUE@	lxc-test-get_item$(EXEEXT) \
-@ENABLE_TESTS_TRUE@	lxc-test-getkeys$(EXEEXT)
+@ENABLE_TESTS_TRUE@	lxc-test-getkeys$(EXEEXT) \
+@ENABLE_TESTS_TRUE@	lxc-test-lxcpath$(EXEEXT)
 subdir = src/tests
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -79,57 +81,68 @@ am__lxc_test_containertests_SOURCES_DIST = containertests.c
 lxc_test_containertests_OBJECTS =  \
 	$(am_lxc_test_containertests_OBJECTS)
 lxc_test_containertests_LDADD = $(LDADD)
+am__DEPENDENCIES_1 =
 @ENABLE_TESTS_TRUE@lxc_test_containertests_DEPENDENCIES =  \
-@ENABLE_TESTS_TRUE@	../lxc/liblxc.so
+@ENABLE_TESTS_TRUE@	../lxc/liblxc.so $(am__DEPENDENCIES_1)
 am__lxc_test_createtest_SOURCES_DIST = createtest.c
 @ENABLE_TESTS_TRUE@am_lxc_test_createtest_OBJECTS =  \
 @ENABLE_TESTS_TRUE@	createtest.$(OBJEXT)
 lxc_test_createtest_OBJECTS = $(am_lxc_test_createtest_OBJECTS)
 lxc_test_createtest_LDADD = $(LDADD)
 @ENABLE_TESTS_TRUE@lxc_test_createtest_DEPENDENCIES =  \
-@ENABLE_TESTS_TRUE@	../lxc/liblxc.so
+@ENABLE_TESTS_TRUE@	../lxc/liblxc.so $(am__DEPENDENCIES_1)
 am__lxc_test_destroytest_SOURCES_DIST = destroytest.c
 @ENABLE_TESTS_TRUE@am_lxc_test_destroytest_OBJECTS =  \
 @ENABLE_TESTS_TRUE@	destroytest.$(OBJEXT)
 lxc_test_destroytest_OBJECTS = $(am_lxc_test_destroytest_OBJECTS)
 lxc_test_destroytest_LDADD = $(LDADD)
 @ENABLE_TESTS_TRUE@lxc_test_destroytest_DEPENDENCIES =  \
-@ENABLE_TESTS_TRUE@	../lxc/liblxc.so
+@ENABLE_TESTS_TRUE@	../lxc/liblxc.so $(am__DEPENDENCIES_1)
 am__lxc_test_get_item_SOURCES_DIST = get_item.c
 @ENABLE_TESTS_TRUE@am_lxc_test_get_item_OBJECTS = get_item.$(OBJEXT)
 lxc_test_get_item_OBJECTS = $(am_lxc_test_get_item_OBJECTS)
 lxc_test_get_item_LDADD = $(LDADD)
-@ENABLE_TESTS_TRUE@lxc_test_get_item_DEPENDENCIES = ../lxc/liblxc.so
+@ENABLE_TESTS_TRUE@lxc_test_get_item_DEPENDENCIES = ../lxc/liblxc.so \
+@ENABLE_TESTS_TRUE@	$(am__DEPENDENCIES_1)
 am__lxc_test_getkeys_SOURCES_DIST = getkeys.c
 @ENABLE_TESTS_TRUE@am_lxc_test_getkeys_OBJECTS = getkeys.$(OBJEXT)
 lxc_test_getkeys_OBJECTS = $(am_lxc_test_getkeys_OBJECTS)
 lxc_test_getkeys_LDADD = $(LDADD)
-@ENABLE_TESTS_TRUE@lxc_test_getkeys_DEPENDENCIES = ../lxc/liblxc.so
+@ENABLE_TESTS_TRUE@lxc_test_getkeys_DEPENDENCIES = ../lxc/liblxc.so \
+@ENABLE_TESTS_TRUE@	$(am__DEPENDENCIES_1)
 am__lxc_test_locktests_SOURCES_DIST = locktests.c
 @ENABLE_TESTS_TRUE@am_lxc_test_locktests_OBJECTS =  \
 @ENABLE_TESTS_TRUE@	locktests.$(OBJEXT)
 lxc_test_locktests_OBJECTS = $(am_lxc_test_locktests_OBJECTS)
 lxc_test_locktests_LDADD = $(LDADD)
-@ENABLE_TESTS_TRUE@lxc_test_locktests_DEPENDENCIES = ../lxc/liblxc.so
+@ENABLE_TESTS_TRUE@lxc_test_locktests_DEPENDENCIES = ../lxc/liblxc.so \
+@ENABLE_TESTS_TRUE@	$(am__DEPENDENCIES_1)
+am__lxc_test_lxcpath_SOURCES_DIST = lxcpath.c
+@ENABLE_TESTS_TRUE@am_lxc_test_lxcpath_OBJECTS = lxcpath.$(OBJEXT)
+lxc_test_lxcpath_OBJECTS = $(am_lxc_test_lxcpath_OBJECTS)
+lxc_test_lxcpath_LDADD = $(LDADD)
+@ENABLE_TESTS_TRUE@lxc_test_lxcpath_DEPENDENCIES = ../lxc/liblxc.so \
+@ENABLE_TESTS_TRUE@	$(am__DEPENDENCIES_1)
 am__lxc_test_saveconfig_SOURCES_DIST = saveconfig.c
 @ENABLE_TESTS_TRUE@am_lxc_test_saveconfig_OBJECTS =  \
 @ENABLE_TESTS_TRUE@	saveconfig.$(OBJEXT)
 lxc_test_saveconfig_OBJECTS = $(am_lxc_test_saveconfig_OBJECTS)
 lxc_test_saveconfig_LDADD = $(LDADD)
 @ENABLE_TESTS_TRUE@lxc_test_saveconfig_DEPENDENCIES =  \
-@ENABLE_TESTS_TRUE@	../lxc/liblxc.so
+@ENABLE_TESTS_TRUE@	../lxc/liblxc.so $(am__DEPENDENCIES_1)
 am__lxc_test_shutdowntest_SOURCES_DIST = shutdowntest.c
 @ENABLE_TESTS_TRUE@am_lxc_test_shutdowntest_OBJECTS =  \
 @ENABLE_TESTS_TRUE@	shutdowntest.$(OBJEXT)
 lxc_test_shutdowntest_OBJECTS = $(am_lxc_test_shutdowntest_OBJECTS)
 lxc_test_shutdowntest_LDADD = $(LDADD)
 @ENABLE_TESTS_TRUE@lxc_test_shutdowntest_DEPENDENCIES =  \
-@ENABLE_TESTS_TRUE@	../lxc/liblxc.so
+@ENABLE_TESTS_TRUE@	../lxc/liblxc.so $(am__DEPENDENCIES_1)
 am__lxc_test_startone_SOURCES_DIST = startone.c
 @ENABLE_TESTS_TRUE@am_lxc_test_startone_OBJECTS = startone.$(OBJEXT)
 lxc_test_startone_OBJECTS = $(am_lxc_test_startone_OBJECTS)
 lxc_test_startone_LDADD = $(LDADD)
-@ENABLE_TESTS_TRUE@lxc_test_startone_DEPENDENCIES = ../lxc/liblxc.so
+@ENABLE_TESTS_TRUE@lxc_test_startone_DEPENDENCIES = ../lxc/liblxc.so \
+@ENABLE_TESTS_TRUE@	$(am__DEPENDENCIES_1)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/src
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
 am__depfiles_maybe = depfiles
@@ -141,7 +154,8 @@ LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
 SOURCES = $(lxc_test_containertests_SOURCES) \
 	$(lxc_test_createtest_SOURCES) $(lxc_test_destroytest_SOURCES) \
 	$(lxc_test_get_item_SOURCES) $(lxc_test_getkeys_SOURCES) \
-	$(lxc_test_locktests_SOURCES) $(lxc_test_saveconfig_SOURCES) \
+	$(lxc_test_locktests_SOURCES) $(lxc_test_lxcpath_SOURCES) \
+	$(lxc_test_saveconfig_SOURCES) \
 	$(lxc_test_shutdowntest_SOURCES) $(lxc_test_startone_SOURCES)
 DIST_SOURCES = $(am__lxc_test_containertests_SOURCES_DIST) \
 	$(am__lxc_test_createtest_SOURCES_DIST) \
@@ -149,6 +163,7 @@ DIST_SOURCES = $(am__lxc_test_containertests_SOURCES_DIST) \
 	$(am__lxc_test_get_item_SOURCES_DIST) \
 	$(am__lxc_test_getkeys_SOURCES_DIST) \
 	$(am__lxc_test_locktests_SOURCES_DIST) \
+	$(am__lxc_test_lxcpath_SOURCES_DIST) \
 	$(am__lxc_test_saveconfig_SOURCES_DIST) \
 	$(am__lxc_test_shutdowntest_SOURCES_DIST) \
 	$(am__lxc_test_startone_SOURCES_DIST)
@@ -197,13 +212,17 @@ LIBEXECDIR = @LIBEXECDIR@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LOCALSTATEDIR = @LOCALSTATEDIR@
+LOGPATH = @LOGPATH@
 LTLIBOBJS = @LTLIBOBJS@
+LUA_CFLAGS = @LUA_CFLAGS@
+LUA_LIBS = @LUA_LIBS@
 LXCINITDIR = @LXCINITDIR@
 LXCPATH = @LXCPATH@
 LXCROOTFSMOUNT = @LXCROOTFSMOUNT@
 LXCTEMPLATEDIR = @LXCTEMPLATEDIR@
-LXC_CONFFILE = @LXC_CONFFILE@
+LXC_DEFAULT_CONF = @LXC_DEFAULT_CONF@
 LXC_GENERATE_DATE = @LXC_GENERATE_DATE@
+LXC_GLOBAL_CONF = @LXC_GLOBAL_CONF@
 MAKEINFO = @MAKEINFO@
 MKDIR_P = @MKDIR_P@
 OBJEXT = @OBJEXT@
@@ -215,15 +234,19 @@ PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
+PKG_CONFIG = @PKG_CONFIG@
+PKG_CONFIG_LIBDIR = @PKG_CONFIG_LIBDIR@
+PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
 PREFIX = @PREFIX@
 PYTHON = @PYTHON@
+PYTHONDEV_CFLAGS = @PYTHONDEV_CFLAGS@
+PYTHONDEV_LIBS = @PYTHONDEV_LIBS@
 PYTHON_EXEC_PREFIX = @PYTHON_EXEC_PREFIX@
 PYTHON_PLATFORM = @PYTHON_PLATFORM@
 PYTHON_PREFIX = @PYTHON_PREFIX@
 PYTHON_VERSION = @PYTHON_VERSION@
 SECCOMP_LIBS = @SECCOMP_LIBS@
 SED = @SED@
-SETCAP = @SETCAP@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
@@ -284,7 +307,7 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-@ENABLE_TESTS_TRUE@LDADD = ../lxc/liblxc.so -lpthread
+@ENABLE_TESTS_TRUE@LDADD = ../lxc/liblxc.so $(am__append_1)
 @ENABLE_TESTS_TRUE@lxc_test_containertests_SOURCES = containertests.c
 @ENABLE_TESTS_TRUE@lxc_test_locktests_SOURCES = locktests.c
 @ENABLE_TESTS_TRUE@lxc_test_startone_SOURCES = startone.c
@@ -294,9 +317,11 @@ top_srcdir = @top_srcdir@
 @ENABLE_TESTS_TRUE@lxc_test_shutdowntest_SOURCES = shutdowntest.c
 @ENABLE_TESTS_TRUE@lxc_test_get_item_SOURCES = get_item.c
 @ENABLE_TESTS_TRUE@lxc_test_getkeys_SOURCES = getkeys.c
+@ENABLE_TESTS_TRUE@lxc_test_lxcpath_SOURCES = lxcpath.c
 @ENABLE_TESTS_TRUE@AM_CFLAGS = -I$(top_srcdir)/src \
 @ENABLE_TESTS_TRUE@	-DLXCROOTFSMOUNT=\"$(LXCROOTFSMOUNT)\" \
 @ENABLE_TESTS_TRUE@	-DLXCPATH=\"$(LXCPATH)\" \
+@ENABLE_TESTS_TRUE@	-DLXC_GLOBAL_CONF=\"$(LXC_GLOBAL_CONF)\" \
 @ENABLE_TESTS_TRUE@	-DLXCINITDIR=\"$(LXCINITDIR)\"
 
 all: all-am
@@ -391,6 +416,9 @@ lxc-test-getkeys$(EXEEXT): $(lxc_test_getkeys_OBJECTS) $(lxc_test_getkeys_DEPEND
 lxc-test-locktests$(EXEEXT): $(lxc_test_locktests_OBJECTS) $(lxc_test_locktests_DEPENDENCIES) $(EXTRA_lxc_test_locktests_DEPENDENCIES) 
 	@rm -f lxc-test-locktests$(EXEEXT)
 	$(LINK) $(lxc_test_locktests_OBJECTS) $(lxc_test_locktests_LDADD) $(LIBS)
+lxc-test-lxcpath$(EXEEXT): $(lxc_test_lxcpath_OBJECTS) $(lxc_test_lxcpath_DEPENDENCIES) $(EXTRA_lxc_test_lxcpath_DEPENDENCIES) 
+	@rm -f lxc-test-lxcpath$(EXEEXT)
+	$(LINK) $(lxc_test_lxcpath_OBJECTS) $(lxc_test_lxcpath_LDADD) $(LIBS)
 lxc-test-saveconfig$(EXEEXT): $(lxc_test_saveconfig_OBJECTS) $(lxc_test_saveconfig_DEPENDENCIES) $(EXTRA_lxc_test_saveconfig_DEPENDENCIES) 
 	@rm -f lxc-test-saveconfig$(EXEEXT)
 	$(LINK) $(lxc_test_saveconfig_OBJECTS) $(lxc_test_saveconfig_LDADD) $(LIBS)
@@ -413,6 +441,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/get_item.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/getkeys.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/locktests.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lxcpath.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/saveconfig.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/shutdowntest.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/startone.Po@am__quote@

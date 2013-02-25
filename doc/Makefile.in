@@ -50,21 +50,29 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-@ENABLE_DOCBOOK_TRUE@@ENABLE_PYTHON_TRUE@am__append_1 = lxc-ls.1
+@ENABLE_DOCBOOK_TRUE@@ENABLE_PYTHON_TRUE@am__append_1 = lxc-device.1 \
+@ENABLE_DOCBOOK_TRUE@@ENABLE_PYTHON_TRUE@	lxc-ls.1 \
+@ENABLE_DOCBOOK_TRUE@@ENABLE_PYTHON_TRUE@	lxc-start-ephemeral.1
 @ENABLE_DOCBOOK_TRUE@@ENABLE_PYTHON_FALSE@am__append_2 = legacy/lxc-ls.1
+@ENABLE_DOCBOOK_TRUE@@ENABLE_LUA_TRUE@am__append_3 = lxc-top.1
 subdir = doc
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in \
 	$(srcdir)/common_options.sgml.in $(srcdir)/lxc-attach.sgml.in \
-	$(srcdir)/lxc-cgroup.sgml.in $(srcdir)/lxc-checkpoint.sgml.in \
+	$(srcdir)/lxc-cgroup.sgml.in $(srcdir)/lxc-checkconfig.sgml.in \
+	$(srcdir)/lxc-checkpoint.sgml.in $(srcdir)/lxc-clone.sgml.in \
 	$(srcdir)/lxc-console.sgml.in $(srcdir)/lxc-create.sgml.in \
-	$(srcdir)/lxc-destroy.sgml.in $(srcdir)/lxc-execute.sgml.in \
-	$(srcdir)/lxc-freeze.sgml.in $(srcdir)/lxc-kill.sgml.in \
+	$(srcdir)/lxc-destroy.sgml.in $(srcdir)/lxc-device.sgml.in \
+	$(srcdir)/lxc-execute.sgml.in $(srcdir)/lxc-freeze.sgml.in \
+	$(srcdir)/lxc-info.sgml.in $(srcdir)/lxc-kill.sgml.in \
 	$(srcdir)/lxc-ls.sgml.in $(srcdir)/lxc-monitor.sgml.in \
-	$(srcdir)/lxc-ps.sgml.in $(srcdir)/lxc-restart.sgml.in \
+	$(srcdir)/lxc-netstat.sgml.in $(srcdir)/lxc-ps.sgml.in \
+	$(srcdir)/lxc-restart.sgml.in $(srcdir)/lxc-shutdown.sgml.in \
+	$(srcdir)/lxc-start-ephemeral.sgml.in \
 	$(srcdir)/lxc-start.sgml.in $(srcdir)/lxc-stop.sgml.in \
-	$(srcdir)/lxc-unfreeze.sgml.in $(srcdir)/lxc-wait.sgml.in \
-	$(srcdir)/lxc.conf.sgml.in $(srcdir)/lxc.sgml.in \
-	$(srcdir)/see_also.sgml.in
+	$(srcdir)/lxc-top.sgml.in $(srcdir)/lxc-unfreeze.sgml.in \
+	$(srcdir)/lxc-unshare.sgml.in $(srcdir)/lxc-version.sgml.in \
+	$(srcdir)/lxc-wait.sgml.in $(srcdir)/lxc.conf.sgml.in \
+	$(srcdir)/lxc.sgml.in $(srcdir)/see_also.sgml.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/config/acinclude.m4 \
 	$(top_srcdir)/configure.ac
@@ -72,12 +80,16 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/src/config.h
-CONFIG_CLEAN_FILES = lxc-create.sgml lxc-destroy.sgml lxc-execute.sgml \
-	lxc-start.sgml lxc-checkpoint.sgml lxc-restart.sgml \
-	lxc-stop.sgml lxc-console.sgml lxc-freeze.sgml \
-	lxc-unfreeze.sgml lxc-monitor.sgml lxc-wait.sgml lxc-ls.sgml \
-	lxc-ps.sgml lxc-cgroup.sgml lxc-kill.sgml lxc-attach.sgml \
-	lxc.conf.sgml lxc.sgml common_options.sgml see_also.sgml
+CONFIG_CLEAN_FILES = lxc-attach.sgml lxc-cgroup.sgml \
+	lxc-checkconfig.sgml lxc-checkpoint.sgml lxc-clone.sgml \
+	lxc-console.sgml lxc-create.sgml lxc-destroy.sgml \
+	lxc-device.sgml lxc-execute.sgml lxc-freeze.sgml lxc-info.sgml \
+	lxc-kill.sgml lxc-ls.sgml lxc-monitor.sgml lxc-netstat.sgml \
+	lxc-ps.sgml lxc-restart.sgml lxc-shutdown.sgml \
+	lxc-start-ephemeral.sgml lxc-start.sgml lxc-stop.sgml \
+	lxc-top.sgml lxc-unfreeze.sgml lxc-unshare.sgml \
+	lxc-version.sgml lxc-wait.sgml lxc.conf.sgml lxc.sgml \
+	common_options.sgml see_also.sgml
 CONFIG_CLEAN_VPATH_FILES =
 SOURCES =
 DIST_SOURCES =
@@ -197,13 +209,17 @@ LIBEXECDIR = @LIBEXECDIR@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LOCALSTATEDIR = @LOCALSTATEDIR@
+LOGPATH = @LOGPATH@
 LTLIBOBJS = @LTLIBOBJS@
+LUA_CFLAGS = @LUA_CFLAGS@
+LUA_LIBS = @LUA_LIBS@
 LXCINITDIR = @LXCINITDIR@
 LXCPATH = @LXCPATH@
 LXCROOTFSMOUNT = @LXCROOTFSMOUNT@
 LXCTEMPLATEDIR = @LXCTEMPLATEDIR@
-LXC_CONFFILE = @LXC_CONFFILE@
+LXC_DEFAULT_CONF = @LXC_DEFAULT_CONF@
 LXC_GENERATE_DATE = @LXC_GENERATE_DATE@
+LXC_GLOBAL_CONF = @LXC_GLOBAL_CONF@
 MAKEINFO = @MAKEINFO@
 MKDIR_P = @MKDIR_P@
 OBJEXT = @OBJEXT@
@@ -215,15 +231,19 @@ PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
+PKG_CONFIG = @PKG_CONFIG@
+PKG_CONFIG_LIBDIR = @PKG_CONFIG_LIBDIR@
+PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
 PREFIX = @PREFIX@
 PYTHON = @PYTHON@
+PYTHONDEV_CFLAGS = @PYTHONDEV_CFLAGS@
+PYTHONDEV_LIBS = @PYTHONDEV_LIBS@
 PYTHON_EXEC_PREFIX = @PYTHON_EXEC_PREFIX@
 PYTHON_PLATFORM = @PYTHON_PLATFORM@
 PYTHON_PREFIX = @PYTHON_PREFIX@
 PYTHON_VERSION = @PYTHON_VERSION@
 SECCOMP_LIBS = @SECCOMP_LIBS@
 SED = @SED@
-SETCAP = @SETCAP@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
@@ -290,14 +310,17 @@ EXTRA_DIST = \
 	FAQ.txt \
 	$(man_MANS)
 
-@ENABLE_DOCBOOK_TRUE@man_MANS = lxc-create.1 lxc-destroy.1 \
-@ENABLE_DOCBOOK_TRUE@	lxc-execute.1 lxc-start.1 lxc-stop.1 \
-@ENABLE_DOCBOOK_TRUE@	lxc-checkpoint.1 lxc-restart.1 \
-@ENABLE_DOCBOOK_TRUE@	lxc-console.1 lxc-freeze.1 lxc-unfreeze.1 \
-@ENABLE_DOCBOOK_TRUE@	lxc-monitor.1 lxc-wait.1 lxc-ps.1 \
-@ENABLE_DOCBOOK_TRUE@	lxc-cgroup.1 lxc-kill.1 lxc-attach.1 \
-@ENABLE_DOCBOOK_TRUE@	lxc.conf.5 lxc.7 $(am__append_1) \
-@ENABLE_DOCBOOK_TRUE@	$(am__append_2)
+@ENABLE_DOCBOOK_TRUE@man_MANS = lxc-attach.1 lxc-cgroup.1 \
+@ENABLE_DOCBOOK_TRUE@	lxc-checkconfig.1 lxc-checkpoint.1 \
+@ENABLE_DOCBOOK_TRUE@	lxc-clone.1 lxc-console.1 lxc-create.1 \
+@ENABLE_DOCBOOK_TRUE@	lxc-destroy.1 lxc-execute.1 lxc-freeze.1 \
+@ENABLE_DOCBOOK_TRUE@	lxc-info.1 lxc-kill.1 lxc-monitor.1 \
+@ENABLE_DOCBOOK_TRUE@	lxc-netstat.1 lxc-ps.1 lxc-restart.1 \
+@ENABLE_DOCBOOK_TRUE@	lxc-shutdown.1 lxc-start.1 lxc-stop.1 \
+@ENABLE_DOCBOOK_TRUE@	lxc-unfreeze.1 lxc-unshare.1 \
+@ENABLE_DOCBOOK_TRUE@	lxc-version.1 lxc-wait.1 lxc.conf.5 lxc.7 \
+@ENABLE_DOCBOOK_TRUE@	$(am__append_1) $(am__append_2) \
+@ENABLE_DOCBOOK_TRUE@	$(am__append_3)
 all: all-recursive
 
 .SUFFIXES:
@@ -331,39 +354,59 @@ $(top_srcdir)/configure:  $(am__configure_deps)
 $(ACLOCAL_M4):  $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(am__aclocal_m4_deps):
+lxc-attach.sgml: $(top_builddir)/config.status $(srcdir)/lxc-attach.sgml.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+lxc-cgroup.sgml: $(top_builddir)/config.status $(srcdir)/lxc-cgroup.sgml.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+lxc-checkconfig.sgml: $(top_builddir)/config.status $(srcdir)/lxc-checkconfig.sgml.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+lxc-checkpoint.sgml: $(top_builddir)/config.status $(srcdir)/lxc-checkpoint.sgml.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+lxc-clone.sgml: $(top_builddir)/config.status $(srcdir)/lxc-clone.sgml.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+lxc-console.sgml: $(top_builddir)/config.status $(srcdir)/lxc-console.sgml.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 lxc-create.sgml: $(top_builddir)/config.status $(srcdir)/lxc-create.sgml.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 lxc-destroy.sgml: $(top_builddir)/config.status $(srcdir)/lxc-destroy.sgml.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+lxc-device.sgml: $(top_builddir)/config.status $(srcdir)/lxc-device.sgml.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 lxc-execute.sgml: $(top_builddir)/config.status $(srcdir)/lxc-execute.sgml.in
-	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
-lxc-start.sgml: $(top_builddir)/config.status $(srcdir)/lxc-start.sgml.in
-	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
-lxc-checkpoint.sgml: $(top_builddir)/config.status $(srcdir)/lxc-checkpoint.sgml.in
-	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
-lxc-restart.sgml: $(top_builddir)/config.status $(srcdir)/lxc-restart.sgml.in
-	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
-lxc-stop.sgml: $(top_builddir)/config.status $(srcdir)/lxc-stop.sgml.in
-	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
-lxc-console.sgml: $(top_builddir)/config.status $(srcdir)/lxc-console.sgml.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 lxc-freeze.sgml: $(top_builddir)/config.status $(srcdir)/lxc-freeze.sgml.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
-lxc-unfreeze.sgml: $(top_builddir)/config.status $(srcdir)/lxc-unfreeze.sgml.in
-	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
-lxc-monitor.sgml: $(top_builddir)/config.status $(srcdir)/lxc-monitor.sgml.in
-	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
-lxc-wait.sgml: $(top_builddir)/config.status $(srcdir)/lxc-wait.sgml.in
-	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
-lxc-ls.sgml: $(top_builddir)/config.status $(srcdir)/lxc-ls.sgml.in
-	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
-lxc-ps.sgml: $(top_builddir)/config.status $(srcdir)/lxc-ps.sgml.in
-	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
-lxc-cgroup.sgml: $(top_builddir)/config.status $(srcdir)/lxc-cgroup.sgml.in
+lxc-info.sgml: $(top_builddir)/config.status $(srcdir)/lxc-info.sgml.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 lxc-kill.sgml: $(top_builddir)/config.status $(srcdir)/lxc-kill.sgml.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
-lxc-attach.sgml: $(top_builddir)/config.status $(srcdir)/lxc-attach.sgml.in
+lxc-ls.sgml: $(top_builddir)/config.status $(srcdir)/lxc-ls.sgml.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+lxc-monitor.sgml: $(top_builddir)/config.status $(srcdir)/lxc-monitor.sgml.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+lxc-netstat.sgml: $(top_builddir)/config.status $(srcdir)/lxc-netstat.sgml.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+lxc-ps.sgml: $(top_builddir)/config.status $(srcdir)/lxc-ps.sgml.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+lxc-restart.sgml: $(top_builddir)/config.status $(srcdir)/lxc-restart.sgml.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+lxc-shutdown.sgml: $(top_builddir)/config.status $(srcdir)/lxc-shutdown.sgml.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+lxc-start-ephemeral.sgml: $(top_builddir)/config.status $(srcdir)/lxc-start-ephemeral.sgml.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+lxc-start.sgml: $(top_builddir)/config.status $(srcdir)/lxc-start.sgml.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+lxc-stop.sgml: $(top_builddir)/config.status $(srcdir)/lxc-stop.sgml.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+lxc-top.sgml: $(top_builddir)/config.status $(srcdir)/lxc-top.sgml.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+lxc-unfreeze.sgml: $(top_builddir)/config.status $(srcdir)/lxc-unfreeze.sgml.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+lxc-unshare.sgml: $(top_builddir)/config.status $(srcdir)/lxc-unshare.sgml.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+lxc-version.sgml: $(top_builddir)/config.status $(srcdir)/lxc-version.sgml.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+lxc-wait.sgml: $(top_builddir)/config.status $(srcdir)/lxc-wait.sgml.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 lxc.conf.sgml: $(top_builddir)/config.status $(srcdir)/lxc.conf.sgml.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
