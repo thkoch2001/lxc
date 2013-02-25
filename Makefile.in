@@ -53,6 +53,8 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
+@ENABLE_LUA_TRUE@am__append_1 = --with lua
+@ENABLE_PYTHON_TRUE@am__append_2 = --with python
 subdir = .
 DIST_COMMON = README $(am__configure_deps) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in $(srcdir)/lxc.pc.in \
@@ -202,13 +204,17 @@ LIBEXECDIR = @LIBEXECDIR@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LOCALSTATEDIR = @LOCALSTATEDIR@
+LOGPATH = @LOGPATH@
 LTLIBOBJS = @LTLIBOBJS@
+LUA_CFLAGS = @LUA_CFLAGS@
+LUA_LIBS = @LUA_LIBS@
 LXCINITDIR = @LXCINITDIR@
 LXCPATH = @LXCPATH@
 LXCROOTFSMOUNT = @LXCROOTFSMOUNT@
 LXCTEMPLATEDIR = @LXCTEMPLATEDIR@
-LXC_CONFFILE = @LXC_CONFFILE@
+LXC_DEFAULT_CONF = @LXC_DEFAULT_CONF@
 LXC_GENERATE_DATE = @LXC_GENERATE_DATE@
+LXC_GLOBAL_CONF = @LXC_GLOBAL_CONF@
 MAKEINFO = @MAKEINFO@
 MKDIR_P = @MKDIR_P@
 OBJEXT = @OBJEXT@
@@ -220,15 +226,19 @@ PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
+PKG_CONFIG = @PKG_CONFIG@
+PKG_CONFIG_LIBDIR = @PKG_CONFIG_LIBDIR@
+PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
 PREFIX = @PREFIX@
 PYTHON = @PYTHON@
+PYTHONDEV_CFLAGS = @PYTHONDEV_CFLAGS@
+PYTHONDEV_LIBS = @PYTHONDEV_LIBS@
 PYTHON_EXEC_PREFIX = @PYTHON_EXEC_PREFIX@
 PYTHON_PLATFORM = @PYTHON_PLATFORM@
 PYTHON_PREFIX = @PYTHON_PREFIX@
 PYTHON_VERSION = @PYTHON_VERSION@
 SECCOMP_LIBS = @SECCOMP_LIBS@
 SED = @SED@
-SETCAP = @SETCAP@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
@@ -293,6 +303,7 @@ ACLOCAL_AMFLAGS = -I config
 SUBDIRS = config src templates doc
 DIST_SUBDIRS = config src templates doc
 EXTRA_DIST = autogen.sh lxc.spec CONTRIBUTING MAINTAINERS ChangeLog
+RPMARGS = $(am__append_1) $(am__append_2)
 pcdatadir = $(libdir)/pkgconfig
 pcdata_DATA = lxc.pc
 all: all-recursive
@@ -823,7 +834,7 @@ ChangeLog::
 	@touch ChangeLog
 
 rpm: dist
-	rpmbuild --clean -ta ${distdir}.tar.gz
+	rpmbuild --clean -ta ${distdir}.tar.gz $(RPMARGS)
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
