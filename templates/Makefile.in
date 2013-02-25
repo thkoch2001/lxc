@@ -53,12 +53,12 @@ build_triplet = @build@
 host_triplet = @host@
 subdir = templates
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in \
-	$(srcdir)/lxc-altlinux.in $(srcdir)/lxc-archlinux.in \
-	$(srcdir)/lxc-busybox.in $(srcdir)/lxc-debian.in \
-	$(srcdir)/lxc-fedora.in $(srcdir)/lxc-lenny.in \
-	$(srcdir)/lxc-opensuse.in $(srcdir)/lxc-oracle.in \
-	$(srcdir)/lxc-sshd.in $(srcdir)/lxc-ubuntu-cloud.in \
-	$(srcdir)/lxc-ubuntu.in
+	$(srcdir)/lxc-alpine.in $(srcdir)/lxc-altlinux.in \
+	$(srcdir)/lxc-archlinux.in $(srcdir)/lxc-busybox.in \
+	$(srcdir)/lxc-debian.in $(srcdir)/lxc-fedora.in \
+	$(srcdir)/lxc-lenny.in $(srcdir)/lxc-opensuse.in \
+	$(srcdir)/lxc-oracle.in $(srcdir)/lxc-sshd.in \
+	$(srcdir)/lxc-ubuntu-cloud.in $(srcdir)/lxc-ubuntu.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/config/acinclude.m4 \
 	$(top_srcdir)/configure.ac
@@ -68,7 +68,7 @@ mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/src/config.h
 CONFIG_CLEAN_FILES = lxc-lenny lxc-debian lxc-ubuntu lxc-ubuntu-cloud \
 	lxc-opensuse lxc-busybox lxc-fedora lxc-oracle lxc-altlinux \
-	lxc-sshd lxc-archlinux
+	lxc-sshd lxc-archlinux lxc-alpine
 CONFIG_CLEAN_VPATH_FILES =
 am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
 am__vpath_adj = case $$p in \
@@ -144,13 +144,17 @@ LIBEXECDIR = @LIBEXECDIR@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LOCALSTATEDIR = @LOCALSTATEDIR@
+LOGPATH = @LOGPATH@
 LTLIBOBJS = @LTLIBOBJS@
+LUA_CFLAGS = @LUA_CFLAGS@
+LUA_LIBS = @LUA_LIBS@
 LXCINITDIR = @LXCINITDIR@
 LXCPATH = @LXCPATH@
 LXCROOTFSMOUNT = @LXCROOTFSMOUNT@
 LXCTEMPLATEDIR = @LXCTEMPLATEDIR@
-LXC_CONFFILE = @LXC_CONFFILE@
+LXC_DEFAULT_CONF = @LXC_DEFAULT_CONF@
 LXC_GENERATE_DATE = @LXC_GENERATE_DATE@
+LXC_GLOBAL_CONF = @LXC_GLOBAL_CONF@
 MAKEINFO = @MAKEINFO@
 MKDIR_P = @MKDIR_P@
 OBJEXT = @OBJEXT@
@@ -162,15 +166,19 @@ PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
+PKG_CONFIG = @PKG_CONFIG@
+PKG_CONFIG_LIBDIR = @PKG_CONFIG_LIBDIR@
+PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
 PREFIX = @PREFIX@
 PYTHON = @PYTHON@
+PYTHONDEV_CFLAGS = @PYTHONDEV_CFLAGS@
+PYTHONDEV_LIBS = @PYTHONDEV_LIBS@
 PYTHON_EXEC_PREFIX = @PYTHON_EXEC_PREFIX@
 PYTHON_PLATFORM = @PYTHON_PLATFORM@
 PYTHON_PREFIX = @PYTHON_PREFIX@
 PYTHON_VERSION = @PYTHON_VERSION@
 SECCOMP_LIBS = @SECCOMP_LIBS@
 SED = @SED@
-SETCAP = @SETCAP@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
@@ -231,7 +239,6 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-EXTRA_DIST = lxc-ubuntu
 templatesdir = @LXCTEMPLATEDIR@
 templates_SCRIPTS = \
 	lxc-debian \
@@ -244,7 +251,8 @@ templates_SCRIPTS = \
 	lxc-altlinux \
 	lxc-busybox \
 	lxc-sshd \
-	lxc-archlinux
+	lxc-archlinux \
+	lxc-alpine
 
 all: all-am
 
@@ -300,6 +308,8 @@ lxc-altlinux: $(top_builddir)/config.status $(srcdir)/lxc-altlinux.in
 lxc-sshd: $(top_builddir)/config.status $(srcdir)/lxc-sshd.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 lxc-archlinux: $(top_builddir)/config.status $(srcdir)/lxc-archlinux.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+lxc-alpine: $(top_builddir)/config.status $(srcdir)/lxc-alpine.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 install-templatesSCRIPTS: $(templates_SCRIPTS)
 	@$(NORMAL_INSTALL)
