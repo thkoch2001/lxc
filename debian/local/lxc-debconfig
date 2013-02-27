@@ -258,10 +258,12 @@ EOF
 		rm -f "${_ROOTFS}/preseed.cfg"
 	fi
 
-	# Reconfigure tzdata
 	# FIXME: All packages of priority of essential need to be reconfigured to reflect choices from preseeding
+
+	# Manual hack to workaround broken preseeding in tzdata package
 	if grep -qs tzdata "${_PRESEED_FILE}"
 	then
+		rm -f "${_ROOTFS}/etc/timezone"
 		Chroot "${_ROOTFS}" "DEBIAN_FRONTEND=noninteractive DEBIAN_PRIORITY=criticial dpkg-reconfigure tzdata"
 	fi
 
