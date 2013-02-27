@@ -13,6 +13,9 @@ override_dh_auto_configure:
 override_dh_auto_install:
 	dh_auto_install
 
+	# currently hardcoding lxc directory
+	echo "lxcpath=/var/lib/lxc" >> debian/tmp/etc/lxc/lxc.conf
+
 	# creating lxc directories
 	mkdir -p debian/tmp/etc/lxc/auto
 	mkdir -p debian/tmp/etc/lxc/debconfig
