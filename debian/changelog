@@ -1,3 +1,22 @@
+lxc (0.9.0~alpha3-1) unstable; urgency=low
+
+  * Updating handling of mount entries to work to do the right thing when
+    files are being tried to be bind-mounted instead of directories.
+  * Merging upstream version 0.9.0~alpha3.
+  * Adding --with-distro=debian when calling configure.
+  * Extending manual hack to workaround broken preseeding in tzdata
+    (Closes: #701800).
+  * Dropping bash.patch, not required anymore.
+  * Adding patch for lxc-create to not try to execute directories as
+    templates should the user have such a situation and specify it
+    (wrongly) (Closes: #701689).
+  * Rediffing lxc-clone-mac.patch.
+  * Currently hardcoding lxc directory.
+  * Defaulting to sysvinit for the time being on progress-linux.
+  * Updating todo file.
+
+ -- Daniel Baumann <daniel.baumann@progress-technologies.net>  Wed, 27 Feb 2013 14:04:06 +0100
+
 lxc (0.9.0~alpha2-10) unstable; urgency=low
 
   * Adding support for systemd in lxc-debconfig.
