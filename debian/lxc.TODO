@@ -1,4 +1,5 @@
 lxc:
+  * check for newly added --with-*/--enable-* configure flags if they're useful for us.
   * add native systemd job to complement sysvinit initscript.
   * add debconf question about ipv4 forward enabling.
   * add a lxc-config script similar to git-config.
@@ -7,7 +8,6 @@ lxc:
   * add debconf multi-select for autostarts in /etc/lxc/auto
   * extend README.Debian to include all information from http://wiki.progress-linux.org/software/lxc/
   * update package description
-  * expose lxc-setcap run with debconf
   * integrate example debian packages that contain /usr/share/lxc/cache/*
   * add debconf question to ask for level of mac conflict check
   * support 'all' in lxc convenience wrapper
@@ -19,6 +19,9 @@ lxc:
   * add lxc 'control' user with sudo magics so that unprivileged users can
     start/stop/restart/create/destroy their containers
   * update lxc bash-completion to cover newer commands too
+  * don't hardcode lxcpath via /etc/lxc/lxc.conf but keep it updated with the
+    debconf foo from the lxc package itself.
+  * use lxc.functions in debian/local/lxc-* commands
 
 lxc-debconfig:
   * include removal of backup files and such from live-build:share/hooks/*
