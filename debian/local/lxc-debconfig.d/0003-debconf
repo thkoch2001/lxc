@@ -894,15 +894,7 @@ Internal_options ()
 		_INITSYSTEM="${RET}" # string (w/o empty)
 	fi
 
-	case "${_MODE}" in
-		progress-linux)
-			_INITSYSTEM="${_INITSYSTEM:-systemd}"
-			;;
-
-		*)
-			_INITSYSTEM="${_INITSYSTEM:-sysvinit}"
-			;;
-	esac
+	_INITSYSTEM="${_INITSYSTEM:-sysvinit}"
 
 	echo "_INITSYSTEM=\"${_INITSYSTEM}\"" >> "${_TMPDIR}/debconf.default"
 
