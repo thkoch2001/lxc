@@ -9,14 +9,10 @@
 
 set -e
 
+, /usr/share/lxc/lxc.functions
+
+_LXC_DIRECTORY="${lxc_path}"
 _CONTAINER="${1}"
-
-if [ -e /etc/default/lxc ]
-then
-	. /etc/default/lxc
-fi
-
-_LXC_DIRECTORY="${LXC_DIRECTORY:-/var/lib/lxc}"
 
 if [ -n "${_CONTAINER}" ]
 then

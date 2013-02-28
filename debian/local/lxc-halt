@@ -9,6 +9,10 @@
 
 set -e
 
+, /usr/share/lxc/lxc.functions
+
+_LXC_DIRECTORY="${lxc_path}"
+
 _OPTIONS="$(getopt -o n: -l name: -- "${@}")"
 
 if [ "${?}" -ne 0 ]
@@ -51,11 +55,10 @@ then
 	exit 0
 fi
 
-# FIXME: Assumption of /var/lib/lxc
-if [ -e /var/lib/lxc/${_CONTAINER}/rootfs ]
+if [ -e "${_LXC_DIRECTORY}/${_CONTAINER}/rootfs" ]
 then
-	chroot /var/lib/lxc/${_CONTAINER}/rootfs telinit 0
+	chroot "${_LXC_DIRECTORY}/{_CONTAINER}/rootfs" telinit 0
 else
-	echo "E: /var/lib/lxc/${_CONTAINER}/rootfs - no such directory"
+	echo "E: ${_LXC_DIRECTORY}/${_CONTAINER}/rootfs - no such directory"
 	exit 1
 fi

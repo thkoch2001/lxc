@@ -9,12 +9,9 @@
 
 set -e
 
-if [ -e /etc/default/lxc ]
-then
-	. /etc/default/lxc
-fi
+, /usr/share/lxc/lxc.functions
 
-_LXC_DIRECTORY="${LXC_DIRECTORY:-/var/lib/lxc}"
+_LXC_DIRECTORY="${lxc_path}"
 
 if [ ! -e "${_LXC_DIRECTORY}" ]
 then
