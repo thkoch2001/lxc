@@ -1,4 +1,4 @@
-Author: Daniel Baumann <daniel.baumann@progress-technologies.net>
+Author: Daniel Baumann <mail@daniel-baumann.ch>
 Description:
  Using debian essential stuff rather than openssl to generate random mac address
  in lxc-clone.

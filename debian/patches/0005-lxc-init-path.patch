@@ -1,4 +1,4 @@
-Author: Daniel Baumann <daniel.baumann@progress-technologies.net>
+Author: Daniel Baumann <mail@daniel-baumann.ch>
 Description: Correcting path to lxc-init in the sshd template (Closes: #697267).
 
 diff -Naurp lxc.orig/templates/lxc-sshd.in lxc/templates/lxc-sshd.in

@@ -1,4 +1,4 @@
-Author: Daniel Baumann <daniel.baumann@progress-technologies.net>
+Author: Daniel Baumann <mail@daniel-baumann.ch>
 Description: Removing double check for configuration path in lxc-create (Closes: #633996).
 
 diff -Naurp lxc.orig/src/lxc/lxc-create.in lxc/src/lxc/lxc-create.in
