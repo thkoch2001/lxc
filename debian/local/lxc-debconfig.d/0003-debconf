@@ -256,7 +256,7 @@ Mirror ()
 				;;
 
 			progress-linux)
-				db_set lxc-debconfig/mirror http://cdn.archive.progress-linux.org/progress/
+				db_set lxc-debconfig/mirror http://cdn.archive.progress-linux.org/packages/
 				db_fset lxc-debconfig/mirror seen false
 				;;
 
@@ -281,7 +281,7 @@ Mirror ()
 					;;
 
 				progress-linux)
-					_MIRROR="http://cdn.archive.progress-linux.org/progress/"
+					_MIRROR="http://cdn.archive.progress-linux.org/packages/"
 					;;
 
 				ubuntu)
