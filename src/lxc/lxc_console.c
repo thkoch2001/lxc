@@ -4,7 +4,7 @@
  * (C) Copyright IBM Corp. 2007, 2008
  *
  * Authors:
- * Daniel Lezcano <dlezcano at fr.ibm.com>
+ * Daniel Lezcano <daniel.lezcano at free.fr>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -182,8 +182,6 @@ int main(int argc, char *argv[])
 	int err, std_in = 1;
 	struct lxc_epoll_descr descr;
 	struct termios newtios, oldtios;
-	/* TODO: add cmdline arg to specify lxcpath */
-	char *lxcpath = NULL;
 
 	err = lxc_arguments_parse(&my_args, argc, argv);
 	if (err)
@@ -200,7 +198,7 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	err = lxc_console(my_args.name, my_args.ttynum, &master, lxcpath);
+	err = lxc_console(my_args.name, my_args.ttynum, &master, my_args.lxcpath);
 	if (err)
 		goto out;
 

@@ -4,7 +4,7 @@
  * (C) Copyright IBM Corp. 2007, 2008
  *
  * Authors:
- * Daniel Lezcano <dlezcano at fr.ibm.com>
+ * Daniel Lezcano <daniel.lezcano at free.fr>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -109,14 +109,8 @@ int main(int argc, char *argv[])
 		rcfile = (char *)my_args.rcfile;
 	else {
 		int rc;
-		char *lxcpath = default_lxc_path();
-		if (!lxcpath) {
-			ERROR("Out of memory");
-			return -1;
-		}
 
-		rc = asprintf(&rcfile, "%s/%s/config", lxcpath, my_args.name);
-		free(lxcpath);
+		rc = asprintf(&rcfile, "%s/%s/config", my_args.lxcpath, my_args.name);
 		if (rc == -1) {
 			SYSERROR("failed to allocate memory");
 			return -1;
@@ -143,5 +137,5 @@ int main(int argc, char *argv[])
 	if (lxc_config_define_load(&defines, conf))
 		return -1;
 
-	return lxc_execute(my_args.name, my_args.argv, my_args.quiet, conf, NULL);
+	return lxc_execute(my_args.name, my_args.argv, my_args.quiet, conf, my_args.lxcpath);
 }

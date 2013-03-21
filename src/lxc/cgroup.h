@@ -4,7 +4,7 @@
  * (C) Copyright IBM Corp. 2007, 2008
  *
  * Authors:
- * Daniel Lezcano <dlezcano at fr.ibm.com>
+ * Daniel Lezcano <daniel.lezcano at free.fr>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -26,13 +26,13 @@
 #define MAXPRIOLEN 24
 
 struct lxc_handler;
-extern int lxc_cgroup_create(const char *name, pid_t pid);
-extern int lxc_cgroup_destroy(const char *name);
-extern int lxc_cgroup_path_get(char **path, const char *subsystem, const char *name);
-extern int lxc_cgroup_nrtasks(const char *name);
-extern int lxc_cgroup_attach(const char *name, pid_t pid);
-extern int lxc_cgroup_prepare_attach(const char *name, void **data);
-extern int lxc_cgroup_finish_attach(void *data, pid_t pid);
-extern int lxc_cgroup_dispose_attach(void *data);
-extern int lxc_ns_is_mounted(void);
+extern int lxc_cgroup_destroy(const char *cgpath);
+extern int lxc_cgroup_path_get(char **path, const char *subsystem, const char *name,
+			      const char *lxcpath);
+extern int lxc_cgroup_nrtasks(const char *cgpath);
+extern char *lxc_cgroup_path_create(const char *lxcgroup, const char *name);
+extern int lxc_cgroup_enter(const char *cgpath, pid_t pid);
+extern int lxc_cgroup_attach(pid_t pid, const char *name, const char *lxcpath);
+extern int cgroup_path_get(char **path, const char *subsystem, const char *cgpath);
+extern int lxc_get_cgpath(const char **path, const char *subsystem, const char *name, const char *lxcpath);
 #endif

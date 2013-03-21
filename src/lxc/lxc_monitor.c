@@ -4,7 +4,7 @@
  * (C) Copyright IBM Corp. 2007, 2008
  *
  * Authors:
- * Daniel Lezcano <dlezcano at fr.ibm.com>
+ * Daniel Lezcano <daniel.lezcano at free.fr>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -87,7 +87,7 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	fd = lxc_monitor_open();
+	fd = lxc_monitor_open(my_args.lxcpath);
 	if (fd < 0)
 		return -1;
 
