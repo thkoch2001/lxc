@@ -4,7 +4,7 @@
  * (C) Copyright IBM Corp. 2007, 2008
  *
  * Authors:
- * Daniel Lezcano <dlezcano at fr.ibm.com>
+ * Daniel Lezcano <daniel.lezcano at free.fr>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -33,6 +33,6 @@ extern lxc_state_t lxc_getstate(const char *name, const char *lxcpath);
 
 extern lxc_state_t lxc_str2state(const char *state);
 extern const char *lxc_state2str(lxc_state_t state);
-extern int lxc_wait(const char *lxcname, const char *states, int timeout);
+extern int lxc_wait(const char *lxcname, const char *states, int timeout, const char *lxcpath);
 
 #endif

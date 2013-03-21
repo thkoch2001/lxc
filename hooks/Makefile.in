@@ -51,14 +51,8 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-subdir = templates
-DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in \
-	$(srcdir)/lxc-alpine.in $(srcdir)/lxc-altlinux.in \
-	$(srcdir)/lxc-archlinux.in $(srcdir)/lxc-busybox.in \
-	$(srcdir)/lxc-debian.in $(srcdir)/lxc-fedora.in \
-	$(srcdir)/lxc-opensuse.in $(srcdir)/lxc-oracle.in \
-	$(srcdir)/lxc-sshd.in $(srcdir)/lxc-ubuntu-cloud.in \
-	$(srcdir)/lxc-ubuntu.in
+subdir = hooks
+DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/config/acinclude.m4 \
 	$(top_srcdir)/configure.ac
@@ -66,9 +60,7 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/src/config.h
-CONFIG_CLEAN_FILES = lxc-debian lxc-ubuntu lxc-ubuntu-cloud \
-	lxc-opensuse lxc-busybox lxc-fedora lxc-oracle lxc-altlinux \
-	lxc-sshd lxc-archlinux lxc-alpine
+CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
 am__vpath_adj = case $$p in \
@@ -97,8 +89,8 @@ am__uninstall_files_from_dir = { \
     || { echo " ( cd '$$dir' && rm -f" $$files ")"; \
          $(am__cd) "$$dir" && rm -f $$files; }; \
   }
-am__installdirs = "$(DESTDIR)$(templatesdir)"
-SCRIPTS = $(templates_SCRIPTS)
+am__installdirs = "$(DESTDIR)$(hooksdir)"
+SCRIPTS = $(hooks_SCRIPTS)
 SOURCES =
 DIST_SOURCES =
 am__can_run_installinfo = \
@@ -240,20 +232,12 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-templatesdir = @LXCTEMPLATEDIR@
-templates_SCRIPTS = \
-	lxc-debian \
-	lxc-ubuntu \
-	lxc-ubuntu-cloud \
-	lxc-opensuse \
-	lxc-fedora \
-	lxc-oracle \
-	lxc-altlinux \
-	lxc-busybox \
-	lxc-sshd \
-	lxc-archlinux \
-	lxc-alpine
+hooksdir = @LXCHOOKDIR@
+hooks_SCRIPTS = \
+	mountcgroups \
+	mountecryptfsroot
 
+EXTRA_DIST = $(hooks_SCRIPTS)
 all: all-am
 
 .SUFFIXES:
@@ -266,9 +250,9 @@ $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
 	      exit 1;; \
 	  esac; \
 	done; \
-	echo ' cd $(top_srcdir) && $(AUTOMAKE) --gnu templates/Makefile'; \
+	echo ' cd $(top_srcdir) && $(AUTOMAKE) --gnu hooks/Makefile'; \
 	$(am__cd) $(top_srcdir) && \
-	  $(AUTOMAKE) --gnu templates/Makefile
+	  $(AUTOMAKE) --gnu hooks/Makefile
 .PRECIOUS: Makefile
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	@case '$?' in \
@@ -287,34 +271,12 @@ $(top_srcdir)/configure:  $(am__configure_deps)
 $(ACLOCAL_M4):  $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(am__aclocal_m4_deps):
-lxc-debian: $(top_builddir)/config.status $(srcdir)/lxc-debian.in
-	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
-lxc-ubuntu: $(top_builddir)/config.status $(srcdir)/lxc-ubuntu.in
-	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
-lxc-ubuntu-cloud: $(top_builddir)/config.status $(srcdir)/lxc-ubuntu-cloud.in
-	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
-lxc-opensuse: $(top_builddir)/config.status $(srcdir)/lxc-opensuse.in
-	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
-lxc-busybox: $(top_builddir)/config.status $(srcdir)/lxc-busybox.in
-	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
-lxc-fedora: $(top_builddir)/config.status $(srcdir)/lxc-fedora.in
-	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
-lxc-oracle: $(top_builddir)/config.status $(srcdir)/lxc-oracle.in
-	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
-lxc-altlinux: $(top_builddir)/config.status $(srcdir)/lxc-altlinux.in
-	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
-lxc-sshd: $(top_builddir)/config.status $(srcdir)/lxc-sshd.in
-	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
-lxc-archlinux: $(top_builddir)/config.status $(srcdir)/lxc-archlinux.in
-	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
-lxc-alpine: $(top_builddir)/config.status $(srcdir)/lxc-alpine.in
-	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
-install-templatesSCRIPTS: $(templates_SCRIPTS)
+install-hooksSCRIPTS: $(hooks_SCRIPTS)
 	@$(NORMAL_INSTALL)
-	@list='$(templates_SCRIPTS)'; test -n "$(templatesdir)" || list=; \
+	@list='$(hooks_SCRIPTS)'; test -n "$(hooksdir)" || list=; \
 	if test -n "$$list"; then \
-	  echo " $(MKDIR_P) '$(DESTDIR)$(templatesdir)'"; \
-	  $(MKDIR_P) "$(DESTDIR)$(templatesdir)" || exit 1; \
+	  echo " $(MKDIR_P) '$(DESTDIR)$(hooksdir)'"; \
+	  $(MKDIR_P) "$(DESTDIR)$(hooksdir)" || exit 1; \
 	fi; \
 	for p in $$list; do \
 	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
@@ -333,17 +295,17 @@ install-templatesSCRIPTS: $(templates_SCRIPTS)
 	while read type dir files; do \
 	     if test "$$dir" = .; then dir=; else dir=/$$dir; fi; \
 	     test -z "$$files" || { \
-	       echo " $(INSTALL_SCRIPT) $$files '$(DESTDIR)$(templatesdir)$$dir'"; \
-	       $(INSTALL_SCRIPT) $$files "$(DESTDIR)$(templatesdir)$$dir" || exit $$?; \
+	       echo " $(INSTALL_SCRIPT) $$files '$(DESTDIR)$(hooksdir)$$dir'"; \
+	       $(INSTALL_SCRIPT) $$files "$(DESTDIR)$(hooksdir)$$dir" || exit $$?; \
 	     } \
 	; done
 
-uninstall-templatesSCRIPTS:
+uninstall-hooksSCRIPTS:
 	@$(NORMAL_UNINSTALL)
-	@list='$(templates_SCRIPTS)'; test -n "$(templatesdir)" || exit 0; \
+	@list='$(hooks_SCRIPTS)'; test -n "$(hooksdir)" || exit 0; \
 	files=`for p in $$list; do echo "$$p"; done | \
 	       sed -e 's,.*/,,;$(transform)'`; \
-	dir='$(DESTDIR)$(templatesdir)'; $(am__uninstall_files_from_dir)
+	dir='$(DESTDIR)$(hooksdir)'; $(am__uninstall_files_from_dir)
 tags: TAGS
 TAGS:
 
@@ -385,7 +347,7 @@ check-am: all-am
 check: check-am
 all-am: Makefile $(SCRIPTS)
 installdirs:
-	for dir in "$(DESTDIR)$(templatesdir)"; do \
+	for dir in "$(DESTDIR)$(hooksdir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
 install: install-am
@@ -438,7 +400,7 @@ info: info-am
 
 info-am:
 
-install-data-am: install-templatesSCRIPTS
+install-data-am: install-hooksSCRIPTS
 
 install-dvi: install-dvi-am
 
@@ -482,21 +444,20 @@ ps: ps-am
 
 ps-am:
 
-uninstall-am: uninstall-templatesSCRIPTS
+uninstall-am: uninstall-hooksSCRIPTS
 
 .MAKE: install-am install-strip
 
 .PHONY: all all-am check check-am clean clean-generic distclean \
 	distclean-generic distdir dvi dvi-am html html-am info info-am \
 	install install-am install-data install-data-am install-dvi \
-	install-dvi-am install-exec install-exec-am install-html \
-	install-html-am install-info install-info-am install-man \
-	install-pdf install-pdf-am install-ps install-ps-am \
-	install-strip install-templatesSCRIPTS installcheck \
+	install-dvi-am install-exec install-exec-am \
+	install-hooksSCRIPTS install-html install-html-am install-info \
+	install-info-am install-man install-pdf install-pdf-am \
+	install-ps install-ps-am install-strip installcheck \
 	installcheck-am installdirs maintainer-clean \
 	maintainer-clean-generic mostlyclean mostlyclean-generic pdf \
-	pdf-am ps ps-am uninstall uninstall-am \
-	uninstall-templatesSCRIPTS
+	pdf-am ps ps-am uninstall uninstall-am uninstall-hooksSCRIPTS
 
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.

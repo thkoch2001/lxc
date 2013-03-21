@@ -4,7 +4,7 @@
  * (C) Copyright IBM Corp. 2007, 2008
  *
  * Authors:
- * Daniel Lezcano <dlezcano at fr.ibm.com>
+ * Daniel Lezcano <daniel.lezcano at free.fr>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -34,6 +34,7 @@
 
 #include <lxc/log.h>
 #include <lxc/start.h>
+#include <lxc/conf.h>
 
 #include "lxc.h"
 #include "commands.h"
@@ -82,10 +83,14 @@ extern int lxc_stop_callback(int fd, struct lxc_request *request,
 {
 	struct lxc_answer answer;
 	int ret;
+	int stopsignal = SIGKILL;
 
-	answer.ret = kill(handler->pid, SIGKILL);
+	if (handler->conf->stopsignal)
+		stopsignal = handler->conf->stopsignal;
+	memset(&answer, 0, sizeof(answer));
+	answer.ret = kill(handler->pid, stopsignal);
 	if (!answer.ret) {
-		ret = lxc_unfreeze(handler->name);
+		ret = lxc_unfreeze_bypath(handler->cgroup);
 		if (!ret)
 			return 0;
 

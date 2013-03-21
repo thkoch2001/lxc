@@ -4,7 +4,7 @@
  * (C) Copyright IBM Corp. 2007, 2008
  *
  * Authors:
- * Daniel Lezcano <dlezcano at fr.ibm.com>
+ * Daniel Lezcano <daniel.lezcano at free.fr>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -112,7 +112,6 @@ int main(int argc, char *argv[])
 {
 	int opt, status;
 	int ret;
-	char *pid_name;
 	char *namespaces = NULL;
 	char **args;
 	int flags = 0;
@@ -168,15 +167,6 @@ int main(int argc, char *argv[])
 	if (waitpid(pid, &status, 0) < 0) {
 		ERROR("failed to wait for '%d'", pid);
 		return -1;
-	}
-
-	if (lxc_ns_is_mounted()) {
-		if (asprintf(&pid_name, "%d", pid) == -1) {
-			ERROR("pid_name: failed to allocate memory");
-			return -1;
-		}
-		lxc_cgroup_destroy(pid_name);
-		free(pid_name);
 	}
 
 	return  lxc_error_set_and_log(pid, status);
