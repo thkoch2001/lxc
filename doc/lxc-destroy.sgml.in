@@ -5,7 +5,7 @@ lxc: linux Container library
 (C) Copyright IBM Corp. 2007, 2008
 
 Authors:
-Daniel Lezcano <dlezcano at fr.ibm.com>
+Daniel Lezcano <daniel.lezcano at free.fr>
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Lesser General Public
@@ -82,6 +82,15 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 	</listitem>
       </varlistentry>
     </variablelist>
+
+    <varlistentry>
+      <term><option>-P, --lxcpath=<replaceable>PATH</replaceable></option></term>
+      <listitem>
+	<para>
+	  Use an alternate container path.  The default is @LXCPATH@.
+	</para>
+      </listitem>
+    </varlistentry>
 
   </refsect1>
 

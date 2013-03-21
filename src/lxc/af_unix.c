@@ -4,7 +4,7 @@
  * (C) Copyright IBM Corp. 2007, 2008
  *
  * Authors:
- * Daniel Lezcano <dlezcano at fr.ibm.com>
+ * Daniel Lezcano <daniel.lezcano at free.fr>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -56,12 +56,16 @@ int lxc_af_unix_open(const char *path, int type, int flags)
 	       path[0]?strlen(path):sizeof(addr.sun_path));
 
 	if (bind(fd, (struct sockaddr *)&addr, sizeof(addr))) {
+		int tmp = errno;
 		close(fd);
+		errno = tmp;
 		return -1;
 	}
 	
 	if (type == SOCK_STREAM && listen(fd, 100)) {
+		int tmp = errno;
 		close(fd);
+		errno = tmp;
 		return -1;
 	}
 
@@ -99,7 +103,9 @@ int lxc_af_unix_connect(const char *path)
 	       path[0]?strlen(path):sizeof(addr.sun_path));
 
 	if (connect(fd, (struct sockaddr *)&addr, sizeof(addr))) {
+		int tmp = errno;
 		close(fd);
+		errno = tmp;
 		return -1;
 	}
 

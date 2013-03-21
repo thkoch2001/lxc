@@ -4,7 +4,7 @@
  * (C) Copyright IBM Corp. 2007, 2008
  *
  * Authors:
- * Daniel Lezcano <dlezcano at fr.ibm.com>
+ * Daniel Lezcano <daniel.lezcano at free.fr>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -31,6 +31,6 @@ extern int mkdir_p(const char *dir, mode_t mode);
  * Return a newly allocated buffer containing the default container
  * path.  Caller must free this buffer.
  */
-extern char *default_lxc_path(void);
+extern const char *default_lxc_path(void);
 
 #endif

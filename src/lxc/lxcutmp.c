@@ -4,7 +4,7 @@
  * (C) Copyright IBM Corp. 2007, 2008
  *
  * Authors:
- * Daniel Lezcano <dlezcano at fr.ibm.com>
+ * Daniel Lezcano <daniel.lezcano at free.fr>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -283,7 +283,7 @@ static int utmp_get_ntasks(struct lxc_handler *handler)
 {
 	int ntasks;
 
-	ntasks = lxc_cgroup_nrtasks(handler->name);
+	ntasks = lxc_cgroup_nrtasks(handler->cgroup);
 
 	if (ntasks < 0) {
 		ERROR("failed to get the number of tasks");
