@@ -9,7 +9,7 @@
 
 set -e
 
-, /usr/share/lxc/lxc.functions
+. /usr/share/lxc/lxc.functions
 
 _LXC_DIRECTORY="${lxc_path}"
 _CONTAINER="${1}"
