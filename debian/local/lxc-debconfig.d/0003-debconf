@@ -137,7 +137,7 @@ Archives ()
 						db_subst lxc-debconfig/archives CHOICES_C "${_DISTRIBUTION}-security, ${_DISTRIBUTION}-updates, ${_DISTRIBUTION}-backports, ${_DISTRIBUTION}-proposed-updates"
 
 						case "${_PARENT_DISTRIBUTION}" in
-							wheezy)
+							jessie|sid)
 								db_set lxc-debconfig/archives "${_DISTRIBUTION}-security, ${_DISTRIBUTION}-updates"
 								;;
 
