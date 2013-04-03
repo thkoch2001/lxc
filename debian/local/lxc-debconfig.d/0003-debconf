@@ -323,8 +323,17 @@ Mirror_backports ()
 	then
 		case "${_MODE}" in
 			debian)
-				db_set lxc-debconfig/mirror-backports http://http.debian.net/debian-backports/
-				db_fset lxc-debconfig/mirror-backports seen false
+				case "${_DISTRIBUTION}" in
+					squeeze)
+						db_set lxc-debconfig/mirror-backports http://http.debian.net/debian-backports/
+						db_fset lxc-debconfig/mirror-backports seen false
+						;;
+
+					*)
+						db_set lxc-debconfig/mirror-backports http://http.debian.net/debian/
+						db_fset lxc-debconfig/mirror-backports seen true
+						;;
+				esac
 				;;
 
 			*)
@@ -344,7 +353,15 @@ Mirror_backports ()
 		then
 			case "${_MODE}" in
 				debian)
-					_MIRROR_BACKPORTS="http://http.debian.net/debian-backports/"
+					case "${_DISTRIBUTION}" in
+						squeeze)
+							_MIRROR_BACKPORTS="http://http.debian.net/debian-backports/"
+							;;
+
+						*)
+							_MIRROR_BACKPORTS="http://http.debian.net/debian/"
+							;;
+					esac
 					;;
 
 				*)
@@ -455,8 +472,17 @@ Parent_mirror_backports ()
 	then
 		case "${_MODE}" in
 			progress-linux)
-				db_set lxc-debconfig/parent-mirror-backports http://backports.debian.org/debian-backports/
-				db_fset lxc-debconfig/parent-mirror-backports seen false
+				case "${_PARENT_DISTRIBUTION}" in
+					squeeze)
+						db_set lxc-debconfig/parent-mirror-backports http://backports.debian.org/debian-backports/
+						db_fset lxc-debconfig/parent-mirror-backports seen false
+						;;
+
+					*)
+						db_set lxc-debconfig/parent-mirror-backports ${_PARENT_MIRROR}
+						db_fset lxc-debconfig/parent-mirror-backports seen true
+						;;
+				esac
 
 				db_settitle lxc-debconfig/title
 				db_input high lxc-debconfig/parent-mirror-backports || true
@@ -476,7 +502,15 @@ Parent_mirror_backports ()
 		then
 			case "${_MODE}" in
 				progress-linux)
-					_PARENT_MIRROR_BACKPORTS="http://backports.debian.org/debian-backports/"
+					case "${_PARENT_DISTRIBUTION}" in
+						squeeze)
+							_PARENT_MIRROR_BACKPORTS="http://backports.debian.org/debian-backports/"
+							;;
+
+						*)
+							_PARENT_MIRROR_BACKPORTS="${_PARENT_MIRROR}"
+							;;
+					esac
 					;;
 
 				*)
