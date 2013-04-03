@@ -896,6 +896,32 @@ Internal_options ()
 
 	echo "_INITSYSTEM=\"${_INITSYSTEM}\"" >> "${_TMPDIR}/debconf.default"
 
+	if db_get lxc-debconfig/mount-proc/entry
+	then
+		LXC_DEBCONFIG_MOUNT_PROC_ENTRY="${RET}"
+	fi
+
+	case "${_MODE}" in
+		progress-linux)
+			LXC_DEBCONFIG_MOUNT_PROC_ENTRY="${LXC_DEBCONFIG_MOUNT_PROC_ENTRY:-proc proc proc ro,nodev,noexec,nosuid,hidepid=2 0 0}"
+			;;
+
+		*)
+			LXC_DEBCONFIG_MOUNT_PROC_ENTRY="${LXC_DEBCONFIG_MOUNT_PROC_ENTRY:-proc proc proc ro,nodev,noexec,nosuid 0 0}"
+			;;
+	esac
+
+	echo "LXC_DEBCONFIG_MOUNT_PROC_ENTRY=\"${LXC_DEBCONFIG_MOUNT_PROC_ENTRY}\"" >> "${_TMPDIR}/debconf.default"
+
+	if db_get lxc-debconfig/mount-sysfs/entry
+	then
+		LXC_DEBCONFIG_MOUNT_SYSFS_ENTRY="${RET}"
+	fi
+
+	LXC_DEBCONFIG_MOUNT_SYSFS_ENTRY="${LXC_DEBCONFIG_MOUNT_SYSFS_ENTRY:-sysfs sys sysfs ro 0 0}"
+
+	echo "LXC_DEBCONFIG_MOUNT_SYSFS_ENTRY=\"${LXC_DEBCONFIG_MOUNT_SYSFS_ENTRY}\"" >> "${_TMPDIR}/debconf.default"
+
 	_NUMBER="0"
 
 	while db_get lxc-debconfig/mount${_NUMBER}/entry && [ "${RET}" ]

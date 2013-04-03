@@ -784,23 +784,8 @@ lxc.cgroup.devices.allow                = c 1:5 rwm
 #lxc.cgroup.memory.memsw.limit_in_bytes = 1G
 
 ## Filesystem
-EOF
-
-case "${_MODE}" in
-	progress-linux)
-		_PROC_OPTIONS="ro,nodev,noexec,nosuid,hidepid=2"
-		;;
-
-	*)
-		_PROC_OPTIONS="ro,nodev,noexec,nosuid"
-		;;
-esac
-
-_SYSFS_OPTIONS="ro"
-
-cat >> "${_PATH}/config" << EOF
-lxc.mount.entry                         = proc proc proc ${_PROC_OPTIONS} 0 0
-lxc.mount.entry                         = sysfs sys sysfs ${_SYSFS_OPTIONS} 0 0
+lxc.mount.entry                         = ${LXC_DEBCONFIG_MOUNT_PROC_ENTRY}
+lxc.mount.entry                         = ${LXC_DEBCONFIG_MOUNT_SYSFS_ENTRY}
 EOF
 
 	# Adding preseeded mount entries
