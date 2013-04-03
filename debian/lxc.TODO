@@ -29,7 +29,7 @@ lxc-debconfig:
   * for some reason the Internal_options don't make it to debconf.default;
     probably because the 'if db_get ...' constructs don't work with set -e.
   * allow mechanism to store local packages that overwrite repository ones
-  * if invoked as lxc-debconfig, ask for mode (debian, progress, ubuntu, etc.)
+  * if invoked as lxc-debconfig, ask for mode (debian, progress-linux, etc.)
   * allow to have templates (that do not get modified) in /etc/lxc/debconf
   * write preseed file into /etc/lxc/debconf after lxc-debconfig is done
   * create /etc/lxc/{debian,progress} and respect it depending on mode

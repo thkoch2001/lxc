@@ -6,7 +6,7 @@
 .\" under certain conditions; see COPYING for details.
 .\"
 .\"
-.TH LXC 1 2013\-03\-21 0.9.0~rc1-1 "Linux Containers"
+.TH LXC 1 2013\-04\-03 0.9.0~rc1-3 "Linux Containers"
 
 .SH NAME
 \fBlxc\-debconfig\fR \- LXC template to create Debian and Debian based containers
@@ -16,12 +16,10 @@
 .PP
 \fBlxc\-create\fR \-t progress\-linux \-n|\-\-name \fICONTAINER\fR \-\- [\-\-apt\-recommends] [\-\-debconf\-frontend \fIDEBCONF_FRONTEND\fR] [\-\-debconf\-priority \fIDEBCONF_PRIORITY\fR] [\-\-preseed\-file \fIPRESEED_FILE\fR]
 
-\fBlxc\-create\fR \-t ubuntu \-n|\-\-name \fICONTAINER\fR \-\- [\-\-apt\-recommends] [\-\-debconf\-frontend \fIDEBCONF_FRONTEND\fR] [\-\-debconf\-priority \fIDEBCONF_PRIORITY\fR] [\-\-preseed\-file \fIPRESEED_FILE\fR]
-
 .SH DESCRIPTION
 LXC(7) uses so called templates to create Linux Container systems. \fBlxc\-debconfig\fR is such a template script to create Debian and Debian based containers.
 .PP
-\fBlxc\-debconfig\fR can be invoked through lxc\-create(1) in three modes: debconf, debian, progress\-linux, and ubuntu. In debconf mode, it currently falls automatically back to debian mode. In debian mode, it will allow offer to choose to create Debian GNU/Linux containers. In progress\-linux mode, it will allow to choose to create Progress Linux containers. In ubuntu mode, it will allow to choose to create Ubuntu containers.
+\fBlxc\-debconfig\fR can be invoked through lxc\-create(1) in three modes: debconf, debian, and progress\-linux. In debconf mode, it currently falls automatically back to debian mode. In debian mode, it will allow offer to choose to create Debian GNU/Linux containers. In progress\-linux mode, it will allow to choose to create Progress Linux containers.
 .PP
 
 .SH OPTIONS
