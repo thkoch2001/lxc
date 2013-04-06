@@ -809,9 +809,9 @@ EOF
 
 			if [ -f "${_SOURCE}" ]
 			then
-				mkdir -p "$(dirname ${_TARGET})"
+				mkdir -p "${_ROOTFS}/$(dirname ${_TARGET})"
 			else
-				mkdir -p "${_TARGET}"
+				mkdir -p "${_ROOTFS}/${_TARGET}"
 			fi
 		fi
 	done
