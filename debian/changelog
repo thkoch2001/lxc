@@ -1,3 +1,15 @@
+lxc (0.9.0~rc1-5) experimental; urgency=low
+
+  * Enabling backports by default for any release except jessie and sid.
+  * Updating handling of debian-backports differently for wheezy and newer
+    releases.
+  * Making proc and sysfs mount entries preseedable in lxc-debconfig to
+    support custom options.
+  * Correcting automatic directory creation for mount entries, thanks to
+    Niels Boehm <schnurzelpieps2000-dbts@yahoo.com> (Closes: #704814).
+
+ -- Daniel Baumann <mail@daniel-baumann.ch>  Sat, 06 Apr 2013 10:51:13 +0200
+
 lxc (0.9.0~rc1-4) experimental; urgency=low
 
   * Dropping ubuntu mode in lxc-debconfig, ubuntu support seems not worth
