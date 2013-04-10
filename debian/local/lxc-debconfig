@@ -533,17 +533,29 @@ EOF
 			esac
 
 			# Import archive keys
-			case "${_DIST}" in
+			case "${_DISTRIBUTION}" in
 				artax)
-					_KEYS="1.0-artax 1.0-artax-packages"
+					_KEYS="1.0-artax"
+					;;
+
+				artax-backports)
+					_KEYS="1.9-artax-backports"
 					;;
 
 				baureo)
-					_KEYS="2.0-baureo 2.0-baureo-packages"
+					_KEYS="2.0-baureo"
+					;;
+
+				baureo-backports)
+					_KEYS="2.9-baureo-backports"
 					;;
 
 				chairon)
-					_KEYS="3.0-chairon 3.0-chairon-packages"
+					_KEYS="3.0-chairon"
+					;;
+
+				chairon-backports)
+					_KEYS="3.9-chairon-backports"
 					;;
 			esac
 
@@ -554,13 +566,38 @@ EOF
 				wget -q "${_MIRROR}/project/keys/archive-key-${_KEY}.asc" -O "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}.partial/key.asc"
 				wget -q "${_MIRROR}/project/keys/archive-key-${_KEY}.asc.sig" -O "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}.partial/key.asc.sig"
 
-				if [ -e /usr/bin/gpgv ] && [ -e /usr/share/keyrings/debian-keyring.gpg ]
+				if [ -e /usr/bin/gpgv ]
 				then
-					echo "I: Verifying archive-key ${_KEY} against debian-keyring..."
+					if [ -e /usr/share/keyrings/debian-keyring.gpg ] || [ -e /usr/share/keyrings/debian-maintainers.gpg ]
+					then
+						_KEY_VALID=""
 
-					/usr/bin/gpgv --quiet --keyring /usr/share/keyrings/debian-keyring.gpg "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}.partial/key.asc.sig" "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}.partial/key.asc" > /dev/null 2>&1 || { echo "E: archive-key ${_KEY} has invalid signature."; return 1;}
+						for _KEYRING in /usr/share/keyrings/debian-keyring.gpg /usr/share/keyrings/debian-maintainers.gpg
+						do
+							if [ -e "${_KEYRING}" ]
+							then
+								echo -n "I: Verifying archive-key ${_KEY} against $(basename ${_KEYRING} .gpg | sed -e 's|-keyring||') keyring..."
+
+								# FIXME: doesn't work anymore when the template eventually be run with 'set -e'
+								/usr/bin/gpgv --quiet --keyring ${_KEYRING} "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}.partial/key.asc.sig" "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}.partial/key.asc" > /dev/null 2>&1 && _KEY_VALID="true" && break
+							fi
+						done
+
+						case "${_KEY_VALID}" in
+							true)
+								echo " successful."
+								;;
+
+							*)
+								echo " failed."
+								return 1
+								;;
+						esac
+					else
+						echo "W: Skipping archive-key ${_KEY} verification, debian-keyring not available..."
+					fi
 				else
-					echo "W: Skipping archive-key ${_KEY} verification, either gpgv or debian-keyring not available..."
+					echo "W: Skipping archive-key ${_KEY} verification, gpgv not available..."
 				fi
 
 				echo "P: Importing archive-key ${_KEY}..."
