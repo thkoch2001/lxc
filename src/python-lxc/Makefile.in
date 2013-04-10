@@ -202,9 +202,14 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-@ENABLE_PYTHON_TRUE@EXTRA_DIST = setup.py lxc.c
 @ENABLE_PYTHON_TRUE@@HAVE_DEBIAN_FALSE@DISTSETUPOPTS = 
 @ENABLE_PYTHON_TRUE@@HAVE_DEBIAN_TRUE@DISTSETUPOPTS = --install-layout=deb
+EXTRA_DIST = \
+	setup.py \
+	lxc.c \
+	lxc/__init__.py \
+	examples/api_test.py
+
 all: all-am
 
 .SUFFIXES:
@@ -309,9 +314,10 @@ distclean-generic:
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
 	@echo "it deletes files that may require special tools to rebuild."
-@ENABLE_PYTHON_FALSE@clean: clean-am
+@ENABLE_PYTHON_FALSE@clean-local:
+clean: clean-am
 
-clean-am: clean-generic mostlyclean-am
+clean-am: clean-generic clean-local mostlyclean-am
 
 distclean: distclean-am
 	-rm -f Makefile
@@ -377,15 +383,16 @@ uninstall-am:
 
 .MAKE: install-am install-strip
 
-.PHONY: all all-am check check-am clean clean-generic distclean \
-	distclean-generic distdir dvi dvi-am html html-am info info-am \
-	install install-am install-data install-data-am install-dvi \
-	install-dvi-am install-exec install-exec-am install-html \
-	install-html-am install-info install-info-am install-man \
-	install-pdf install-pdf-am install-ps install-ps-am \
-	install-strip installcheck installcheck-am installdirs \
-	maintainer-clean maintainer-clean-generic mostlyclean \
-	mostlyclean-generic pdf pdf-am ps ps-am uninstall uninstall-am
+.PHONY: all all-am check check-am clean clean-generic clean-local \
+	distclean distclean-generic distdir dvi dvi-am html html-am \
+	info info-am install install-am install-data install-data-am \
+	install-dvi install-dvi-am install-exec install-exec-am \
+	install-html install-html-am install-info install-info-am \
+	install-man install-pdf install-pdf-am install-ps \
+	install-ps-am install-strip installcheck installcheck-am \
+	installdirs maintainer-clean maintainer-clean-generic \
+	mostlyclean mostlyclean-generic pdf pdf-am ps ps-am uninstall \
+	uninstall-am
 
 
 @ENABLE_PYTHON_TRUE@all:
@@ -398,7 +405,7 @@ uninstall-am:
 @ENABLE_PYTHON_TRUE@		$(PYTHON) setup.py install --root=$(DESTDIR) --prefix=$(prefix) --no-compile $(DISTSETUPOPTS); \
 @ENABLE_PYTHON_TRUE@	fi
 
-@ENABLE_PYTHON_TRUE@clean:
+@ENABLE_PYTHON_TRUE@clean-local:
 @ENABLE_PYTHON_TRUE@	rm -rf build
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
