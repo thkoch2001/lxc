@@ -255,7 +255,6 @@ top_srcdir = @top_srcdir@
 @ENABLE_LUA_TRUE@luadir = $(datadir)/lua/5.1
 @ENABLE_LUA_TRUE@sodir = $(libdir)/lua/5.1/lxc
 @ENABLE_LUA_TRUE@lua_SCRIPTS = lxc.lua
-@ENABLE_LUA_TRUE@EXTRA_DIST = lxc.lua
 @ENABLE_LUA_TRUE@core_so_SOURCES = core.c
 @ENABLE_LUA_TRUE@AM_CFLAGS = -I$(top_srcdir)/src $(LUA_CFLAGS) -DVERSION=\"$(VERSION)\" -DLXCPATH=\"$(LXCPATH)\"
 @ENABLE_LUA_TRUE@core_so_CFLAGS = -fPIC -DPIC $(AM_CFLAGS)
@@ -265,6 +264,10 @@ top_srcdir = @top_srcdir@
 @ENABLE_LUA_TRUE@	-Wl,-soname,core.so.$(firstword $(subst ., ,$(VERSION)))
 
 @ENABLE_LUA_TRUE@core_so_LDADD = -llxc $(LUA_LIBS)
+EXTRA_DIST = \
+	lxc.lua \
+	test/apitest.lua
+
 all: all-am
 
 .SUFFIXES:

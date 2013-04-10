@@ -1,7 +1,7 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-AC_INIT([lxc], [0.9.0.rc1])
+AC_INIT([lxc], [0.9.0])
 
 AC_CONFIG_SRCDIR([configure.ac])
 AC_CONFIG_AUX_DIR([config])
@@ -194,7 +194,7 @@ AM_CONDITIONAL([USE_CONFIGPATH_LOGS], [test "$use_configpath_logs" = "yes"])
 if test "$use_configpath_logs" = "yes"; then
 	default_log_path="${with_config_path}"
 else
-	default_log_path="/var/log/lxc"
+	default_log_path="${localstatedir}/log/lxc"
 fi
 
 AC_ARG_WITH([log-path],

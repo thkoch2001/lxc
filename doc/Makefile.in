@@ -308,8 +308,7 @@ top_srcdir = @top_srcdir@
 SUBDIRS = examples rootfs
 DIST_SUBDIRS = examples rootfs
 EXTRA_DIST = \
-	FAQ.txt \
-	$(man_MANS)
+	FAQ.txt
 
 @ENABLE_DOCBOOK_TRUE@man_MANS = lxc-attach.1 lxc-cgroup.1 \
 @ENABLE_DOCBOOK_TRUE@	lxc-checkconfig.1 lxc-checkpoint.1 \
@@ -788,10 +787,10 @@ distclean-generic:
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
 	@echo "it deletes files that may require special tools to rebuild."
-@ENABLE_DOCBOOK_FALSE@maintainer-clean-local:
+@ENABLE_DOCBOOK_FALSE@clean-local:
 clean: clean-recursive
 
-clean-am: clean-generic mostlyclean-am
+clean-am: clean-generic clean-local mostlyclean-am
 
 distclean: distclean-recursive
 	-rm -f Makefile
@@ -839,8 +838,7 @@ installcheck-am:
 
 maintainer-clean: maintainer-clean-recursive
 	-rm -f Makefile
-maintainer-clean-am: distclean-am maintainer-clean-generic \
-	maintainer-clean-local
+maintainer-clean-am: distclean-am maintainer-clean-generic
 
 mostlyclean: mostlyclean-recursive
 
@@ -862,19 +860,19 @@ uninstall-man: uninstall-man1 uninstall-man5 uninstall-man7
 	install-am install-strip tags-recursive
 
 .PHONY: $(RECURSIVE_CLEAN_TARGETS) $(RECURSIVE_TARGETS) CTAGS GTAGS \
-	all all-am check check-am clean clean-generic ctags \
-	ctags-recursive distclean distclean-generic distclean-tags \
-	distdir dvi dvi-am html html-am info info-am install \
-	install-am install-data install-data-am install-dvi \
+	all all-am check check-am clean clean-generic clean-local \
+	ctags ctags-recursive distclean distclean-generic \
+	distclean-tags distdir dvi dvi-am html html-am info info-am \
+	install install-am install-data install-data-am install-dvi \
 	install-dvi-am install-exec install-exec-am install-html \
 	install-html-am install-info install-info-am install-man \
 	install-man1 install-man5 install-man7 install-pdf \
 	install-pdf-am install-ps install-ps-am install-strip \
 	installcheck installcheck-am installdirs installdirs-am \
-	maintainer-clean maintainer-clean-generic \
-	maintainer-clean-local mostlyclean mostlyclean-generic pdf \
-	pdf-am ps ps-am tags tags-recursive uninstall uninstall-am \
-	uninstall-man uninstall-man1 uninstall-man5 uninstall-man7
+	maintainer-clean maintainer-clean-generic mostlyclean \
+	mostlyclean-generic pdf pdf-am ps ps-am tags tags-recursive \
+	uninstall uninstall-am uninstall-man uninstall-man1 \
+	uninstall-man5 uninstall-man7
 
 
 @ENABLE_DOCBOOK_TRUE@%.1 : %.sgml
@@ -891,7 +889,7 @@ uninstall-man: uninstall-man1 uninstall-man5 uninstall-man7
 
 @ENABLE_DOCBOOK_TRUE@lxc-%.sgml : common_options.sgml see_also.sgml
 
-@ENABLE_DOCBOOK_TRUE@maintainer-clean-local:
+@ENABLE_DOCBOOK_TRUE@clean-local:
 @ENABLE_DOCBOOK_TRUE@	$(RM) manpage.* *.7 *.5 *.1 $(man_MANS)
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.

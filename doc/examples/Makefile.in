@@ -239,7 +239,6 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-EXTRA_DIST = $(pkgexamples_DATA)
 @ENABLE_EXAMPLES_TRUE@pkgexamplesdir = $(docdir)/examples
 @ENABLE_EXAMPLES_TRUE@pkgexamples_DATA = \
 @ENABLE_EXAMPLES_TRUE@	lxc-macvlan.conf \
