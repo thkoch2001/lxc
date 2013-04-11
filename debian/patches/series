@@ -3,4 +3,3 @@
 0003-lxc-destroy-symlinks.patch
 0004-lxc-clone-mac.patch
 0005-lxc-init-path.patch
-0006-lxc-create-template.patch
