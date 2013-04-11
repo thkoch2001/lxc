@@ -1,3 +1,12 @@
+lxc (0.9.0-1) experimental; urgency=low
+
+  * Merging upstream version 0.9.0.
+  * Removing lxc-create-template.patch, not needed anymore.
+  * Updating archive-key signature validiation to look by default at both
+    debian and debian-maintainers keyrings.
+
+ -- Daniel Baumann <mail@daniel-baumann.ch>  Thu, 11 Apr 2013 13:48:30 +0200
+
 lxc (0.9.0~rc1-5) experimental; urgency=low
 
   * Enabling backports by default for any release except jessie and sid.
