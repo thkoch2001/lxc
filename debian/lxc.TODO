@@ -25,7 +25,7 @@ lxc:
 lxc-debconfig:
   * include removal of backup files and such from live-build:share/hooks/*
   * create lxc configs 'dynamically' by calling lxc-cgroup
-  * make /usr/share/lxc/includes or somesuch for local includes (e.g. certs)
+  * make /usr/share/lxc/includes/{$name,all} or somesuch for local includes (e.g. certs)
   * for some reason the Internal_options don't make it to debconf.default;
     probably because the 'if db_get ...' constructs don't work with set -e.
   * allow mechanism to store local packages that overwrite repository ones
@@ -41,3 +41,5 @@ lxc-debconfig:
   * don't embedd lxc config, use a template from etc
   * if no debconf frontend/priority is given, make sure that live-debconfig
     doesn't re-ask already preseeded values
+  * bug: if no network is configured via live-debconfig, then lxc-debconfig
+    should not add network entries in the container config file.
