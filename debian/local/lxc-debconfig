@@ -821,9 +821,25 @@ lxc.cgroup.devices.allow                = c 1:5 rwm
 #lxc.cgroup.memory.memsw.limit_in_bytes = 1G
 
 ## Filesystem
-lxc.mount.entry                         = ${LXC_DEBCONFIG_MOUNT_PROC_ENTRY}
-lxc.mount.entry                         = ${LXC_DEBCONFIG_MOUNT_SYSFS_ENTRY}
 EOF
+
+	case "${LXC_DEBCONFIG_MOUNT_PROC_ENTRY}" in
+		none)
+			;;
+
+		*)
+			echo "lxc.mount.entry                         = ${LXC_DEBCONFIG_MOUNT_PROC_ENTRY}" >> "${_PATH}/config"
+			;;
+	esac
+
+	case "${LXC_DEBCONFIG_MOUNT_SYSFS_ENTRY}" in
+		none)
+			;;
+
+		*)
+			echo "lxc.mount.entry                         = ${LXC_DEBCONFIG_MOUNT_SYSFS_ENTRY}" >> "${_PATH}/config"
+			;;
+	esac
 
 	# Adding preseeded mount entries
 	for _NUMBER in $(seq 0 ${LXC_DEBCONFIG_MOUNT_NUMBER})
