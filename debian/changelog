@@ -1,3 +1,15 @@
+lxc (0.9.0-2) experimental; urgency=low
+
+  [ Daniel Baumann ]
+  * Updating todo file.
+  * Also importing base-release keys for progress-linux.
+
+  [ Nik Lutz ]
+  * Do not write empty lxc.mount entries for sys and proc-fs if debconf
+    value is 'none'.
+
+ -- Daniel Baumann <mail@daniel-baumann.ch>  Sun, 14 Apr 2013 11:27:15 +0200
+
 lxc (0.9.0-1) experimental; urgency=low
 
   * Merging upstream version 0.9.0.
