@@ -1,0 +1,17 @@
+#!/bin/sh
+
+set -e
+
+_CONTAINER_SYS="${LXC_ROOTFS_MOUNT}/sys"
+_CONTAINER_CGROUP="${_CONTAINER_SYS}/fs/cgroup"
+_CONTAINER_SYSTEMD="${_CONTAINER_CGROUP}/systemd"
+
+# mount container /sys
+mount -t sysfs sysfs "${_CONTAINER_SYS}"
+
+# let container /sys/fs/cgroup be a mount point
+mount -t tmpfs tmpfs "${_CONTAINER_CGROUP}"
+
+# mount systemd cgroup in container
+mkdir -p "${_CONTAINER_SYSTEMD}"
+mount -t cgroup -o none,name=${LXC_NAME} cgroup "${_CONTAINER_SYSTEMD}"

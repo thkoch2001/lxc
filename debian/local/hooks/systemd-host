@@ -1,0 +1,16 @@
+#!/bin/sh
+
+set -e
+
+# If you create /sys/fs/cgroup/systemd on a non-systemd host/dom0
+# lsb scripts assume systemd is running.
+_HOST_SYSTEMD="/sys/fs/cgroup/lxc.systemd"
+
+if ! grep -qs "^cgroup /sys/fs/cgroup/systemd cgroup" /proc/mounts
+then
+	if ! grep -qs "^cgroup ${_HOST_SYSTEMD} cgroup" /proc/mounts
+	then
+		mkdir -p "${_HOST_SYSTEMD}"
+		mount -t cgroup -o none,name=systemd cgroup "${_HOST_SYSTEMD}"
+	fi
+fi

@@ -36,6 +36,9 @@ override_dh_auto_install:
 	mkdir -p debian/lxc/etc/bash_completion.d
 	cp debian/local/lxc.sh debian/lxc/etc/bash_completion.d
 
+	cp debian/local/hooks/systemd-container debian/tmp/usr/share/lxc/hooks
+	cp debian/local/hooks/systemd-host debian/tmp/usr/share/lxc/hooks
+
 	mkdir -p debian/lxc/usr/share/lxc/templates
 	cp -r debian/local/lxc-debconfig* debian/lxc/usr/share/lxc/templates
 
