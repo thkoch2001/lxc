@@ -832,6 +832,14 @@ EOF
 			;;
 	esac
 
+	case "${_INITSYSTEM}" in
+		systemd)
+			LXC_DEBCONFIG_MOUNT_SYSFS_ENTRY="none"
+			;;
+		*)
+			;;
+	esac
+
 	case "${LXC_DEBCONFIG_MOUNT_SYSFS_ENTRY}" in
 		none)
 			;;
