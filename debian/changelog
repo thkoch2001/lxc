@@ -1,3 +1,16 @@
+lxc (0.9.0-3) experimental; urgency=low
+
+  [ Daniel Baumann ]
+  * Quoting arguments from templates properly in lxc-create, thanks to
+    Denys Gavrysh <deg@ciklum.com> (Closes: #705458).
+
+  [ Nik Lutz ]
+  * Disabling sysfs mount config for containers with systemd.
+  * Adding hooks for systemd support.
+  * Enabling hooks for containers with init-system systemd.
+
+ -- Daniel Baumann <mail@daniel-baumann.ch>  Mon, 15 Apr 2013 15:39:30 +0200
+
 lxc (0.9.0-2) experimental; urgency=low
 
   [ Daniel Baumann ]
