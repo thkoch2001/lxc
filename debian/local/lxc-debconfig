@@ -896,6 +896,15 @@ EOF
 		fi
 	fi
 
+	case "${_INITSYSTEM}" in
+		systemd)
+			echo "lxc.hook.pre-start                      = /usr/share/lxc/hooks/systemd-host" >> "${_PATH}/config"
+			echo "lxc.hook.mount                          = /srv/share/share/lxc/hooks/systemd-container" >> "${_PATH}/config"
+			;;
+		*)
+			;;
+	esac
+
 	# Adding network configuration
 	for _NUMBER in $(seq 0 ${LXC_DEBCONFIG_ETH_NUMBER})
 	do
