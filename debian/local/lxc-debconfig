@@ -899,7 +899,7 @@ EOF
 	case "${_INITSYSTEM}" in
 		systemd)
 			echo "lxc.hook.pre-start                      = /usr/share/lxc/hooks/systemd-host" >> "${_PATH}/config"
-			echo "lxc.hook.mount                          = /srv/share/share/lxc/hooks/systemd-container" >> "${_PATH}/config"
+			echo "lxc.hook.mount                          = /usr/share/lxc/hooks/systemd-container" >> "${_PATH}/config"
 			;;
 		*)
 			;;
