@@ -1,3 +1,14 @@
+lxc (0.9.0-4) experimental; urgency=low
+
+  [ Nik Lutz ]
+  * Correcting typo in path when writing hooks for systemd in container
+    configs.
+
+  [ Daniel Baumann ]
+  * Correcting wrong toolname in lxc-unshare manpage (Closes: #705709).
+
+ -- Daniel Baumann <mail@daniel-baumann.ch>  Fri, 19 Apr 2013 15:58:57 +0200
+
 lxc (0.9.0-3) experimental; urgency=low
 
   [ Daniel Baumann ]
