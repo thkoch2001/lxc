@@ -228,7 +228,7 @@ EOF
 
 	Upgrade_system "${_ROOTFS}"
 
-	# Temporary hack for base-files (FIXME)
+	# Temporary hack for base-files
 	for _FILE in motd.tail motd profile
 	do
 		if [ -e "${_ROOTFS}/usr/share/base-files/${_FILE}" ]
@@ -238,8 +238,26 @@ EOF
 		fi
 	done
 
-	rm -f ${_ROOTFS}/etc/dpkg/origins/default
-	Chroot "${_ROOTFS}" "dpkg-reconfigure base-files"
+	# Temporary hack for dpkg
+	if [ -e "${_ROOTFS}/etc/dpkg/origins/default" ]
+	then
+		rm -f "${_ROOTFS}/etc/dpkg/origins/default"
+		Chroot "${_ROOTFS}" "dpkg-reconfigure base-files"
+	fi
+
+	# Temporary hack for readline
+	if [ -e "${_ROOTFS}/etc/inputrc" ]
+	then
+		rm -f "${_ROOTFS}/etc/inputrc"
+		cp "${_ROOTFS}/usr/share/readline/inputrc" "${_ROOTFS}/etc"
+	fi
+
+	# Temporary hack for sysvinit
+	if [ -e "${_ROOTFS}/etc/inittab" ]
+	then
+		rm -f "${_ROOTFS}/etc/inittab"
+		cp "${_ROOTFS}/usr/share/sysvinit/inittab" "${_ROOTFS}/etc/inittab"
+	fi
 
 	# Removing hostname
 	rm -f "${_ROOTFS}"/etc/hostname
