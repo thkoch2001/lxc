@@ -10,7 +10,7 @@ _CONTAINER_SYSTEMD="${_CONTAINER_CGROUP}/systemd"
 mount -t sysfs sysfs "${_CONTAINER_SYS}"
 
 # let container /sys/fs/cgroup be a mount point
-mount -t tmpfs tmpfs "${_CONTAINER_CGROUP}"
+mount -t cgroup -o none,name=cbgroup.${LXC_NAME} cgroup "${_CONTAINER_CGROUP}"
 
 # mount systemd cgroup in container
 mkdir -p "${_CONTAINER_SYSTEMD}"
