@@ -331,7 +331,7 @@ EOF
 
 			rm -f "${_ROOTFS}/preseed.cfg"
 
-			# Run live-debconfig
+			# Run live-debconfig (first pass)
 			Chroot "${_ROOTFS}" "DEBIAN_FRONTEND=${_DEBCONF_FRONTEND:-dialog} DEBIAN_PRIORITY=${_DEBCONF_PRIORITY:-high} live-debconfig"
 			;;
 	esac
@@ -345,6 +345,7 @@ EOF
 	# packages, then unpack them with dpkg, run live-debconfig, and dpkg --configure them.
 	# For the time being, it's better to have live-debconfig see no packages at all and be run before
 	# packages are installed, than the other way around.
+	# Workaround: We're running live-debconfig at the end of the template again.
 	if [ -n "${_PACKAGES}" ]
 	then
 		case "${_DEBCONF_FRONTEND}" in
@@ -374,6 +375,12 @@ EOF
 		find . | cpio -dmpu --no-preserve-owner "${_ROOTFS}"
 
 		cd "${OLDPWD}"
+	fi
+
+	# Run live-debconfig (second pass)
+	if [ -x "${_ROOTFS}/bin/live-debconfig" ]
+	then
+		Chroot "${_ROOTFS}" "DEBIAN_FRONTEND=${_DEBCONF_FRONTEND:-dialog} DEBIAN_PRIORITY=${_DEBCONF_PRIORITY:-high} live-debconfig"
 	fi
 
 	if [ -n "${_LATE_COMMAND}" ]
