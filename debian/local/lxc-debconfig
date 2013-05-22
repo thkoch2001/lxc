@@ -799,6 +799,18 @@ EOF
 
 cat >> "${_PATH}/config" << EOF
 ## Devices
+EOF
+
+	case "${_INITSYSTEM}" in
+		systemd)
+			echo "lxc.autodev                             = 1" >> "${_PATH}/config"
+			;;
+		*)
+			echo "lxc.autodev                             = 0" >> "${_PATH}/config"
+			;;
+	esac
+
+cat >> "${_PATH}/config" << EOF
 # Allow all devices
 #lxc.cgroup.devices.allow               = a
 # Deny all devices
