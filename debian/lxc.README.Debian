@@ -9,10 +9,10 @@ LXC needs various cgroup related features enabled in the Linux kernel.
 If you use a non-Debian kernel, you can check your kernel configuration with the
 lxc-checkconfig tool.
 
-If you use a Debian squeeze kernel, all of the features are enable except the
-resource controller, means, you can use LXC just fine but cannot limit the use
-of RAM per container. Every container can use as much RAM as the host system
-offers. See http://bugs.debian.org/534964 for more information.
+If you use a Debian squeeze kernel, all of the features are enabled except the
+resource controller. This means that you can use LXC but cannot limit the amount
+of RAM used per container. Every container can use as much RAM as the host
+system offers. See http://bugs.debian.org/534964 for more information.
 
 If you use a Debian wheezy kernel or newer, all of the features are enabled
 including the resource controller.
