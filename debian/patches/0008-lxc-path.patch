@@ -1,0 +1,226 @@
+--- a/src/lxc/lxc-shutdown.in
++++ b/src/lxc/lxc-shutdown.in
+@@ -18,13 +18,17 @@
+ 
+ set -e
+ 
++lxcpath=/var/lib/lxc
++test ! -f @DATADIR@/lxc/lxc.conf || . @DATADIR@/lxc/lxc.conf
++
+ usage() {
+-    echo "usage: lxc-shutdown -n name [-w] [-r]"
++    echo "usage: lxc-shutdown -n name [-w] [-r] [-P lxcpath]"
+     echo "  Cleanly shut down a container."
+     echo "  -w: wait for shutdown to complete."
+     echo "  -r: reboot (ignore -w)."
+     echo "  -t timeout: wait at most timeout seconds (implies -w), then kill"
+     echo "              the container."
++    echo "  -P lxcpath: path to the lxc container directories."
+ }
+ 
+ alarm() {
+@@ -38,7 +42,7 @@
+ dolxcstop()
+ {
+     echo "Calling lxc-stop on $lxc_name"
+-    lxc-stop -n $lxc_name
++    lxc-stop -n $lxc_name -P "$lxcpath"
+     exit 0
+ }
+ 
+@@ -82,6 +86,12 @@
+         dowait=1
+         shift
+         ;;
++    -P|--lxcpath)
++        optarg_check $opt "$1"
++        lxcpath=$1
++        dowait=1
++        shift
++        ;;
+     --)
+         break;;
+     -?)
+@@ -104,6 +114,11 @@
+     exit 1
+ fi
+ 
++if [ ! -d "$lxcpath" ]; then
++    echo "$lxcpath: no such directory"
++    exit 1
++fi
++
+ if [ "$(id -u)" != "0" ]; then
+    echo "This command has to be run as root"
+    exit 1
+@@ -112,7 +127,7 @@
+ which lxc-info > /dev/null 2>&1 || { echo "lxc-info not found."; exit 1; }
+ which lxc-wait > /dev/null 2>&1 || { echo "lxc-wait not found."; exit 1; }
+ 
+-pid=`lxc-info -n $lxc_name -p 2>/dev/null | awk '{ print $2 }'`
++pid=`lxc-info -n $lxc_name  -P "$lxcpath" -p 2>/dev/null | awk '{ print $2 }'`
+ if [ "$pid" = "-1" ]; then
+     echo "$lxc_name is not running"
+     exit 1
+@@ -135,7 +150,7 @@
+     alarmpid=$!
+ fi
+ 
+-while ! lxc-info -n $lxc_name --state-is STOPPED; do
++while ! lxc-info -n $lxc_name -P "$lxcpath" --state-is STOPPED; do
+     sleep 1
+ done
+ 
+--- a/src/lxc/lxc-clone.in
++++ b/src/lxc/lxc-clone.in
+@@ -25,7 +25,7 @@
+ 
+ usage() {
+     echo "usage: $(basename $0) -o ORIG_NAME -n NEW_NAME [-s] [-h] [-L FS_SIZE]" >&2
+-    echo "        [-v VG_NAME] [-p LV_PREFIX] [-t FS_TYPE]" >&2
++    echo "        [-P LXC_PATH] [-v VG_NAME] [-p LV_PREFIX] [-t FS_TYPE]" >&2
+ }
+ 
+ help() {
+@@ -38,6 +38,7 @@
+     echo "  -n NEW_NAME    specify the name of the new container" >&2
+     echo "  -s             make the new rootfs a snapshot of the original" >&2
+     echo "  -L FS_SIZE     specify the new filesystem size (default: same as original)" >&2
++    echo "  -P LXC_PATH    use an alternate container path (default: @LXCPATH@)" >&2
+     echo "  -v VG_NAME     specify the new LVM volume group name (default: lxc)" >&2
+     echo "  -p LV_PREFIX   add a prefix to new LVM logical volume names" >&2
+     echo "  -t FS_TYPE     specify the new filesystem type (default: ext3;" >&2
+@@ -83,6 +84,11 @@
+             lxc_size=$1
+             shift
+             ;;
++        -P|--lxcpath)
++            optarg_check $opt $1
++            lxc_path="$1"
++            shift
++            ;;
+         -t|--fstype)
+             optarg_check $opt $1
+             fstype=$1
+@@ -167,9 +173,9 @@
+         fi
+         lvremove -f $rootdev || true
+     fi
+-    ${bindir}/lxc-destroy -n $lxc_new || true
++    ${bindir}/lxc-destroy -n $lxc_new -P "$lxc_path" || true
+     if [ $frozen -eq 1 ]; then
+-        lxc-unfreeze -n $lxc_orig
++        lxc-unfreeze -n $lxc_orig -P "$lxc_path"
+     fi
+     echo "$(basename $0): aborted" >&2
+     exit 1
+@@ -196,7 +202,7 @@
+ rootfs=`echo $oldroot |sed "s/$lxc_orig/$lxc_new/"`
+ 
+ container_running=True
+-lxc-info -n $lxc_orig --state-is RUNNING || container_running=False
++lxc-info -n $lxc_orig -P "$lxc_path" --state-is RUNNING || container_running=False
+ 
+ sed -i '/lxc.rootfs/d' $lxc_path/$lxc_new/config
+ if [ -b $oldroot ]; then
+@@ -205,7 +211,7 @@
+     lvm=TRUE
+     # ok, create a snapshot of the lvm device
+     if [ $container_running = "True" ]; then
+-        lxc-freeze -n $lxc_orig
++        lxc-freeze -n $lxc_orig -P "$lxc_path"
+         frozen=1
+     fi
+     if [ $lxc_size = "_unset" ]; then
+@@ -219,7 +225,7 @@
+     }
+ 
+     if [ $container_running = "True" ]; then
+-        lxc-unfreeze -n $lxc_orig
++        lxc-unfreeze -n $lxc_orig -P "$lxc_path"
+         frozen=0
+     fi
+     if [ $snapshot = "no" ]; then
+@@ -274,14 +280,14 @@
+         cleanup
+     fi
+     if [ $container_running = "True" ]; then
+-        lxc-freeze -n $lxc_orig
++        lxc-freeze -n $lxc_orig -P "$lxc_path"
+         frozen=1
+     fi
+     mkdir -p $rootfs/
+     rsync -Hax $oldroot/ $rootfs/
+     echo "lxc.rootfs = $rootfs" >> $lxc_path/$lxc_new/config
+     if [ $container_running = "True" ]; then
+-        lxc-unfreeze -n $lxc_orig
++        lxc-unfreeze -n $lxc_orig -P "$lxc_path"
+         frozen=0
+     fi
+ fi
+--- a/src/lxc/lxc-create.in
++++ b/src/lxc/lxc-create.in
+@@ -264,7 +264,7 @@
+         btrfs subvolume delete "$rootfs"
+     fi
+ 
+-    ${bindir}/lxc-destroy -n $lxc_name
++    ${bindir}/lxc-destroy -n $lxc_name -P "$lxc_path"
+     echo "$(basename $0): aborted" >&2
+     exit 1
+ }
+--- a/src/lxc/lxc-netstat.in
++++ b/src/lxc/lxc-netstat.in
+@@ -17,8 +17,10 @@
+ # License along with this library; if not, write to the Free Software
+ # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ 
++. @DATADIR@/lxc/lxc.functions
++
+ usage() {
+-    echo "usage: $(basename $0) -n|--name <name> -- [netstat_options]" >&2
++    echo "usage: $(basename $0) -n|--name <name> [-P|--lxcpath <lxc_path>] -- [netstat_options]" >&2
+ }
+ 
+ help() {
+@@ -26,8 +28,9 @@
+     echo >&2
+     echo "Execute 'netstat' for the specified container." >&2
+     echo >&2
+-    echo "  --name NAME       specify the container name" >&2
+-    echo "  NETSTAT_OPTIONS   netstat command options (see \`netstat --help')" >&2
++    echo "  --name NAME               specify the container name" >&2
++    echo "  --lxcpath LXC_PATH        use an alternate container path" >&2
++    echo "  NETSTAT_OPTIONS           netstat command options (see \`netstat --help')" >&2
+ }
+ 
+ get_parent_cgroup()
+@@ -73,6 +76,8 @@
+             help; exit 1;;
+         -n|--name)
+             name=$2; shift 2;;
++	-P|--lxcpath)
++            lxc_path="$2"; shift 2;;
+         --exec)
+             exec="exec"; shift;;
+         --)
+@@ -92,11 +97,17 @@
+     exit 1
+ fi
+ 
++if [ -z "$lxc_path" ]; then
++    echo "$(basename $0): no configuration path defined" >&2
++    usage
++    exit 1
++fi
++
+ if [ -z "$exec" ]; then
+-    exec @BINDIR@/lxc-unshare -s MOUNT -- $0 -n $name --exec "$@"
++    exec @BINDIR@/lxc-unshare -s MOUNT -- $0 -n $name -P "$lxc_path" --exec "$@"
+ fi
+ 
+-if lxc-info -n $name --state-is 'STOPPED'; then
++if lxc-info -n $name -P "$lxc_path" --state-is 'STOPPED'; then
+     echo "$(basename $0): container '$name' is not running" >&2
+     exit 1
+ fi

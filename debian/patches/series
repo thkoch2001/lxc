@@ -5,3 +5,4 @@
 0005-lxc-init-path.patch
 0006-lxc-quote-arguments.patch
 0007-lxc-unshare-manpage.patch
+0008-lxc-path.patch
