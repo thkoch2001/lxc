@@ -165,7 +165,7 @@ int main(int argc, char *argv[])
 		args = my_args.argv;
 
 	if (lxc_log_init(my_args.name, my_args.log_file, my_args.log_priority,
-			 my_args.progname, my_args.quiet))
+			 my_args.progname, my_args.quiet, my_args.lxcpath[0]))
 		return err;
 
 	/* rcfile is specified in the cli option */
@@ -174,7 +174,7 @@ int main(int argc, char *argv[])
 	else {
 		int rc;
 
-		rc = asprintf(&rcfile, "%s/%s/config", my_args.lxcpath, my_args.name);
+		rc = asprintf(&rcfile, "%s/%s/config", my_args.lxcpath[0], my_args.name);
 		if (rc == -1) {
 			SYSERROR("failed to allocate memory");
 			return err;
@@ -196,25 +196,25 @@ int main(int argc, char *argv[])
 
 	if (rcfile && lxc_config_read(rcfile, conf)) {
 		ERROR("failed to read configuration file");
-		return err;
+		goto out;
 	}
 
 	if (lxc_config_define_load(&defines, conf))
-		return err;
+		goto out;
 
 	if (!rcfile && !strcmp("/sbin/init", args[0])) {
 		ERROR("no configuration file for '/sbin/init' (may crash the host)");
-		return err;
+		goto out;
 	}
 
 	if (ensure_path(&conf->console.path, my_args.console) < 0) {
 		ERROR("failed to ensure console path '%s'", my_args.console);
-		return err;
+		goto out;
 	}
 
 	if (ensure_path(&conf->console.log_path, my_args.console_log) < 0) {
 		ERROR("failed to ensure console log '%s'", my_args.console_log);
-		return err;
+		goto out;
 	}
 
 	if (my_args.pidfile != NULL) {
@@ -222,7 +222,7 @@ int main(int argc, char *argv[])
 		if (pid_fp == NULL) {
 			SYSERROR("failed to create pidfile '%s' for '%s'",
 				 my_args.pidfile, my_args.name);
-			return err;
+			goto out;
 		}
 	}
 
@@ -232,19 +232,19 @@ int main(int argc, char *argv[])
 
 		if (!lxc_caps_check()) {
 			ERROR("Not running with sufficient privilege");
-			return err;
+			goto out;
 		}
 
 		if (daemon(0, 0)) {
 			SYSERROR("failed to daemonize '%s'", my_args.name);
-			return err;
+			goto out;
 		}
 	}
 
 	if (pid_fp != NULL) {
 		if (fprintf(pid_fp, "%d\n", getpid()) < 0) {
 			SYSERROR("failed to write '%s'", my_args.pidfile);
-			return err;
+			goto out;
 		}
 		fclose(pid_fp);
 	}
@@ -252,7 +252,7 @@ int main(int argc, char *argv[])
 	if (my_args.close_all_fds)
 		conf->close_all_fds = 1;
 
-	err = lxc_start(my_args.name, args, conf, my_args.lxcpath);
+	err = lxc_start(my_args.name, args, conf, my_args.lxcpath[0]);
 
 	/*
 	 * exec ourself, that requires to have all opened fd
@@ -267,7 +267,8 @@ int main(int argc, char *argv[])
 
 	if (my_args.pidfile)
 		unlink(my_args.pidfile);
-
+out:
+	lxc_conf_free(conf);
 	return err;
 }
 

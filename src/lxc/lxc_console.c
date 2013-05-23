@@ -43,6 +43,7 @@
 #include "log.h"
 #include "mainloop.h"
 #include "arguments.h"
+#include "commands.h"
 
 lxc_log_define(lxc_console_ui, lxc_console);
 
@@ -165,14 +166,18 @@ static int master_handler(int fd, void *data, struct lxc_epoll_descr *descr)
 {
 	char buf[1024];
 	int *peer = (int *)data;
-	int r;
+	int r,w;
 
 	r = read(fd, buf, sizeof(buf));
 	if (r < 0) {
 		SYSERROR("failed to read");
 		return 1;
 	}
-	r = write(*peer, buf, r);
+	w = write(*peer, buf, r);
+	if (w < 0 || w != r) {
+		SYSERROR("failed to write");
+		return 1;
+	}
 
 	return 0;
 }
@@ -188,7 +193,7 @@ int main(int argc, char *argv[])
 		return -1;
 
 	err = lxc_log_init(my_args.name, my_args.log_file, my_args.log_priority,
-			   my_args.progname, my_args.quiet);
+			   my_args.progname, my_args.quiet, my_args.lxcpath[0]);
 	if (err)
 		return -1;
 
@@ -198,13 +203,14 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	err = lxc_console(my_args.name, my_args.ttynum, &master, my_args.lxcpath);
+	err = lxc_cmd_console(my_args.name, &my_args.ttynum, &master, my_args.lxcpath[0]);
 	if (err)
 		goto out;
 
 	fprintf(stderr, "\n\
-Type <Ctrl+%1$c q> to exit the console, \
-<Ctrl+%1$c Ctrl+%1$c> to enter Ctrl+%1$c itself\n",
+Connected to tty %1$d\n\
+Type <Ctrl+%2$c q> to exit the console, \
+<Ctrl+%2$c Ctrl+%2$c> to enter Ctrl+%2$c itself\n", my_args.ttynum,
                 'a' + my_args.escape - 1);
 
 	err = setsid();
@@ -237,7 +243,7 @@ Type <Ctrl+%1$c q> to exit the console, \
 		goto out_mainloop_open;
 	}
 
-	err = lxc_mainloop(&descr);
+	err = lxc_mainloop(&descr, -1);
 	if (err) {
 		ERROR("mainloop returned an error");
 		goto out_mainloop_open;
@@ -251,7 +257,7 @@ out_mainloop_open:
 out:
 	/* Restore previous terminal parameter */
 	tcsetattr(0, TCSAFLUSH, &oldtios);
-	
+
 	/* Return to line it is */
 	printf("\n");
 

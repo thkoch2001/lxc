@@ -34,81 +34,12 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <libgen.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 #include "log.h"
 
 lxc_log_define(lxc_utils, lxc);
-
-int lxc_copy_file(const char *srcfile, const char *dstfile)
-{
-	void *srcaddr = NULL, *dstaddr;
-	struct stat stat;
-	int srcfd, dstfd, ret = -1;
-	char c = '\0';
-
-	dstfd = open(dstfile, O_CREAT | O_EXCL | O_RDWR, 0600);
-	if (dstfd < 0) {
-		SYSERROR("failed to creat '%s'", dstfile);
-		goto out;
-	}
-
-	srcfd = open(srcfile, O_RDONLY);
-	if (srcfd < 0) {
-		SYSERROR("failed to open '%s'", srcfile);
-		goto err;
-	}
-
-	if (fstat(srcfd, &stat)) {
-		SYSERROR("failed to stat '%s'", srcfile);
-		goto err;
-	}
-
-	if (!stat.st_size) {
-		INFO("copy '%s' which is an empty file", srcfile);
-		ret = 0;
-		goto out_close;
-	}
-
-	if (lseek(dstfd, stat.st_size - 1, SEEK_SET) < 0) {
-		SYSERROR("failed to seek dest file '%s'", dstfile);
-		goto err;
-	}
-
-	/* fixup length */
-	if (write(dstfd, &c, 1) < 0) {
-		SYSERROR("failed to write to '%s'", dstfile);
-		goto err;
-	}
-
-	srcaddr = mmap(NULL, stat.st_size, PROT_READ, MAP_SHARED, srcfd, 0L);
-	if (srcaddr == MAP_FAILED) {
-		SYSERROR("failed to mmap '%s'", srcfile);
-		goto err;
-	}
-
-	dstaddr = mmap(NULL, stat.st_size, PROT_WRITE, MAP_SHARED, dstfd, 0L);
-	if (dstaddr == MAP_FAILED) {
-		SYSERROR("failed to mmap '%s'", dstfile);
-		goto err;
-	}
-
-	ret = 0;
-
-	memcpy(dstaddr, srcaddr, stat.st_size);
-
-	munmap(dstaddr, stat.st_size);
-out_mmap:
-	if (srcaddr)
-		munmap(srcaddr, stat.st_size);
-out_close:
-	close(dstfd);
-	close(srcfd);
-out:
-	return ret;
-err:
-	unlink(dstfile);
-	goto out_mmap;
-}
 
 static int mount_fs(const char *source, const char *target, const char *type)
 {
@@ -168,30 +99,23 @@ extern int get_u16(unsigned short *val, const char *arg, int base)
 
 extern int mkdir_p(char *dir, mode_t mode)
 {
-        int ret;
-        char *d;
+	char *tmp = dir;
+	char *orig = dir;
+	char *makeme;
 
-        if (!strcmp(dir, "/"))
-                return 0;
+	do {
+		dir = tmp + strspn(tmp, "/");
+		tmp = dir + strcspn(dir, "/");
+		makeme = strndupa(orig, dir - orig);
+		if (*makeme) {
+			if (mkdir(makeme, mode) && errno != EEXIST) {
+				SYSERROR("failed to create directory '%s'\n", makeme);
+				return -1;
+			}
+		}
+	} while(tmp != dir);
 
-        d = strdup(dir);
-        if (!d)
-                return -1;
-
-        ret = mkdir_p(dirname(d), mode);
-        free(d);
-        if (ret)
-                return -1;
-
-        if (!access(dir, F_OK))
-                return 0;
-
-        if (mkdir(dir, mode)) {
-                SYSERROR("failed to create directory '%s'\n", dir);
-                return -1;
-        }
-
-        return 0;
+	return 0;
 }
 
 static char *copypath(char *p)
@@ -213,7 +137,80 @@ static char *copypath(char *p)
 }
 
 char *default_lxcpath;
+#define DEFAULT_VG "lxc"
+char *default_lvmvg;
+#define DEFAULT_ZFSROOT "lxc"
+char *default_zfsroot;
 
+const char *default_lvm_vg(void)
+{
+	char buf[1024], *p;
+	FILE *fin;
+
+	if (default_lvmvg)
+		return default_lvmvg;
+
+	fin = fopen(LXC_GLOBAL_CONF, "r");
+	if (fin) {
+		while (fgets(buf, 1024, fin)) {
+			if (buf[0] == '#')
+				continue;
+			p = strstr(buf, "lvm_vg");
+			if (!p)
+				continue;
+			p = strchr(p, '=');
+			if (!p)
+				continue;
+			p++;
+			while (*p && (*p == ' ' || *p == '\t')) p++;
+			if (!*p)
+				continue;
+			default_lvmvg = copypath(p);
+			goto out;
+		}
+	}
+	default_lvmvg = DEFAULT_VG;
+
+out:
+	if (fin)
+		fclose(fin);
+	return default_lvmvg;
+}
+
+const char *default_zfs_root(void)
+{
+	char buf[1024], *p;
+	FILE *fin;
+
+	if (default_zfsroot)
+		return default_zfsroot;
+
+	fin = fopen(LXC_GLOBAL_CONF, "r");
+	if (fin) {
+		while (fgets(buf, 1024, fin)) {
+			if (buf[0] == '#')
+				continue;
+			p = strstr(buf, "zfsroot");
+			if (!p)
+				continue;
+			p = strchr(p, '=');
+			if (!p)
+				continue;
+			p++;
+			while (*p && (*p == ' ' || *p == '\t')) p++;
+			if (!*p)
+				continue;
+			default_zfsroot = copypath(p);
+			goto out;
+		}
+	}
+	default_zfsroot = DEFAULT_ZFSROOT;
+
+out:
+	if (fin)
+		fclose(fin);
+	return default_zfsroot;
+}
 const char *default_lxc_path(void)
 {
 	char buf[1024], *p;
@@ -249,4 +246,73 @@ out:
 	if (fin)
 		fclose(fin);
 	return default_lxcpath;
+}
+
+int wait_for_pid(pid_t pid)
+{
+	int status, ret;
+
+again:
+	ret = waitpid(pid, &status, 0);
+	if (ret == -1) {
+		if (errno == EINTR)
+			goto again;
+		return -1;
+	}
+	if (ret != pid)
+		goto again;
+	if (!WIFEXITED(status) || WEXITSTATUS(status) != 0)
+		return -1;
+	return 0;
+}
+
+int lxc_wait_for_pid_status(pid_t pid)
+{
+	int status, ret;
+
+again:
+	ret = waitpid(pid, &status, 0);
+	if (ret == -1) {
+		if (errno == EINTR)
+			goto again;
+		return -1;
+	}
+	if (ret != pid)
+		goto again;
+	return status;
+}
+
+int lxc_write_nointr(int fd, const void* buf, size_t count)
+{
+	int ret;
+again:
+	ret = write(fd, buf, count);
+	if (ret < 0 && errno == EINTR)
+		goto again;
+	return ret;
+}
+
+int lxc_read_nointr(int fd, void* buf, size_t count)
+{
+	int ret;
+again:
+	ret = read(fd, buf, count);
+	if (ret < 0 && errno == EINTR)
+		goto again;
+	return ret;
+}
+
+int lxc_read_nointr_expect(int fd, void* buf, size_t count, const void* expected_buf)
+{
+	int ret;
+	ret = lxc_read_nointr(fd, buf, count);
+	if (ret <= 0)
+		return ret;
+	if (ret != count)
+		return -1;
+	if (expected_buf && memcmp(buf, expected_buf, count) != 0) {
+		errno = EINVAL;
+		return -1;
+	}
+	return ret;
 }

@@ -25,7 +25,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 #Configurations
-arch=$(arch)
+arch=$(uname -m)
 cache_base=@LOCALSTATEDIR@/cache/lxc/altlinux/$arch
 default_path=@LXCPATH@
 default_profile=default
@@ -243,6 +243,7 @@ lxc.utsname = $name
 lxc.tty = 4
 lxc.pts = 1024
 lxc.mount = $config_path/fstab
+lxc.cap.drop = sys_module mac_admin mac_override sys_time
 
 # When using LXC with apparmor, uncomment the next line to run unconfined:
 #lxc.aa_profile = unconfined

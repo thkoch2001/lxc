@@ -89,12 +89,13 @@ def getTerminalSize():
 
 
 def getSubContainers(container, lxcpath):
-    attach = ['lxc-attach', '-R', '-s', 'NETWORK|PID', '-n', container,
+    attach = ['lxc-attach', '-P', lxcpath, '-R', '-s', 'NETWORK|PID',
+              '-n', container,
               '--', sys.argv[0], "--nesting"]
 
     with open(os.devnull, "w") as fd:
         newenv = dict(os.environ)
-        newenv['NESTED'] = "/proc/1/root/%s" % lxcpath
+        newenv['NESTED'] = "/proc/1/root/%s" % lxc.default_config_path
         sp = subprocess.Popen(attach, stderr=fd, stdout=subprocess.PIPE,
                               env=newenv, universal_newlines=True)
         sp.wait()
@@ -201,10 +202,10 @@ for container_name in lxc.list_containers(config_path=lxcpath):
             entry['pid'] = str(container.init_pid)
 
     # Get the IPs
-    for protocol in ('ipv4', 'ipv6'):
+    for family, protocol in {'inet': 'ipv4', 'inet6': 'ipv6'}.items():
         if protocol in args.fancy_format or args.nesting:
             entry[protocol] = "-"
-            ips = container.get_ips(protocol=protocol, timeout=1)
+            ips = container.get_ips(family=family)
             if ips:
                 entry[protocol] = ", ".join(ips)
 

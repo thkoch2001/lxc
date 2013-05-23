@@ -17,27 +17,55 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#define _GNU_SOURCE
+#include <pthread.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <errno.h>
+#include <sched.h>
+#include "config.h"
 #include "lxc.h"
 #include "state.h"
 #include "lxccontainer.h"
 #include "conf.h"
-#include "config.h"
 #include "confile.h"
 #include "cgroup.h"
 #include "commands.h"
 #include "version.h"
 #include "log.h"
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <errno.h>
+#include "bdev.h"
 #include <lxc/utils.h>
+#include <lxc/monitor.h>
+#include <sched.h>
+#include <fcntl.h>
+#include <arpa/inet.h>
+#include <ifaddrs.h>
+
+static pthread_mutex_t thread_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+/* Define unshare() if missing from the C library */
+/* this is also in attach.c and lxccontainer.c: commonize it in utils.c */
+#ifndef HAVE_UNSHARE
+static int unshare(int flags)
+{
+#ifdef __NR_unshare
+	return syscall(__NR_unshare, flags);
+#else
+	errno = ENOSYS;
+	return -1;
+#endif
+}
+#else
+int unshare(int);
+#endif
 
 lxc_log_define(lxc_container, lxc);
 
 /* LOCKING
  * c->privlock protects the struct lxc_container from multiple threads.
  * c->slock protects the on-disk container data
+ * thread_mutex protects process data (ex: fd table) from multiple threads
  * NOTHING mutexes two independent programs with their own struct
  * lxc_container for the same c->name, between API calls.  For instance,
  * c->config_read(); c->start();  Between those calls, data on disk
@@ -72,9 +100,10 @@ static void lxc_container_free(struct lxc_container *c)
 		c->slock = NULL;
 	}
 	if (c->privlock) {
-		sem_destroy(c->privlock);
-		free(c->privlock);
+		sem_t *l = c->privlock;
 		c->privlock = NULL;
+		sem_destroy(l);
+		free(l);
 	}
 	if (c->name) {
 		free(c->name);
@@ -91,9 +120,37 @@ static void lxc_container_free(struct lxc_container *c)
 	free(c);
 }
 
+/*
+ * Consider the following case:
+freer                         |    racing get()er
+==================================================================
+lxc_container_put()           |   lxc_container_get()
+\ lxclock(c->privlock)        |   c->numthreads < 1? (no)
+\ c->numthreads = 0           |   \ lxclock(c->privlock) -> waits
+\ lxcunlock()                 |   \
+\ lxc_container_free()        |   \ lxclock() returns
+                              |   \ c->numthreads < 1 -> return 0
+\ \ (free stuff)              |
+\ \ sem_destroy(privlock)     |
+
+ * When the get()er checks numthreads the first time, one of the following
+ * is true:
+ * 1. freer has set numthreads = 0.  get() returns 0
+ * 2. freer is between lxclock and setting numthreads to 0.  get()er will
+ *    sem_wait on privlock, get lxclock after freer() drops it, then see
+ *    numthreads is 0 and exit without touching lxclock again..
+ * 3. freer has not yet locked privlock.  If get()er runs first, then put()er
+ *    will see --numthreads = 1 and not call lxc_container_free().
+*/
+
 int lxc_container_get(struct lxc_container *c)
 {
 	if (!c)
+		return 0;
+
+	// if someone else has already started freeing the container, don't
+	// try to take the lock, which may be invalid
+	if (c->numthreads < 1)
 		return 0;
 
 	if (lxclock(c->privlock, 0))
@@ -226,7 +283,7 @@ static pid_t lxcapi_init_pid(struct lxc_container *c)
 
 	if (lxclock(c->slock, 0))
 		return -1;
-	ret = get_init_pid(c->name, c->config_path);
+	ret = lxc_cmd_get_init_pid(c->name, c->config_path);
 	lxcunlock(c->slock);
 	return ret;
 }
@@ -341,13 +398,25 @@ static bool lxcapi_start(struct lxc_container *c, int useinit, char * const argv
 	if (daemonize) {
 		if (!lxc_container_get(c))
 			return false;
+		lxc_monitord_spawn(c->config_path);
+
+		ret = pthread_mutex_lock(&thread_mutex);
+		if (ret != 0) {
+			ERROR("pthread_mutex_lock returned:%d %s", ret, strerror(ret));
+			return false;
+		}
 		pid_t pid = fork();
 		if (pid < 0) {
 			lxc_container_put(c);
+			pthread_mutex_unlock(&thread_mutex);
 			return false;
 		}
-		if (pid != 0)
-			return wait_on_daemonized_start(c);
+		if (pid != 0) {
+			ret = wait_on_daemonized_start(c);
+			pthread_mutex_unlock(&thread_mutex);
+			return ret;
+		}
+		pthread_mutex_unlock(&thread_mutex);
 		/* second fork to be reparented by init */
 		pid = fork();
 		if (pid < 0) {
@@ -411,8 +480,10 @@ static bool lxcapi_startl(struct lxc_container *c, int useinit, ...)
 			break;
 		n_inargs++;
 		temp = realloc(inargs, n_inargs * sizeof(*inargs));
-		if (!temp)
+		if (!temp) {
+			va_end(ap);
 			goto out;
+		}
 		inargs = temp;
 		inargs[n_inargs - 1] = strdup(arg);  // not sure if it's safe not to copy
 	}
@@ -450,7 +521,7 @@ static bool lxcapi_stop(struct lxc_container *c)
 	if (!c)
 		return false;
 
-	ret = lxc_stop(c->name, c->config_path);
+	ret = lxc_cmd_stop(c->name, c->config_path);
 
 	return ret == 0;
 }
@@ -503,10 +574,8 @@ static bool lxcapi_create(struct lxc_container *c, char *t, char *const argv[])
 {
 	bool bret = false;
 	pid_t pid;
-	int ret, status;
-	char *tpath = NULL;
-	int len, nargs = 0;
-	char **newargv;
+	char *tpath = NULL, **newargv;
+	int ret, len, nargs = 0;
 
 	if (!c)
 		return false;
@@ -529,11 +598,11 @@ static bool lxcapi_create(struct lxc_container *c, char *t, char *const argv[])
 	}
 
 	/* container is already created if we have a config and rootfs.path is accessible */
-	if (lxcapi_is_defined(c) && c->lxc_conf && c->lxc_conf->rootfs.path && access(c->lxc_conf->rootfs.path, F_OK) == 0) 
-		return false;
+	if (lxcapi_is_defined(c) && c->lxc_conf && c->lxc_conf->rootfs.path && access(c->lxc_conf->rootfs.path, F_OK) == 0)
+		goto out;
 
 	/* we're going to fork.  but since we'll wait for our child, we
-	   don't need to lxc_container_get */
+	 * don't need to lxc_container_get */
 
 	if (lxclock(c->slock, 0)) {
 		ERROR("failed to grab global container lock for %s\n", c->name);
@@ -599,31 +668,13 @@ static bool lxcapi_create(struct lxc_container *c, char *t, char *const argv[])
 		newargv[nargs - 1] = NULL;
 
 		/* execute */
-		ret = execv(tpath, newargv);
+		execv(tpath, newargv);
 		SYSERROR("failed to execute template %s", tpath);
 		exit(1);
 	}
 
-again:
-	ret = waitpid(pid, &status, 0);
-	if (ret == -1) {
-		if (errno == -EINTR)
-			goto again;
-		SYSERROR("waitpid failed");
-		goto out_unlock;
-	}
-	if (ret != pid)
-		goto again;
-	if (!WIFEXITED(status))  { // did not exit normally
-		// we could set an error code and string inside the
-		// container_struct here if we like
-		ERROR("container creation template exited abnormally\n");
-		goto out_unlock;
-	}
-
-	if (WEXITSTATUS(status) != 0) {
-		ERROR("container creation template for %s exited with %d\n",
-		      c->name, WEXITSTATUS(status));
+	if (wait_for_pid(pid) != 0) {
+		ERROR("container creation template for %s failed\n", c->name);
 		goto out_unlock;
 	}
 
@@ -688,8 +739,10 @@ static bool lxcapi_createl(struct lxc_container *c, char *t, ...)
 			break;
 		nargs++;
 		temp = realloc(args, (nargs+1) * sizeof(*args));
-		if (!temp)
+		if (!temp) {
+			va_end(ap);
 			goto out;
+		}
 		args = temp;
 		args[nargs - 1] = arg;
 	}
@@ -717,6 +770,118 @@ static bool lxcapi_clear_config_item(struct lxc_container *c, const char *key)
 	ret = lxc_clear_config_item(c->lxc_conf, key);
 	lxcunlock(c->privlock);
 	return ret == 0;
+}
+
+char** lxcapi_get_ips(struct lxc_container *c, char* interface, char* family, int scope)
+{
+	int count = 0;
+	struct ifaddrs *interfaceArray = NULL, *tempIfAddr = NULL;
+	char addressOutputBuffer[INET6_ADDRSTRLEN];
+	void *tempAddrPtr = NULL;
+	char **addresses = NULL, **temp;
+	char *address = NULL;
+	char new_netns_path[MAXPATHLEN];
+	int old_netns = -1, new_netns = -1, ret = 0;
+
+	if (!c->is_running(c))
+		goto out;
+
+	/* Save reference to old netns */
+	old_netns = open("/proc/self/ns/net", O_RDONLY);
+	if (old_netns < 0) {
+		SYSERROR("failed to open /proc/self/ns/net");
+		goto out;
+	}
+
+	/* Switch to new netns */
+	ret = snprintf(new_netns_path, MAXPATHLEN, "/proc/%d/ns/net", c->init_pid(c));
+	if (ret < 0 || ret >= MAXPATHLEN)
+		goto out;
+
+	new_netns = open(new_netns_path, O_RDONLY);
+	if (new_netns < 0) {
+		SYSERROR("failed to open %s", new_netns_path);
+		goto out;
+	}
+
+	if (setns(new_netns, CLONE_NEWNET)) {
+		SYSERROR("failed to setns");
+		goto out;
+	}
+
+	/* Grab the list of interfaces */
+	if (getifaddrs(&interfaceArray)) {
+		SYSERROR("failed to get interfaces list");
+		goto out;
+	}
+
+	/* Iterate through the interfaces */
+	for (tempIfAddr = interfaceArray; tempIfAddr != NULL; tempIfAddr = tempIfAddr->ifa_next) {
+		if(tempIfAddr->ifa_addr->sa_family == AF_INET) {
+			if (family && strcmp(family, "inet"))
+				continue;
+			tempAddrPtr = &((struct sockaddr_in *)tempIfAddr->ifa_addr)->sin_addr;
+		}
+		else {
+			if (family && strcmp(family, "inet6"))
+				continue;
+
+			if (((struct sockaddr_in6 *)tempIfAddr->ifa_addr)->sin6_scope_id != scope)
+				continue;
+
+			tempAddrPtr = &((struct sockaddr_in6 *)tempIfAddr->ifa_addr)->sin6_addr;
+		}
+
+		if (interface && strcmp(interface, tempIfAddr->ifa_name))
+			continue;
+		else if (!interface && strcmp("lo", tempIfAddr->ifa_name) == 0)
+			continue;
+
+		address = (char *)inet_ntop(tempIfAddr->ifa_addr->sa_family,
+					   tempAddrPtr,
+					   addressOutputBuffer,
+					   sizeof(addressOutputBuffer));
+		if (!address)
+			continue;
+
+		count += 1;
+		temp = realloc(addresses, count * sizeof(*addresses));
+		if (!temp) {
+			count--;
+			goto out;
+		}
+		addresses = temp;
+		addresses[count - 1] = strdup(address);
+	}
+
+out:
+	if(interfaceArray)
+		freeifaddrs(interfaceArray);
+
+	/* Switch back to original netns */
+	if (old_netns >= 0 && setns(old_netns, CLONE_NEWNET))
+		SYSERROR("failed to setns");
+	if (new_netns >= 0)
+		close(new_netns);
+	if (old_netns >= 0)
+		close(old_netns);
+
+	/* Append NULL to the array */
+	if (count) {
+		count++;
+		temp = realloc(addresses, count * sizeof(*addresses));
+		if (!temp) {
+			int i;
+			for (i = 0; i < count-1; i++)
+				free(addresses[i]);
+			free(addresses);
+			return NULL;
+		}
+		addresses = temp;
+		addresses[count - 1] = NULL;
+	}
+
+	return addresses;
 }
 
 static int lxcapi_get_config_item(struct lxc_container *c, const char *key, char *retv, int inlen)
@@ -787,41 +952,29 @@ static bool lxcapi_save_config(struct lxc_container *c, const char *alt_file)
 static bool lxcapi_destroy(struct lxc_container *c)
 {
 	pid_t pid;
-	int ret, status;
 
 	if (!c)
 		return false;
 
 	/* container is already destroyed if we don't have a config and rootfs.path is not accessible */
-	if (!lxcapi_is_defined(c) && (!c->lxc_conf || !c->lxc_conf->rootfs.path || access(c->lxc_conf->rootfs.path, F_OK) != 0)) 
+	if (!lxcapi_is_defined(c) && (!c->lxc_conf || !c->lxc_conf->rootfs.path || access(c->lxc_conf->rootfs.path, F_OK) != 0))
 		return false;
 
 	pid = fork();
 	if (pid < 0)
 		return false;
 	if (pid == 0) { // child
-		ret = execlp("lxc-destroy", "lxc-destroy", "-n", c->name, "-P", c->config_path, NULL);
+		execlp("lxc-destroy", "lxc-destroy", "-n", c->name, "-P", c->config_path, NULL);
 		perror("execl");
 		exit(1);
 	}
 
-again:
-	ret = waitpid(pid, &status, 0);
-	if (ret == -1) {
-		if (errno == -EINTR)
-			goto again;
-		perror("waitpid");
-		return false;
-	}
-	if (ret != pid)
-		goto again;
-	if (!WIFEXITED(status))  { // did not exit normally
-		// we could set an error code and string inside the
-		// container_struct here if we like
+	if (wait_for_pid(pid) < 0) {
+		ERROR("Error destroying container %s", c->name);
 		return false;
 	}
 
-	return WEXITSTATUS(status) == 0;
+	return true;
 }
 
 static bool lxcapi_set_config_item(struct lxc_container *c, const char *key, const char *v)
@@ -987,9 +1140,545 @@ const char *lxc_get_default_config_path(void)
 	return default_lxc_path();
 }
 
+const char *lxc_get_default_lvm_vg(void)
+{
+	return default_lvm_vg();
+}
+
+const char *lxc_get_default_zfs_root(void)
+{
+	return default_zfs_root();
+}
+
 const char *lxc_get_version(void)
 {
 	return lxc_version();
+}
+
+static int copy_file(char *old, char *new)
+{
+	int in, out;
+	ssize_t len, ret;
+	char buf[8096];
+	struct stat sbuf;
+
+	if (file_exists(new)) {
+		ERROR("copy destination %s exists", new);
+		return -1;
+	}
+	ret = stat(old, &sbuf);
+	if (ret < 0) {
+		SYSERROR("stat'ing %s", old);
+		return -1;
+	}
+
+	in = open(old, O_RDONLY);
+	if (in < 0) {
+		SYSERROR("opening original file %s", old);
+		return -1;
+	}
+	out = open(new, O_CREAT | O_EXCL | O_WRONLY, 0644);
+	if (out < 0) {
+		SYSERROR("opening new file %s", new);
+		close(in);
+		return -1;
+	}
+
+	while (1) {
+		len = read(in, buf, 8096);
+		if (len < 0) {
+			SYSERROR("reading old file %s", old);
+			goto err;
+		}
+		if (len == 0)
+			break;
+		ret = write(out, buf, len);
+		if (ret < len) {  // should we retry?
+			SYSERROR("write to new file %s was interrupted", new);
+			goto err;
+		}
+	}
+	close(in);
+	close(out);
+
+	// we set mode, but not owner/group
+	ret = chmod(new, sbuf.st_mode);
+	if (ret) {
+		SYSERROR("setting mode on %s", new);
+		return -1;
+	}
+
+	return 0;
+
+err:
+	close(in);
+	close(out);
+	return -1;
+}
+
+/*
+ * we're being passed result of two strstrs(x, y).  We want to write
+ * all data up to the first found string, or to end of the string if
+ * neither string was found.
+ * This function will return the earliest found string if any, or else
+ * NULL
+ */
+static const char *lowest_nonnull(const char *p1, const char *p2)
+{
+	if (!p1)
+		return p2;
+	if (!p2)
+		return p1;
+	return p1 < p2 ? p1 : p2;
+}
+
+static int is_word_sep(char c)
+{
+	switch(c) {
+	case '\0':
+	case '\n':
+	case '\r':
+	case '\t':
+	case ' ':
+	case '=':
+	case '/':
+		return 1;
+	default: return 0;
+	}
+}
+
+static const char *find_first_wholeword(const char *p, const char *word)
+{
+	if (!p)
+		return NULL;
+
+	while ((p = strstr(p, word)) != NULL) {
+		if (is_word_sep(*(p-1)) && is_word_sep(p[strlen(word)]))
+			return p;
+		p++;
+	}
+	return NULL;
+}
+
+static int update_name_and_paths(const char *path, struct lxc_container *oldc,
+		const char *newname, const char *newpath)
+{
+	FILE *f;
+	long flen;
+	char *contents;
+	const char *p0, *p1, *p2, *end;
+	const char *oldpath = oldc->get_config_path(oldc);
+	const char *oldname = oldc->name;
+
+	f = fopen(path, "r");
+	if (!f) {
+		SYSERROR("opening old config");
+		return -1;
+	}
+	if (fseek(f, 0, SEEK_END) < 0) {
+		SYSERROR("seeking to end of old config");
+		fclose(f);
+		return -1;
+	}
+	flen = ftell(f);
+	if (flen < 0) {
+		fclose(f);
+		SYSERROR("telling size of old config");
+		return -1;
+	}
+	if (fseek(f, 0, SEEK_SET) < 0) {
+		fclose(f);
+		SYSERROR("rewinding old config");
+		return -1;
+	}
+	contents = malloc(flen+1);
+	if (!contents) {
+		SYSERROR("out of memory");
+		fclose(f);
+		return -1;
+	}
+	if (fread(contents, 1, flen, f) != flen) {
+		free(contents);
+		fclose(f);
+		SYSERROR("reading old config");
+		return -1;
+	}
+	contents[flen] = '\0';
+	if (fclose(f) < 0) {
+		free(contents);
+		SYSERROR("closing old config");
+		return -1;
+	}
+
+	f = fopen(path, "w");
+	if (!f) {
+		SYSERROR("reopening config");
+		free(contents);
+		return -1;
+	}
+
+	p0 = contents;
+	end = contents + flen;
+	while (1) {
+		p1 = find_first_wholeword(p0, oldpath);
+		p2 = find_first_wholeword(p0, oldname);
+		if (!p1 && !p2) {
+			// write the rest and be done
+			if (fwrite(p0, 1, (end-p0), f) != (end-p0)) {
+				SYSERROR("writing new config");
+				free(contents);
+				fclose(f);
+				return -1;
+			}
+			free(contents);
+			fclose(f);
+			// success
+			return 0;
+		} else {
+			const char *p = lowest_nonnull(p1, p2);
+			const char *new = (p == p2) ? newname : newpath;
+			if (fwrite(p0, 1, (p-p0), f) != (p-p0)) {
+				SYSERROR("writing new config");
+				free(contents);
+				fclose(f);
+				return -1;
+			}
+			p0 = p;
+			// now write the newpath or newname
+			if (fwrite(new, 1, strlen(new), f) != strlen(new)) {
+				SYSERROR("writing new name or path in new config");
+				free(contents);
+				fclose(f);
+				return -1;
+			}
+			p0 += (p == p2) ? strlen(oldname) : strlen(oldpath);
+		}
+	}
+}
+
+static int copyhooks(struct lxc_container *oldc, struct lxc_container *c)
+{
+	int i;
+	int ret;
+	struct lxc_list *it;
+
+	for (i=0; i<NUM_LXC_HOOKS; i++) {
+		lxc_list_for_each(it, &c->lxc_conf->hooks[i]) {
+			char *hookname = it->elem;
+			char *fname = rindex(hookname, '/');
+			char tmppath[MAXPATHLEN];
+			if (!fname) // relative path - we don't support, but maybe we should
+				return 0;
+			// copy the script, and change the entry in confile
+			ret = snprintf(tmppath, MAXPATHLEN, "%s/%s/%s",
+					c->config_path, c->name, fname+1);
+			if (ret < 0 || ret >= MAXPATHLEN)
+				return -1;
+			ret = copy_file(it->elem, tmppath);
+			if (ret < 0)
+				return -1;
+			free(it->elem);
+			it->elem = strdup(tmppath);
+			if (!it->elem) {
+				ERROR("out of memory copying hook path");
+				return -1;
+			}
+			update_name_and_paths(it->elem, oldc, c->name, c->get_config_path(c));
+		}
+	}
+
+	c->save_config(c, NULL);
+	return 0;
+}
+
+static void new_hwaddr(char *hwaddr)
+{
+	FILE *f = fopen("/dev/urandom", "r");
+	if (f) {
+		unsigned int seed;
+		int ret = fread(&seed, sizeof(seed), 1, f);
+		if (ret != 1)
+			seed = time(NULL);
+		fclose(f);
+		srand(seed);
+	} else
+		srand(time(NULL));
+	snprintf(hwaddr, 18, "00:16:3e:%02x:%02x:%02x",
+			rand() % 255, rand() % 255, rand() % 255);
+}
+
+static void network_new_hwaddrs(struct lxc_container *c)
+{
+	struct lxc_list *it;
+
+	lxc_list_for_each(it, &c->lxc_conf->network) {
+		struct lxc_netdev *n = it->elem;
+		if (n->hwaddr)
+			new_hwaddr(n->hwaddr);
+	}
+}
+
+static int copy_fstab(struct lxc_container *oldc, struct lxc_container *c)
+{
+	char newpath[MAXPATHLEN];
+	char *oldpath = oldc->lxc_conf->fstab;
+	int ret;
+
+	if (!oldpath)
+		return 0;
+
+	char *p = rindex(oldpath, '/');
+	if (!p)
+		return -1;
+	ret = snprintf(newpath, MAXPATHLEN, "%s/%s%s",
+			c->config_path, c->name, p);
+	if (ret < 0 || ret >= MAXPATHLEN) {
+		ERROR("error printing new path for %s", oldpath);
+		return -1;
+	}
+	if (file_exists(newpath)) {
+		ERROR("error: fstab file %s exists", newpath);
+		return -1;
+	}
+
+	if (copy_file(oldpath, newpath) < 0) {
+		ERROR("error: copying %s to %s", oldpath, newpath);
+		return -1;
+	}
+	free(c->lxc_conf->fstab);
+	c->lxc_conf->fstab = strdup(newpath);
+	if (!c->lxc_conf->fstab) {
+		ERROR("error: allocating pathname");
+		return -1;
+	}
+
+	return 0;
+}
+
+static int copy_storage(struct lxc_container *c0, struct lxc_container *c,
+		const char *newtype, int flags, const char *bdevdata, unsigned long newsize)
+{
+	struct bdev *bdev;
+
+	bdev = bdev_copy(c0->lxc_conf->rootfs.path, c0->name, c->name,
+			c0->config_path, c->config_path, newtype, !!(flags & LXC_CLONE_SNAPSHOT),
+			bdevdata, newsize);
+	if (!bdev) {
+		ERROR("error copying storage");
+		return -1;
+	}
+	free(c->lxc_conf->rootfs.path);
+	c->lxc_conf->rootfs.path = strdup(bdev->src);
+	bdev_put(bdev);
+	if (!c->lxc_conf->rootfs.path)
+		return -1;
+	// here we could also update all lxc.mount.entries or even
+	// items in the lxc.mount fstab list.  As discussed on m-l,
+	// we could do either any source paths starting with the
+	// lxcpath/oldname, or simply anythign which is not a virtual
+	// fs or a bind mount.
+	return 0;
+}
+
+static int clone_update_rootfs(struct lxc_container *c, int flags, char **hookargs)
+{
+	int ret = -1;
+	char path[MAXPATHLEN];
+	struct bdev *bdev;
+	FILE *fout;
+	pid_t pid;
+	struct lxc_conf *conf = c->lxc_conf;
+
+	/* update hostname in rootfs */
+	/* we're going to mount, so run in a clean namespace to simplify cleanup */
+
+	pid = fork();
+	if (pid < 0)
+		return -1;
+	if (pid > 0)
+		return wait_for_pid(pid);
+
+	if (unshare(CLONE_NEWNS) < 0) {
+		ERROR("error unsharing mounts");
+		exit(1);
+	}
+	bdev = bdev_init(c->lxc_conf->rootfs.path, c->lxc_conf->rootfs.mount, NULL);
+	if (!bdev)
+		exit(1);
+	if (bdev->ops->mount(bdev) < 0)
+		exit(1);
+
+	if (!lxc_list_empty(&conf->hooks[LXCHOOK_CLONE])) {
+		/* Start of environment variable setup for hooks */
+		if (setenv("LXC_NAME", c->name, 1)) {
+			SYSERROR("failed to set environment variable for container name");
+		}
+		if (setenv("LXC_CONFIG_FILE", conf->rcfile, 1)) {
+			SYSERROR("failed to set environment variable for config path");
+		}
+		if (setenv("LXC_ROOTFS_MOUNT", conf->rootfs.mount, 1)) {
+			SYSERROR("failed to set environment variable for rootfs mount");
+		}
+		if (setenv("LXC_ROOTFS_PATH", conf->rootfs.path, 1)) {
+			SYSERROR("failed to set environment variable for rootfs mount");
+		}
+
+		if (run_lxc_hooks(c->name, "clone", conf, hookargs)) {
+			ERROR("Error executing clone hook for %s", c->name);
+			exit(1);
+		}
+	}
+
+	if (!(flags & LXC_CLONE_KEEPNAME)) {
+		ret = snprintf(path, MAXPATHLEN, "%s/etc/hostname", bdev->dest);
+		if (ret < 0 || ret >= MAXPATHLEN)
+			exit(1);
+		if (!(fout = fopen(path, "w"))) {
+			SYSERROR("unable to open %s: ignoring\n", path);
+			exit(0);
+		}
+		if (fprintf(fout, "%s", c->name) < 0)
+			exit(1);
+		if (fclose(fout) < 0)
+			exit(1);
+	}
+	exit(0);
+}
+
+/*
+ * We want to support:
+sudo lxc-clone -o o1 -n n1 -s -L|-fssize fssize -v|--vgname vgname \
+        -p|--lvprefix lvprefix -t|--fstype fstype  -B backingstore
+
+-s [ implies overlayfs]
+-s -B overlayfs
+-s -B aufs
+
+only rootfs gets converted (copied/snapshotted) on clone.
+*/
+
+static int create_file_dirname(char *path)
+{
+	char *p = rindex(path, '/');
+	int ret;
+
+	if (!p)
+		return -1;
+	*p = '\0';
+	ret = mkdir(path, 0755);
+	if (ret && errno != EEXIST)
+		SYSERROR("creating container path %s\n", path);
+	*p = '/';
+	return ret;
+}
+
+struct lxc_container *lxcapi_clone(struct lxc_container *c, const char *newname,
+		const char *lxcpath, int flags,
+		const char *bdevtype, const char *bdevdata, unsigned long newsize,
+		char **hookargs)
+{
+	struct lxc_container *c2 = NULL;
+	char newpath[MAXPATHLEN];
+	int ret;
+	const char *n, *l;
+	FILE *fout;
+
+	if (!c || !c->is_defined(c))
+		return NULL;
+
+	if (lxclock(c->privlock, 0))
+		return NULL;
+
+	if (c->is_running(c)) {
+		ERROR("error: Original container (%s) is running", c->name);
+		goto out;
+	}
+
+	// Make sure the container doesn't yet exist.
+	n = newname ? newname : c->name;
+	l = lxcpath ? lxcpath : c->get_config_path(c);
+	ret = snprintf(newpath, MAXPATHLEN, "%s/%s/config", l, n);
+	if (ret < 0  || ret >= MAXPATHLEN) {
+		SYSERROR("clone: failed making config pathname");
+		goto out;
+	}
+	if (file_exists(newpath)) {
+		ERROR("error: clone: %s exists", newpath);
+		goto out;
+	}
+
+	if (create_file_dirname(newpath) < 0) {
+		ERROR("Error creating container dir for %s", newpath);
+		goto out;
+	}
+
+	// copy the configuration, tweak it as needed,
+	fout = fopen(newpath, "w");
+	if (!fout) {
+		SYSERROR("open %s", newpath);
+		goto out;
+	}
+	write_config(fout, c->lxc_conf);
+	fclose(fout);
+
+	if (update_name_and_paths(newpath, c, n, l) < 0) {
+		ERROR("Error updating name in cloned config");
+		goto out;
+	}
+
+	sprintf(newpath, "%s/%s/rootfs", l, n);
+	if (mkdir(newpath, 0755) < 0) {
+		SYSERROR("error creating %s", newpath);
+		goto out;
+	}
+
+	c2 = lxc_container_new(n, l);
+	if (!c2) {
+		ERROR("clone: failed to create new container (%s %s)", n, l);
+		goto out;
+	}
+
+	// copy hooks if requested
+	if (flags & LXC_CLONE_COPYHOOKS) {
+		ret = copyhooks(c, c2);
+		if (ret < 0) {
+			ERROR("error copying hooks");
+			goto out;
+		}
+	}
+
+	if (copy_fstab(c, c2) < 0) {
+		ERROR("error copying fstab");
+		goto out;
+	}
+
+	// update macaddrs
+	if (!(flags & LXC_CLONE_KEEPMACADDR))
+		network_new_hwaddrs(c2);
+
+	// copy/snapshot rootfs's
+	ret = copy_storage(c, c2, bdevtype, flags, bdevdata, newsize);
+	if (ret < 0)
+		goto out;
+
+	if (!c2->save_config(c2, NULL))
+		goto out;
+
+	if (clone_update_rootfs(c2, flags, hookargs) < 0)
+		goto out;
+
+	// TODO: update c's lxc.snapshot = count
+	lxcunlock(c->privlock);
+	return c2;
+
+out:
+	lxcunlock(c->privlock);
+	if (c2) {
+		c2->destroy(c2);
+		lxc_container_put(c2);
+	}
+
+	return NULL;
 }
 
 struct lxc_container *lxc_container_new(const char *name, const char *configpath)
@@ -1068,9 +1757,11 @@ struct lxc_container *lxc_container_new(const char *name, const char *configpath
 	c->set_cgroup_item = lxcapi_set_cgroup_item;
 	c->get_config_path = lxcapi_get_config_path;
 	c->set_config_path = lxcapi_set_config_path;
+	c->clone = lxcapi_clone;
+	c->get_ips = lxcapi_get_ips;
 
 	/* we'll allow the caller to update these later */
-	if (lxc_log_init(NULL, "none", NULL, "lxc_container", 0)) {
+	if (lxc_log_init(NULL, "none", NULL, "lxc_container", 0, c->config_path)) {
 		fprintf(stderr, "failed to open log\n");
 		goto err;
 	}

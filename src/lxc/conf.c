@@ -64,6 +64,7 @@
 #include "log.h"
 #include "lxc.h"	/* for lxc_cgroup_set() */
 #include "caps.h"       /* for lxc_caps_last_cap() */
+#include "bdev.h"
 
 #if HAVE_APPARMOR
 #include <apparmor.h>
@@ -91,30 +92,6 @@ lxc_log_define(lxc_conf, lxc);
 #define MAXINDEXLEN 20
 #define MAXMTULEN   16
 #define MAXLINELEN  128
-
-#ifndef MS_DIRSYNC
-#define MS_DIRSYNC  128
-#endif
-
-#ifndef MS_REC
-#define MS_REC 16384
-#endif
-
-#ifndef MNT_DETACH
-#define MNT_DETACH 2
-#endif
-
-#ifndef MS_SLAVE
-#define MS_SLAVE (1<<19)
-#endif
-
-#ifndef MS_RELATIME
-#define MS_RELATIME (1 << 21)
-#endif
-
-#ifndef MS_STRICTATIME
-#define MS_STRICTATIME (1 << 24)
-#endif
 
 #if HAVE_SYS_CAPABILITY_H
 #ifndef CAP_SETFCAP
@@ -172,7 +149,7 @@ return -1;
 #endif
 
 char *lxchook_names[NUM_LXC_HOOKS] = {
-	"pre-start", "pre-mount", "mount", "autodev", "start", "post-stop" };
+	"pre-start", "pre-mount", "mount", "autodev", "start", "post-stop", "clone" };
 
 typedef int (*instanciate_cb)(struct lxc_handler *, struct lxc_netdev *);
 
@@ -299,6 +276,7 @@ static int run_buffer(char *buffer)
 {
 	FILE *f;
 	char *output;
+	int ret;
 
 	f = popen(buffer, "r");
 	if (!f) {
@@ -309,6 +287,7 @@ static int run_buffer(char *buffer)
 	output = malloc(LXC_LOG_BUFFER_SIZE);
 	if (!output) {
 		ERROR("failed to allocate memory for script output");
+		pclose(f);
 		return -1;
 	}
 
@@ -317,12 +296,69 @@ static int run_buffer(char *buffer)
 
 	free(output);
 
-	if (pclose(f) == -1) {
+	ret = pclose(f);
+	if (ret == -1) {
 		SYSERROR("Script exited on error");
+		return -1;
+	} else if (WIFEXITED(ret) && WEXITSTATUS(ret) != 0) {
+		ERROR("Script exited with status %d", WEXITSTATUS(ret));
+		return -1;
+	} else if (WIFSIGNALED(ret)) {
+		ERROR("Script terminated by signal %d (%s)", WTERMSIG(ret),
+		      strsignal(WTERMSIG(ret)));
 		return -1;
 	}
 
 	return 0;
+}
+
+static int run_script_argv(const char *name, const char *section,
+		      const char *script, const char *hook, char **argsin)
+{
+	int ret, i;
+	char *buffer;
+	size_t size = 0;
+
+	INFO("Executing script '%s' for container '%s', config section '%s'",
+	     script, name, section);
+
+	for (i=0; argsin && argsin[i]; i++)
+		size += strlen(argsin[i]) + 1;
+
+	size += strlen(hook) + 1;
+
+	size += strlen(script);
+	size += strlen(name);
+	size += strlen(section);
+	size += 3;
+
+	if (size > INT_MAX)
+		return -1;
+
+	buffer = alloca(size);
+	if (!buffer) {
+		ERROR("failed to allocate memory");
+		return -1;
+	}
+
+	ret = snprintf(buffer, size, "%s %s %s %s", script, name, section, hook);
+	if (ret < 0 || ret >= size) {
+		ERROR("Script name too long");
+		return -1;
+	}
+
+	for (i=0; argsin && argsin[i]; i++) {
+		int len = size-ret;
+		int rc;
+		rc = snprintf(buffer + ret, len, " %s", argsin[i]);
+		if (rc < 0 || rc >= len) {
+			ERROR("Script args too long");
+			return -1;
+		}
+		ret += rc;
+	}
+
+	return run_buffer(buffer);
 }
 
 static int run_script(const char *name, const char *section,
@@ -358,7 +394,6 @@ static int run_script(const char *name, const char *section,
 	ret = snprintf(buffer, size, "%s %s %s", script, name, section);
 	if (ret < 0 || ret >= size) {
 		ERROR("Script name too long");
-		free(buffer);
 		return -1;
 	}
 
@@ -368,7 +403,6 @@ static int run_script(const char *name, const char *section,
 		int rc;
 		rc = snprintf(buffer + ret, len, " %s", p);
 		if (rc < 0 || rc >= len) {
-			free(buffer);
 			ERROR("Script args too long");
 			return -1;
 		}
@@ -537,6 +571,7 @@ static int mount_rootfs_file(const char *rootfs, const char *target)
 		if (errno != ENXIO) {
 			WARN("unexpected error for ioctl on '%s': %m",
 			     direntp->d_name);
+			close(fd);
 			continue;
 		}
 
@@ -581,8 +616,8 @@ int pin_rootfs(const char *rootfs)
 		return -2;
 
 	if (!realpath(rootfs, absrootfs)) {
-		SYSERROR("failed to get real path for '%s'", rootfs);
-		return -1;
+		INFO("failed to get real path for '%s', not pinning", rootfs);
+		return -2;
 	}
 
 	if (access(absrootfs, F_OK)) {
@@ -700,7 +735,8 @@ static int setup_tty(const struct lxc_rootfs *rootfs,
 				SYSERROR("error creating %s\n", lxcpath);
 				return -1;
 			}
-			close(ret);
+			if (ret >= 0)
+				close(ret);
 			ret = unlink(path);
 			if (ret && errno != ENOENT) {
 				SYSERROR("error unlinking %s\n", path);
@@ -749,7 +785,7 @@ static int setup_tty(const struct lxc_rootfs *rootfs,
 static int setup_rootfs_pivot_root_cb(char *buffer, void *data)
 {
 	struct lxc_list	*mountlist, *listentry, *iterator;
-	char *pivotdir, *mountpoint, *mountentry;
+	char *pivotdir, *mountpoint, *mountentry, *saveptr = NULL;
 	int found;
 	void **cbparm;
 
@@ -760,12 +796,12 @@ static int setup_rootfs_pivot_root_cb(char *buffer, void *data)
 	pivotdir  = cbparm[1];
 
 	/* parse entry, first field is mountname, ignore */
-	mountpoint = strtok(mountentry, " ");
+	mountpoint = strtok_r(mountentry, " ", &saveptr);
 	if (!mountpoint)
 		return -1;
 
 	/* second field is mountpoint */
-	mountpoint = strtok(NULL, " ");
+	mountpoint = strtok_r(NULL, " ", &saveptr);
 	if (!mountpoint)
 		return -1;
 
@@ -794,6 +830,7 @@ static int setup_rootfs_pivot_root_cb(char *buffer, void *data)
 	listentry->elem = strdup(mountpoint);
 	if (!listentry->elem) {
 		SYSERROR("strdup failed");
+		free(listentry);
 		return -1;
 	}
 	lxc_list_add_tail(mountlist, listentry);
@@ -1055,8 +1092,10 @@ int detect_shared_rootfs(void)
 		if (strcmp(p+1, "/") == 0) {
 			// this is '/'.  is it shared?
 			p = index(p2+1, ' ');
-			if (strstr(p, "shared:"))
+			if (p && strstr(p, "shared:")) {
+				fclose(f);
 				return 1;
+			}
 		}
 	}
 	fclose(f);
@@ -1150,6 +1189,12 @@ static int setup_rootfs(struct lxc_conf *conf)
 		}
 	}
 
+	// First try mounting rootfs using a bdev
+	struct bdev *bdev = bdev_init(rootfs->path, rootfs->mount, NULL);
+	if (bdev && bdev->ops->mount(bdev) == 0) {
+		DEBUG("mounted '%s' on '%s'", rootfs->path, rootfs->mount);
+		return 0;
+	}
 	if (mount_rootfs(rootfs->path, rootfs->mount)) {
 		ERROR("failed to mount rootfs");
 		return -1;
@@ -1311,7 +1356,8 @@ static int setup_ttydir_console(const struct lxc_rootfs *rootfs,
 		SYSERROR("error %d creating %s\n", errno, lxcpath);
 		return -1;
 	}
-	close(ret);
+	if (ret >= 0)
+		close(ret);
 
 	if (console->peer == -1) {
 		INFO("no console output required");
@@ -1380,7 +1426,8 @@ static int setup_kmsg(const struct lxc_rootfs *rootfs,
 	return 0;
 }
 
-int setup_cgroup(const char *cgpath, struct lxc_list *cgroups)
+static int _setup_cgroup(const char *cgpath, struct lxc_list *cgroups,
+			  int devices)
 {
 	struct lxc_list *iterator;
 	struct lxc_cgroup *cg;
@@ -1390,13 +1437,15 @@ int setup_cgroup(const char *cgpath, struct lxc_list *cgroups)
 		return 0;
 
 	lxc_list_for_each(iterator, cgroups) {
-
 		cg = iterator->elem;
 
-		if (lxc_cgroup_set_bypath(cgpath, cg->subsystem, cg->value)) {
-			ERROR("Error setting %s to %s for %s\n", cg->subsystem,
-				cg->value, cgpath);
-			goto out;
+		if (devices == !strncmp("devices", cg->subsystem, 7)) {
+			if (lxc_cgroup_set_bypath(cgpath, cg->subsystem,
+			    cg->value)) {
+				ERROR("Error setting %s to %s for %s\n",
+				      cg->subsystem, cg->value, cgpath);
+				goto out;
+			}
 		}
 
 		DEBUG("cgroup '%s' set to '%s'", cg->subsystem, cg->value);
@@ -1406,6 +1455,16 @@ int setup_cgroup(const char *cgpath, struct lxc_list *cgroups)
 	INFO("cgroup has been setup");
 out:
 	return ret;
+}
+
+int setup_cgroup_devices(const char *cgpath, struct lxc_list *cgroups)
+{
+	return _setup_cgroup(cgpath, cgroups, 1);
+}
+
+int setup_cgroup(const char *cgpath, struct lxc_list *cgroups)
+{
+	return _setup_cgroup(cgpath, cgroups, 0);
 }
 
 static void parse_mntopt(char *opt, unsigned long *flags, char **data)
@@ -2731,7 +2790,7 @@ int lxc_setup(const char *name, struct lxc_conf *lxc_conf)
 		return -1;
 	}
 
-	if (run_lxc_hooks(name, "pre-mount", lxc_conf)) {
+	if (run_lxc_hooks(name, "pre-mount", lxc_conf, NULL)) {
 		ERROR("failed to run pre-mount hooks for container '%s'.", name);
 		return -1;
 	}
@@ -2758,13 +2817,13 @@ int lxc_setup(const char *name, struct lxc_conf *lxc_conf)
 		return -1;
 	}
 
-	if (run_lxc_hooks(name, "mount", lxc_conf)) {
+	if (run_lxc_hooks(name, "mount", lxc_conf, NULL)) {
 		ERROR("failed to run mount hooks for container '%s'.", name);
 		return -1;
 	}
 
 	if (lxc_conf->autodev) {
-		if (run_lxc_hooks(name, "autodev", lxc_conf)) {
+		if (run_lxc_hooks(name, "autodev", lxc_conf, NULL)) {
 			ERROR("failed to run autodev hooks for container '%s'.", name);
 			return -1;
 		}
@@ -2831,7 +2890,7 @@ int lxc_setup(const char *name, struct lxc_conf *lxc_conf)
 	return 0;
 }
 
-int run_lxc_hooks(const char *name, char *hook, struct lxc_conf *conf)
+int run_lxc_hooks(const char *name, char *hook, struct lxc_conf *conf, char *argv[])
 {
 	int which = -1;
 	struct lxc_list *it;
@@ -2848,12 +2907,14 @@ int run_lxc_hooks(const char *name, char *hook, struct lxc_conf *conf)
 		which = LXCHOOK_START;
 	else if (strcmp(hook, "post-stop") == 0)
 		which = LXCHOOK_POSTSTOP;
+	else if (strcmp(hook, "clone") == 0)
+		which = LXCHOOK_CLONE;
 	else
 		return -1;
 	lxc_list_for_each(it, &conf->hooks[which]) {
 		int ret;
 		char *hookname = it->elem;
-		ret = run_script(name, "lxc", hookname, hook, NULL);
+		ret = run_script_argv(name, "lxc", hookname, hook, argv);
 		if (ret)
 			return ret;
 	}
@@ -3094,6 +3155,8 @@ void lxc_conf_free(struct lxc_conf *conf)
 		free(conf->ttydir);
 	if (conf->fstab)
 		free(conf->fstab);
+	if (conf->rcfile)
+		free(conf->rcfile);
 	lxc_clear_config_network(conf);
 #if HAVE_APPARMOR
 	if (conf->aa_profile)

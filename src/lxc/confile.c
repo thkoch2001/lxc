@@ -117,6 +117,7 @@ static struct lxc_config_t config[] = {
 	{ "lxc.hook.autodev",         config_hook                 },
 	{ "lxc.hook.start",           config_hook                 },
 	{ "lxc.hook.post-stop",       config_hook                 },
+	{ "lxc.hook.clone",           config_hook                 },
 	{ "lxc.network.type",         config_network_type         },
 	{ "lxc.network.flags",        config_network_flags        },
 	{ "lxc.network.link",         config_network_link         },
@@ -272,6 +273,7 @@ static int config_network_type(const char *key, const char *value,
 	list = malloc(sizeof(*list));
 	if (!list) {
 		SYSERROR("failed to allocate memory");
+		free(netdev);
 		return -1;
 	}
 
@@ -610,6 +612,7 @@ static int config_network_ipv4(const char *key, const char *value,
 	list = malloc(sizeof(*list));
 	if (!list) {
 		SYSERROR("failed to allocate memory");
+		free(inetdev);
 		return -1;
 	}
 
@@ -619,6 +622,8 @@ static int config_network_ipv4(const char *key, const char *value,
 	addr = strdup(value);
 	if (!addr) {
 		ERROR("no address specified");
+		free(inetdev);
+		free(list);
 		return -1;
 	}
 
@@ -636,12 +641,16 @@ static int config_network_ipv4(const char *key, const char *value,
 
 	if (!inet_pton(AF_INET, addr, &inetdev->addr)) {
 		SYSERROR("invalid ipv4 address: %s", value);
+		free(inetdev);
 		free(addr);
+		free(list);
 		return -1;
 	}
 
 	if (bcast && !inet_pton(AF_INET, bcast, &inetdev->bcast)) {
 		SYSERROR("invalid ipv4 broadcast address: %s", value);
+		free(inetdev);
+		free(list);
 		free(addr);
 		return -1;
 	}
@@ -683,6 +692,7 @@ static int config_network_ipv4_gateway(const char *key, const char *value,
 
 	if (!value) {
 		ERROR("no ipv4 gateway address specified");
+		free(gw);
 		return -1;
 	}
 
@@ -692,6 +702,7 @@ static int config_network_ipv4_gateway(const char *key, const char *value,
 	} else {
 		if (!inet_pton(AF_INET, value, gw)) {
 			SYSERROR("invalid ipv4 gateway address: %s", value);
+			free(gw);
 			return -1;
 		}
 
@@ -725,6 +736,7 @@ static int config_network_ipv6(const char *key, const char *value,
 	list = malloc(sizeof(*list));
 	if (!list) {
 		SYSERROR("failed to allocate memory");
+		free(inet6dev);
 		return -1;
 	}
 
@@ -734,6 +746,8 @@ static int config_network_ipv6(const char *key, const char *value,
 	valdup = strdup(value);
 	if (!valdup) {
 		ERROR("no address specified");
+		free(list);
+		free(inet6dev);
 		return -1;
 	}
 
@@ -747,6 +761,8 @@ static int config_network_ipv6(const char *key, const char *value,
 
 	if (!inet_pton(AF_INET6, value, &inet6dev->addr)) {
 		SYSERROR("invalid ipv6 address: %s", value);
+		free(list);
+		free(inet6dev);
 		free(valdup);
 		return -1;
 	}
@@ -761,17 +777,10 @@ static int config_network_ipv6_gateway(const char *key, const char *value,
 			               struct lxc_conf *lxc_conf)
 {
 	struct lxc_netdev *netdev;
-	struct in6_addr *gw;
 
 	netdev = network_netdev(key, value, &lxc_conf->network);
 	if (!netdev)
 		return -1;
-
-	gw = malloc(sizeof(*gw));
-	if (!gw) {
-		SYSERROR("failed to allocate ipv6 gateway address");
-		return -1;
-	}
 
 	if (!value) {
 		ERROR("no ipv6 gateway address specified");
@@ -782,8 +791,17 @@ static int config_network_ipv6_gateway(const char *key, const char *value,
 		netdev->ipv6_gateway = NULL;
 		netdev->ipv6_gateway_auto = true;
 	} else {
+		struct in6_addr *gw;
+
+		gw = malloc(sizeof(*gw));
+		if (!gw) {
+			SYSERROR("failed to allocate ipv6 gateway address");
+			return -1;
+		}
+
 		if (!inet_pton(AF_INET6, value, gw)) {
 			SYSERROR("invalid ipv6 gateway address: %s", value);
+			free(gw);
 			return -1;
 		}
 
@@ -877,6 +895,8 @@ static int config_hook(const char *key, const char *value,
 		return add_hook(lxc_conf, LXCHOOK_START, copy);
 	else if (strcmp(key, "lxc.hook.post-stop") == 0)
 		return add_hook(lxc_conf, LXCHOOK_POSTSTOP, copy);
+	else if (strcmp(key, "lxc.hook.clone") == 0)
+		return add_hook(lxc_conf, LXCHOOK_CLONE, copy);
 	SYSERROR("Unknown key: %s", key);
 	free(copy);
 	return -1;
@@ -1233,8 +1253,10 @@ static int config_mount(const char *key, const char *value,
 		return -1;
 
 	mntelem = strdup(value);
-	if (!mntelem)
+	if (!mntelem) {
+		free(mntlist);
 		return -1;
+	}
 	mntlist->elem = mntelem;
 
 	lxc_list_add_tail(&lxc_conf->mount_list, mntlist);
@@ -1344,6 +1366,7 @@ static int config_utsname(const char *key, const char *value,
 	if (strlen(value) >= sizeof(utsname->nodename)) {
 		ERROR("node name '%s' is too long",
 			      utsname->nodename);
+		free(utsname);
 		return -1;
 	}
 
@@ -1682,8 +1705,12 @@ static int lxc_get_item_nic(struct lxc_conf *c, char *retv, int inlen,
 			strprint(retv, inlen, "%s", mode);
 		}
 	} else if (strcmp(p1, "veth.pair") == 0) {
-		if (netdev->type == LXC_NET_VETH && netdev->priv.veth_attr.pair)
-			strprint(retv, inlen, "%s", netdev->priv.veth_attr.pair);
+		if (netdev->type == LXC_NET_VETH) {
+			strprint(retv, inlen, "%s",
+				 netdev->priv.veth_attr.pair ?
+				  netdev->priv.veth_attr.pair :
+				  netdev->priv.veth_attr.veth1);
+		}
 	} else if (strcmp(p1, "vlan") == 0) {
 		if (netdev->type == LXC_NET_VLAN) {
 			strprint(retv, inlen, "%d", netdev->priv.vlan_attr.vid);

@@ -55,10 +55,13 @@ lxc.pts = 1024
 
 lxc.utsname = $name
 lxc.arch = $arch
-lxc.cap.drop = sys_module mac_admin mac_override
+lxc.cap.drop = sys_module mac_admin mac_override sys_time
 
 # When using LXC with apparmor, uncomment the next line to run unconfined:
 #lxc.aa_profile = unconfined
+# To support container nesting on an Ubuntu host, uncomment next two lines:
+#lxc.aa_profile = lxc-container-default-with-nesting
+#lxc.hook.mount = /usr/share/lxc/hooks/mountcgroups
 
 lxc.cgroup.devices.deny = a
 # Allow any mknod (but not using the node)
@@ -70,24 +73,22 @@ lxc.cgroup.devices.allow = c 1:5 rwm
 # consoles
 lxc.cgroup.devices.allow = c 5:1 rwm
 lxc.cgroup.devices.allow = c 5:0 rwm
-#lxc.cgroup.devices.allow = c 4:0 rwm
-#lxc.cgroup.devices.allow = c 4:1 rwm
 # /dev/{,u}random
 lxc.cgroup.devices.allow = c 1:9 rwm
 lxc.cgroup.devices.allow = c 1:8 rwm
 lxc.cgroup.devices.allow = c 136:* rwm
 lxc.cgroup.devices.allow = c 5:2 rwm
 # rtc
-lxc.cgroup.devices.allow = c 254:0 rwm
-#fuse
+lxc.cgroup.devices.allow = c 254:0 rm
+# fuse
 lxc.cgroup.devices.allow = c 10:229 rwm
-#tun
+# tun
 lxc.cgroup.devices.allow = c 10:200 rwm
-#full
+# full
 lxc.cgroup.devices.allow = c 1:7 rwm
-#hpet
+# hpet
 lxc.cgroup.devices.allow = c 10:228 rwm
-#kvm
+# kvm
 lxc.cgroup.devices.allow = c 10:232 rwm
 EOF
 
@@ -148,15 +149,13 @@ if [ -f /etc/lsb-release ]; then
     esac
 fi
 
-arch=$(arch)
-
 # Code taken from debootstrap
 if [ -x /usr/bin/dpkg ] && /usr/bin/dpkg --print-architecture >/dev/null 2>&1; then
     arch=`/usr/bin/dpkg --print-architecture`
 elif type udpkg >/dev/null 2>&1 && udpkg --print-architecture >/dev/null 2>&1; then
     arch=`/usr/bin/udpkg --print-architecture`
 else
-    arch=$(arch)
+    arch=$(uname -m)
     if [ "$arch" = "i686" ]; then
         arch="i386"
     elif [ "$arch" = "x86_64" ]; then

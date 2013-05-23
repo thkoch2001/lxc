@@ -27,6 +27,7 @@
 #include <errno.h>
 #include "../lxc/cgroup.h"
 #include "../lxc/lxc.h"
+#include "../lxc/commands.h"
 
 #define MYNAME "lxctest1"
 #define MYNAME2 "lxctest2"
@@ -39,6 +40,7 @@ int main()
 {
 	struct lxc_container *c = NULL, *c2 = NULL;
 	char *path;
+	char *dirpath = NULL;
 	int len;
 	int ret, retv = -1;
 
@@ -51,8 +53,7 @@ int main()
 
 	printf("Basic cgroup path tests...\n");
 	path = lxc_cgroup_path_create(NULL, MYNAME);
-	len = strlen(path);
-	if (!path || !len) {
+	if (!path || !(len = strlen(path))) {
 		TSTERR("zero result from lxc_cgroup_path_create");
 		exit(1);
 	}
@@ -63,8 +64,7 @@ int main()
 	free(path);
 
 	path = lxc_cgroup_path_create("ab", MYNAME);
-	len = strlen(path);
-	if (!path || !len) {
+	if (!path || !(len = strlen(path))) {
 		TSTERR("zero result from lxc_cgroup_path_create");
 		exit(1);
 	}
@@ -89,7 +89,7 @@ int main()
 	c->set_config_item(c, "lxc.network.type", "empty");
 	if (!c->createl(c, "ubuntu", NULL)) {
 		TSTERR("creating first container");
-		exit(1);
+		goto out;
 	}
 	c->load_config(c, NULL);
 	c->want_daemonize(c);
@@ -111,7 +111,7 @@ int main()
 
 	/* start second container */
 	if ((c2 = lxc_container_new(MYNAME2, ALTBASE)) == NULL) {
-		TSTERR("instantiating first container");
+		TSTERR("instantiating second container");
 		goto out;
 	}
 	if (c2->is_defined(c2)) {
@@ -121,14 +121,14 @@ int main()
 	}
 	c2->set_config_item(c2, "lxc.network.type", "empty");
 	if (!c2->createl(c2, "ubuntu", NULL)) {
-		TSTERR("creating first container");
+		TSTERR("creating second container");
 		goto out;
 	}
 
 	c2->load_config(c2, NULL);
 	c2->want_daemonize(c2);
 	if (!c2->startl(c2, 0, NULL)) {
-		TSTERR("starting first container");
+		TSTERR("starting second container");
 		goto out;
 	}
 
@@ -138,10 +138,10 @@ int main()
 		goto out;
 	}
 
-	const char *dirpath;
-	if (lxc_get_cgpath(&dirpath, NULL, c2->name, c2->config_path) < 0) {
+	dirpath = lxc_cmd_get_cgroup_path(NULL, c2->name, c2->config_path);
+	if (!dirpath) {
 		TSTERR("getting second container's cgpath");
-		return -1;
+		goto out;
 	}
 
 	if (lxc_cgroup_nrtasks(dirpath) < 1) {
@@ -152,6 +152,8 @@ int main()
 
 	retv = 0;
 out:
+	if (dirpath)
+		free(dirpath);
 	if (c2) {
 		c2->stop(c2);
 		c2->destroy(c2);

@@ -262,90 +262,6 @@ static int signal_handler(int fd, void *data,
 	return 1;
 }
 
-int lxc_pid_callback(int fd, struct lxc_request *request,
-		     struct lxc_handler *handler)
-{
-	struct lxc_answer answer;
-	int ret;
-
-	memset(&answer, 0, sizeof(answer));
-	answer.pid = handler->pid;
-	answer.ret = 0;
-
-	ret = send(fd, &answer, sizeof(answer), 0);
-	if (ret < 0) {
-		WARN("failed to send answer to the peer");
-		return -1;
-	}
-
-	if (ret != sizeof(answer)) {
-		ERROR("partial answer sent");
-		return -1;
-	}
-
-	return 0;
-}
-
-int lxc_cgroup_callback(int fd, struct lxc_request *request,
-		     struct lxc_handler *handler)
-{
-	struct lxc_answer answer;
-	int ret;
-
-	memset(&answer, 0, sizeof(answer));
-	answer.pathlen = strlen(handler->cgroup) + 1;
-	answer.path = handler->cgroup;
-	answer.ret = 0;
-
-	ret = send(fd, &answer, sizeof(answer), 0);
-	if (ret < 0) {
-		WARN("failed to send answer to the peer");
-		return -1;
-	}
-
-	if (ret != sizeof(answer)) {
-		ERROR("partial answer sent");
-		return -1;
-	}
-
-	ret = send(fd, answer.path, answer.pathlen, 0);
-	if (ret < 0) {
-		WARN("failed to send answer to the peer");
-		return -1;
-	}
-
-	if (ret != answer.pathlen) {
-		ERROR("partial answer sent");
-		return -1;
-	}
-
-	return 0;
-}
-
-int lxc_clone_flags_callback(int fd, struct lxc_request *request,
-			     struct lxc_handler *handler)
-{
-	struct lxc_answer answer;
-	int ret;
-
-	memset(&answer, 0, sizeof(answer));
-	answer.pid = 0;
-	answer.ret = handler->clone_flags;
-
-	ret = send(fd, &answer, sizeof(answer), 0);
-	if (ret < 0) {
-		WARN("failed to send answer to the peer");
-		return -1;
-	}
-
-	if (ret != sizeof(answer)) {
-		ERROR("partial answer sent");
-		return -1;
-	}
-
-	return 0;
-}
-
 int lxc_set_state(const char *name, struct lxc_handler *handler, lxc_state_t state)
 {
 	handler->state = state;
@@ -374,7 +290,7 @@ int lxc_poll(const char *name, struct lxc_handler *handler)
 		goto out_mainloop_open;
 	}
 
-	if (lxc_command_mainloop_add(name, &descr, handler)) {
+	if (lxc_cmd_mainloop_add(name, &descr, handler)) {
 		ERROR("failed to add command handler to mainloop");
 		goto out_mainloop_open;
 	}
@@ -390,7 +306,7 @@ int lxc_poll(const char *name, struct lxc_handler *handler)
 		#endif
 	}
 
-	return lxc_mainloop(&descr);
+	return lxc_mainloop(&descr, -1);
 
 out_mainloop_open:
 	lxc_mainloop_close(&descr);
@@ -426,7 +342,7 @@ struct lxc_handler *lxc_init(const char *name, struct lxc_conf *conf, const char
 		goto out_free;
 	}
 
-	if (lxc_command_init(name, handler, lxcpath))
+	if (lxc_cmd_init(name, handler, lxcpath))
 		goto out_free_name;
 
 	if (lxc_read_seccomp_config(conf) != 0) {
@@ -434,10 +350,10 @@ struct lxc_handler *lxc_init(const char *name, struct lxc_conf *conf, const char
 		goto out_close_maincmd_fd;
 	}
 
-	/* Begin the set the state to STARTING*/
+	/* Begin by setting the state to STARTING */
 	if (lxc_set_state(name, handler, STARTING)) {
 		ERROR("failed to set state '%s'", lxc_state2str(STARTING));
-		goto out_free_name;
+		goto out_close_maincmd_fd;
 	}
 
 	/* Start of environment variable setup for hooks */
@@ -461,7 +377,7 @@ struct lxc_handler *lxc_init(const char *name, struct lxc_conf *conf, const char
 	}
 	/* End of environment variable setup for hooks */
 
-	if (run_lxc_hooks(name, "pre-start", conf)) {
+	if (run_lxc_hooks(name, "pre-start", conf, NULL)) {
 		ERROR("failed to run pre-start hooks for container '%s'.", name);
 		goto out_aborting;
 	}
@@ -513,7 +429,7 @@ static void lxc_fini(const char *name, struct lxc_handler *handler)
 	lxc_set_state(name, handler, STOPPING);
 	lxc_set_state(name, handler, STOPPED);
 
-	if (run_lxc_hooks(name, "post-stop", handler->conf))
+	if (run_lxc_hooks(name, "post-stop", handler->conf, NULL))
 		ERROR("failed to run post-stop hooks for container '%s'.", name);
 
 	/* reset mask set by setup_signal_fd */
@@ -676,7 +592,7 @@ static int do_start(void *data)
 	if (lxc_seccomp_load(handler->conf) != 0)
 		goto out_warn_father;
 
-	if (run_lxc_hooks(handler->name, "start", handler->conf)) {
+	if (run_lxc_hooks(handler->name, "start", handler->conf, NULL)) {
 		ERROR("failed to run start hooks for container '%s'.", handler->name);
 		goto out_warn_father;
 	}
@@ -808,7 +724,12 @@ int lxc_spawn(struct lxc_handler *handler)
 	/* TODO - pass lxc.cgroup.dir (or user's pam cgroup) in for first argument */
 	if ((handler->cgroup = lxc_cgroup_path_create(NULL, name)) == NULL)
 		goto out_delete_net;
-	
+
+	if (setup_cgroup(handler->cgroup, &handler->conf->cgroup)) {
+		ERROR("failed to setup the cgroups for '%s'", name);
+		goto out_delete_net;
+	}
+
 	if (lxc_cgroup_enter(handler->cgroup, handler->pid) < 0)
 		goto out_delete_net;
 
@@ -839,11 +760,10 @@ int lxc_spawn(struct lxc_handler *handler)
 	if (lxc_sync_barrier_child(handler, LXC_SYNC_POST_CONFIGURE))
 		goto out_delete_net;
 
-	if (setup_cgroup(handler->cgroup, &handler->conf->cgroup)) {
-		ERROR("failed to setup the cgroups for '%s'", name);
+	if (setup_cgroup_devices(handler->cgroup, &handler->conf->cgroup)) {
+		ERROR("failed to setup the devices cgroup for '%s'", name);
 		goto out_delete_net;
 	}
-
 
 	/* Tell the child to complete its initialization and wait for
 	 * it to exec or return an error.  (the child will never

@@ -22,6 +22,7 @@
  */
 #include <stdio.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <libgen.h>
 #include <sys/types.h>
@@ -80,14 +81,14 @@ int main(int argc, char *argv[])
 		return 1;
 
 	if (lxc_log_init(my_args.name, my_args.log_file, my_args.log_priority,
-			 my_args.progname, my_args.quiet))
+			 my_args.progname, my_args.quiet, my_args.lxcpath[0]))
 		return 1;
 
 	if (!state && !pid)
 		state = pid = true;
 
 	if (state || test_state) {
-		ret = lxc_getstate(my_args.name, my_args.lxcpath);
+		ret = lxc_getstate(my_args.name, my_args.lxcpath[0]);
 		if (ret < 0)
 			return 1;
 		if (test_state)
@@ -96,8 +97,13 @@ int main(int argc, char *argv[])
 		printf("state:%10s\n", lxc_state2str(ret));
 	}
 
-	if (pid)
-		printf("pid:%10d\n", get_init_pid(my_args.name, my_args.lxcpath));
+	if (pid) {
+		pid_t initpid;
+
+		initpid = lxc_cmd_get_init_pid(my_args.name, my_args.lxcpath[0]);
+		if (initpid >= 0)
+			printf("pid:%10d\n", initpid);
+	}
 
 	return 0;
 }
