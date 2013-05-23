@@ -843,7 +843,7 @@ lxc.cgroup.devices.allow                = c 136:* rwm
 # /dev/random
 lxc.cgroup.devices.allow                = c 1:8 rwm
 # /dev/rtc
-lxc.cgroup.devices.allow                = c 254:0 rwm
+lxc.cgroup.devices.allow                = c 254:0 rm
 # /dev/tty
 lxc.cgroup.devices.allow                = c 5:0 rwm
 # /dev/urandom
