@@ -57,7 +57,7 @@ fi
 
 if [ -e "${_LXC_DIRECTORY}/${_CONTAINER}/rootfs" ]
 then
-	chroot "${_LXC_DIRECTORY}/{_CONTAINER}/rootfs" telinit 0
+	chroot "${_LXC_DIRECTORY}/${_CONTAINER}/rootfs" telinit 0
 else
 	echo "E: ${_LXC_DIRECTORY}/${_CONTAINER}/rootfs - no such directory"
 	exit 1
