@@ -26,9 +26,9 @@ PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin
 
 for _CONFFILE in /etc/default/lxc /etc/default/lxc.d/*
 do
-	if [ -e /etc/default/lxc ]
+	if [ -e ${_CONFFILE} ]
 	then
-		. /etc/default/lxc || true
+		. ${_CONFFILE} || true
 	fi
 done
 
