@@ -13,11 +13,11 @@ set -e
 
 _LXC_DIRECTORY="${lxc_path}"
 
-_OPTIONS="$(getopt -o n: -l name: -- "${@}")"
+_OPTIONS="$(getopt -o n:,P: -l name:,lxcpath: -- "${@}")"
 
 if [ "${?}" -ne 0 ]
 then
-	echo "Usage: $(basename ${0}) -n|--name CONTAINER" >&2
+	echo "Usage: $(basename ${0}) -n|--name CONTAINER [-P|--lxcpath DIRECTORY]" >&2
 	exit 1
 fi
 
@@ -28,6 +28,11 @@ do
 	case "${1}" in
 		-n|--name)
 			_CONTAINER="${2}"
+			shift 2
+			;;
+
+	        -P|--lxcpath)
+			_LXC_DIRECTORY="${2}"
 			shift 2
 			;;
 
@@ -49,7 +54,13 @@ then
 	exit 1
 fi
 
-if lxc-info -n ${_CONTAINER} 2>&1 | grep -qs "STOPPED"
+if [ ! -d "${_LXC_DIRECTORY}" ]
+then
+	echo "E: ${_LXC_DIRECTORY}: no such directory." >&2
+	exit 1
+fi
+
+if lxc-info -n ${_CONTAINER} -P "${_LXC_DIRECTORY}" 2>&1 | grep -qs "STOPPED"
 then
 	echo "P: ${_CONTAINER} - already stopped"
 	exit 0
