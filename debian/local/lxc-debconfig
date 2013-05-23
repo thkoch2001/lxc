@@ -828,8 +828,14 @@ lxc.cgroup.devices.allow                = b *:* m
 
 # /dev/console
 lxc.cgroup.devices.allow                = c 5:1 rwm
+# /dev/full
+lxc.cgroup.devices.allow                = c 1:7 rwm
 # /dev/fuse
 #lxc.cgroup.devices.allow               = c 10:229 rwm
+# /dev/hpet
+#lxc.cgroup.devices.allow               = c 10:228 rwm
+# /dev/kvm
+#lxc.cgroup.devices.allow               = c 10:232 rwm
 # /dev/loop*
 #lxc.cgroup.devices.allow               = b 7:* rwm
 # /dev/loop-control
