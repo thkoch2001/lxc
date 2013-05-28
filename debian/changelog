@@ -1,3 +1,41 @@
+lxc (0.9.0-5) experimental; urgency=low
+
+  [ Daniel Baumann ]
+  * Completing temporary hacks for derivatives wrt/ replacing packages of
+    priority essential.
+
+  [ Nik Lutz ]
+  * Replacing container tmpfs with cgroup in systemd-container hook to not
+    waste memory.
+
+  [ Daniel Baumann ]
+  * Setting lxc.autodev depending on initsystem automatically to the
+    correct value explicitly in container config files.
+  * Running live-debconfig after packages have been installed in lxc-
+    debconfig again.
+  * Applying parts from a patch from Jeremiah C. Foster
+    <jeremiah.foster@pelagicore.com> to improve wording in readme (Closes:
+    #709280).
+  * De-emphasign note about bridges in readme.
+  * Correcting typo in lxc-halt.
+  * Correcting multi-default files read-in in init file, thanks to Harald
+    Dunkel <harald.dunkel@aixigo.de>.
+  * Applying slightly modified patch from Harald Dunkel
+    <harald.dunkel@aixigo.de> to add support for lxc-path in local debian
+    additions (Closes: #706379).
+  * Adding slightly modified patch from Harald Dunkel
+    <harald.dunkel@aixigo.de> to add support for lxc-path in upstream
+    commands.
+  * Enabling configpath log.
+  * Cosmetically restrict access to /dev/rtc a bit more in the default lxc
+    config.
+  * Adding sample device configs for /dev/full, /dev/hpet, and /dev/kvm in
+    default container configs.
+  * Dropping note about now obsoleted lxc-setcap in readme.
+  * Autogenerating preseed example file from debconf files.
+
+ -- Daniel Baumann <mail@daniel-baumann.ch>  Tue, 28 May 2013 14:50:34 +0200
+
 lxc (0.9.0-4) experimental; urgency=low
 
   [ Nik Lutz ]
