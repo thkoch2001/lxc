@@ -6,3 +6,4 @@
 0006-lxc-quote-arguments.patch
 0007-lxc-unshare-manpage.patch
 0008-lxc-path.patch
+0009-ftbfs-sparc.patch
