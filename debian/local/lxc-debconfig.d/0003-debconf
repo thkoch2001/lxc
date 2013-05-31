@@ -125,7 +125,7 @@ Archives ()
 			debian)
 				case "${_PARENT_DISTRIBUTION}" in
 					sid)
-						db_subst lxc-debconfig/archives CHOICES "Debian Experimental"
+						db_subst lxc-debconfig/archives CHOICES "Experimental"
 						db_subst lxc-debconfig/archives CHOICES_C "experimental"
 
 						db_set lxc-debconfig/archives ""
@@ -133,7 +133,7 @@ Archives ()
 						;;
 
 					*)
-						db_subst lxc-debconfig/archives CHOICES "Debian Security, Debian Updates, Debian Backports, Debian Proposed Updates"
+						db_subst lxc-debconfig/archives CHOICES "Security, Updates, Backports, Proposed Updates"
 						db_subst lxc-debconfig/archives CHOICES_C "${_DISTRIBUTION}-security, ${_DISTRIBUTION}-updates, ${_DISTRIBUTION}-backports, ${_DISTRIBUTION}-proposed-updates"
 
 						case "${_PARENT_DISTRIBUTION}" in
@@ -152,7 +152,7 @@ Archives ()
 				;;
 
 			progress-linux)
-				db_subst lxc-debconfig/archives CHOICES "Progress (staging), Progress Security, Progress Security (staging), Progress Updates, Progress Updates (staging), Progress Backports, Progress Backports (staging)"
+				db_subst lxc-debconfig/archives CHOICES "staging, Security, Security (staging), Updates, Updates (staging), Backports, Backports (staging)"
 				db_subst lxc-debconfig/archives CHOICES_C "${_DISTRIBUTION}-staging, ${_DISTRIBUTION}-security, ${_DISTRIBUTION}-security-staging, ${_DISTRIBUTION}-updates, ${_DISTRIBUTION}-updates-staging, ${_DISTRIBUTION}-backports, ${_DISTRIBUTION}-backports-staging"
 
 				db_set lxc-debconfig/archives "${_DISTRIBUTION}-security, ${_DISTRIBUTION}-updates, ${_DISTRIBUTION}-backports"
@@ -183,7 +183,7 @@ Parent_archives ()
 	then
 		case "${_MODE}" in
 			progress-linux)
-				db_subst lxc-debconfig/parent-archives CHOICES "Debian Security, Debian Updates , Debian Backports, Debian Proposed Updates"
+				db_subst lxc-debconfig/parent-archives CHOICES "Security, Updates , Backports, Proposed Updates"
 				db_subst lxc-debconfig/parent-archives CHOICES_C "${_DISTRIBUTION}-security, ${_DISTRIBUTION}-updates, ${_DISTRIBUTION}-backports, ${_DISTRIBUTION}-proposed-updates"
 
 				db_set lxc-debconfig/parent-archives "${_DISTRIBUTION}-security, ${_DISTRIBUTION}-updates, ${_DISTRIBUTION}-backports"
@@ -195,7 +195,7 @@ Parent_archives ()
 				;;
 
 			*)
-				db_subst lxc-debconfig/parent-archives CHOICES "Debian Security, Debian Updates , Debian Backports, Debian Proposed Updates"
+				db_subst lxc-debconfig/parent-archives CHOICES "Security, Updates , Backports, Proposed Updates"
 				db_subst lxc-debconfig/parent-archives CHOICES_C "${_ARCHIVES}"
 
 				db_set lxc-debconfig/parent-archives "${_ARCHIVES}"
