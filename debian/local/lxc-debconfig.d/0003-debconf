@@ -23,7 +23,7 @@ Distribution ()
 	then
 		case "${_MODE}" in
 			debian)
-				db_subst lxc-debconfig/distribution CHOICES "Debian GNU/Linux 6.0 \"squeeze\", Debian GNU/Linux 7.0 \"wheezy\", Debian GNU/Linux 8.0 \"jessie\", Debian GNU/Linux unstable/sid"
+				db_subst lxc-debconfig/distribution CHOICES "Debian GNU/Linux 6 \"squeeze\", Debian GNU/Linux 7 \"wheezy\", Debian GNU/Linux 8 \"jessie\", Debian GNU/Linux unstable/sid"
 				db_subst lxc-debconfig/distribution CHOICES_C "squeeze, wheezy, jessie, sid"
 
 				db_set lxc-debconfig/distribution wheezy
@@ -31,7 +31,7 @@ Distribution ()
 				;;
 
 			progress-linux)
-				db_subst lxc-debconfig/distribution CHOICES "Progress Linux 1.0 (artax), Progress Linux 1.9 (artax-backports), Progress Linux 2.0 (baureo), Progress Linux 2.9 (baureo-backports), Progress Linux 3.0 (chairon), Progress Linux 3.9 (chairon-backports)"
+				db_subst lxc-debconfig/distribution CHOICES "Progress Linux 1 (artax), Progress Linux 1+ (artax-backports), Progress Linux 2 (baureo), Progress Linux 2+ (baureo-backports), Progress Linux 3 (chairon), Progress Linux 3+ (chairon-backports)"
 				db_subst lxc-debconfig/distribution CHOICES_C "artax, artax-backports, baureo, baureo-backports, chairon, chairon-backports"
 
 				db_set lxc-debconfig/distribution baureo
