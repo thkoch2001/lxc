@@ -302,7 +302,7 @@ EOF
 			# Preseed live-debconfig
 cat > "${_ROOTFS}/preseed.cfg" << EOF
 # multiselect
-live-debconfig live-debconfig/scripts multiselect hostname, ifupdown, ${_INITSYSTEM}, util-linux, selinux, openssh-server
+live-debconfig live-debconfig/scripts multiselect hostname, ifupdown, ${_INITSYSTEM}, util-linux, rsyslog, selinux, openssh-server
 
 # passwd
 live-debconfig live-debconfig/passwd/root-password string ${_ROOT_PASSWORD}
@@ -316,6 +316,9 @@ live-debconfig live-debconfig/${_INITSYSTEM}/lxc-enable boolean true
 
 # util-linux
 live-debconfig live-debconfig/util-linux/hwclockaccess boolean false
+
+# rsyslog
+live-debconfig live-debconfig/rsyslog/imklog boolean false
 
 # selinux
 live-debconfig live-debconfig/selinux/enable boolean false
