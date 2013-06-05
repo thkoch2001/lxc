@@ -5,7 +5,7 @@ Maintainer: Daniel Baumann <mail@daniel-baumann.ch>
 Uploaders: Jonas Genannt <jonas.genannt@capi2name.de>
 Build-Depends:
  debhelper (>= 9), dh-autoreconf, autotools-dev, docbook2x, libapparmor-dev,
- libcap-dev, linux-libc-dev
+ libcap-dev, linux-libc-dev, pkg-config
 Standards-Version: 3.9.4
 Homepage: http://lxc.sourceforge.net/
 
