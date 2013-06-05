@@ -1,3 +1,10 @@
+lxc (0.9.0-9) experimental; urgency=low
+
+  * Updating for lxc-debconfig for live-debconfig 4.0~a24-1.
+  * Adding missing build-depends to pkg-config.
+
+ -- Daniel Baumann <mail@daniel-baumann.ch>  Wed, 05 Jun 2013 10:58:01 +0200
+
 lxc (0.9.0-8) experimental; urgency=low
 
   * Using dh-autoreconf (Closes: #706443).
