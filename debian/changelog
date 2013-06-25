@@ -1,3 +1,10 @@
+lxc (0.9.0-11) experimental; urgency=low
+
+  * Reverting dropping of sys_boot capability, otherwise sysvinit will not
+    terminate in some cases on shutdown.
+
+ -- Daniel Baumann <mail@daniel-baumann.ch>  Tue, 25 Jun 2013 12:19:51 +0200
+
 lxc (0.9.0-10) experimental; urgency=low
 
   * Sorting debhelper build-with list in rules.
