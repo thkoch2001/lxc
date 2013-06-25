@@ -1,3 +1,10 @@
+lxc (0.9.0-10) experimental; urgency=low
+
+  * Sorting debhelper build-with list in rules.
+  * Updating lxc-debconfig for live-debconfig 4.0~a25.
+
+ -- Daniel Baumann <mail@daniel-baumann.ch>  Tue, 25 Jun 2013 11:47:22 +0200
+
 lxc (0.9.0-9) experimental; urgency=low
 
   * Updating for lxc-debconfig for live-debconfig 4.0~a24-1.
