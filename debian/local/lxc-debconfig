@@ -418,12 +418,12 @@ Download_system ()
 
 	case "${_MODE}" in
 		debian)
-			_INCLUDE="ifupdown,locales,libui-dialog-perl,dialog,isc-dhcp-client,netbase,net-tools,iproute,openssh-server"
+			_INCLUDE="ifupdown,locales,libui-dialog-perl,dialog,isc-dhcp-client,netbase,net-tools,iproute,openssh-server,wget"
 			_EXCLUDE=""
 			;;
 
 		progress-linux)
-			_INCLUDE="apt-utils,ifupdown,locales-all,libui-dialog-perl,dialog,isc-dhcp-client,netbase,net-tools,iproute"
+			_INCLUDE="apt-utils,ifupdown,locales-all,libui-dialog-perl,dialog,isc-dhcp-client,netbase,net-tools,iproute,wget"
 			_EXCLUDE=""
 			;;
 	esac
