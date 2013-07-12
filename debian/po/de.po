@@ -19,7 +19,7 @@ msgstr ""
 #. Description
 #: ../lxc.templates:1001
 msgid "Linux Containers: LXC setup"
-msgstr "Linux Containers: LXC setup"
+msgstr "Linux Containers: LXC Einrichtung"
 
 #. Type: boolean
 #. Description
@@ -44,7 +44,7 @@ msgstr ""
 #. Description
 #: ../lxc.templates:2001
 msgid "If unsure, choose yes (default)."
-msgstr "Wenn Sie unsicher sind, wählen sie ja (Standard)."
+msgstr "Wenn Sie sich unsicher sind, wählen sie ja (Standard)."
 
 #. Type: string
 #. Description
@@ -65,4 +65,4 @@ msgstr ""
 #. Description
 #: ../lxc.templates:3001
 msgid "If unsure, use /var/lib/lxc (default)."
-msgstr "Wenn Sie unsicher sind, benutzen sie /var/lib/lxc (Standard)."
+msgstr "Wenn Sie sich unsicher sind, benutzen sie /var/lib/lxc (Standard)."
