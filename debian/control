@@ -8,6 +8,8 @@ Build-Depends:
  libcap-dev, linux-libc-dev, pkg-config
 Standards-Version: 3.9.4
 Homepage: http://lxc.sourceforge.net/
+Vcs-Browser: http://daniel-baumann.ch/gitweb/?p=debian/lxc.git
+Vcs-Git: git://daniel-baumann.ch/git/debian/lxc.git
 
 Package: lxc
 Architecture: linux-any
