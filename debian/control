@@ -4,8 +4,14 @@ Priority: optional
 Maintainer: Daniel Baumann <mail@daniel-baumann.ch>
 Uploaders: Jonas Genannt <jonas.genannt@capi2name.de>
 Build-Depends:
- debhelper (>= 9), dh-autoreconf, autotools-dev, docbook2x, libapparmor-dev,
- libcap-dev, linux-libc-dev, pkg-config
+ debhelper (>= 9),
+ dh-autoreconf,
+ autotools-dev,
+ docbook2x,
+ libapparmor-dev,
+ libcap-dev,
+ linux-libc-dev,
+ pkg-config,
 Standards-Version: 3.9.4
 Homepage: http://lxc.sourceforge.net/
 Vcs-Browser: http://daniel-baumann.ch/gitweb/?p=debian/lxc.git
@@ -14,9 +20,17 @@ Vcs-Git: git://daniel-baumann.ch/git/debian/lxc.git
 Package: lxc
 Architecture: linux-any
 Pre-Depends: multiarch-support
-Depends: ${misc:Depends}, ${shlibs:Depends}
-Recommends: debootstrap | cdebootstrap, libcap2-bin
-Suggests: live-debconfig-doc, gpgv, debian-keyring, rsync
+Depends:
+ ${misc:Depends},
+ ${shlibs:Depends},
+Recommends:
+ debootstrap | cdebootstrap,
+ libcap2-bin,
+Suggests:
+ live-debconfig-doc,
+ gpgv,
+ debian-keyring,
+ rsync,
 Conflicts: cgroup-bin
 Description: Linux Containers userspace tools
  Containers are insulated areas inside a system, which have their own namespace
@@ -33,7 +47,9 @@ Section: debug
 Priority: extra
 Architecture: linux-any
 Depends:
- ${misc:Depends}, lxc (= ${binary:Version}), lxc-dev (= ${binary:Version})
+ ${misc:Depends},
+ lxc (= ${binary:Version}),
+ lxc-dev (= ${binary:Version}),
 Description: Linux Containers userspace tools (debug)
  Containers are insulated areas inside a system, which have their own namespace
  for filesystem, network, PID, IPC, CPU and memory allocation and which can be
@@ -45,7 +61,9 @@ Description: Linux Containers userspace tools (debug)
 Package: lxc-dev
 Section: libdevel
 Architecture: linux-any
-Depends: ${misc:Depends}, lxc (= ${binary:Version})
+Depends:
+ ${misc:Depends},
+ lxc (= ${binary:Version}),
 Description: Linux Containers userspace tools (development)
  Containers are insulated areas inside a system, which have their own namespace
  for filesystem, network, PID, IPC, CPU and memory allocation and which can be
