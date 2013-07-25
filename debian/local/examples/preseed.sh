@@ -5,6 +5,7 @@ _PRESEED_FILE="preseed.cfg"
 cat > "${_PRESEED_FILE}" << EOF
 # lxc-debconfig ($(dpkg-parsechangelog -l../../changelog | awk '/^Version: / { print $2 }'))
 
+lxc-debconfig lxc-debconfig/include-preseed-files string 
 EOF
 
 for _SCRIPT in $(ls ../lxc-debconfig.d/????-* | grep -v ".templates")

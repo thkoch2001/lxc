@@ -17,6 +17,31 @@ fi
 
 if [ -e "${_PRESEED_FILE}" ]
 then
-	# Apply user specified preseed file
-	debconf-set-selections "${_PRESEED_FILE}"
+	_PRESEED_FILES="${_PRESEED_FILE}"
+
+	while [ -n "${_PRESEED_FILE}" ]
+	do
+		if grep -qs '^ *lxc-debconfig *lxc-debconfig/include-preseed-files' "${_PRESEED_FILE}"
+		then
+			# First expansion
+			_INCLUDE_PRESEED_FILES="$(cat ${_PRESEED_FILE} | grep '^ *lxc-debconfig *lxc-debconfig/include-preseed-files' | awk '{ print $4 }')"
+
+			if [ -e "${_INCLUDE_PRESEED_FILES}" ]
+			then
+				# Use included files before including files
+				_PRESEED_FILES="${_INCLUDE_PRESEED_FILES} ${_PRESEED_FILES}"
+			fi
+
+			# Second (recursive) expansion
+			_PRESEED_FILE="${_INCLUDE_PRESEED_FILES}"
+		else
+			break
+		fi
+	done
+
+	for _PRESEED_FILE in ${_PRESEED_FILES}
+	do
+		# Apply user specified preseed files
+		debconf-set-selections "${_PRESEED_FILE}"
+	done
 fi
