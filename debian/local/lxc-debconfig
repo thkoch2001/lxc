@@ -59,12 +59,18 @@ Chroot ()
 	_CHROOT="${1}"
 	shift
 
+	# Workaround: until the whole template can be executed with 'set -e',
+	# let's at least run all chrooted commands with 'set -e'.
+	set -e
+
 	chroot "${_CHROOT}" /usr/bin/env -i \
 		LC_ALL="C" PATH="/usr/sbin:/usr/bin:/sbin:/bin" TERM="${TERM}" \
 		DEBIAN_FRONTEND="${_DEBCONF_FRONTEND}" DEBIAN_PRIORITY="${_DEBCONF_PRIORITY}" \
 		DEBCONF_NONINTERACTIVE_SEEN="true" DEBCONF_NOWARNINGS="true" \
 		ftp_proxy="${ftp_proxy}" http_proxy="${http_proxy}" \
 		${@}
+
+	set +e
 }
 
 Upgrade_system ()
