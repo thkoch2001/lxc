@@ -1,3 +1,12 @@
+lxc (0.9.0-14) experimental; urgency=low
+
+  * Adding temporary workaround to run chrooted commands in lxc-debconfig
+    with 'set -e' until the whole template can be run with 'set -e'
+    (Closes: #717717).
+  * Adding support of includable preseed files within lxc-debconfig.
+
+ -- Daniel Baumann <mail@daniel-baumann.ch>  Mon, 29 Jul 2013 11:50:22 +0200
+
 lxc (0.9.0-13) experimental; urgency=low
 
   * Adding vcs fields.
