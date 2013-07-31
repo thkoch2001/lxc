@@ -40,7 +40,7 @@ override_dh_auto_install:
 	cp debian/local/hooks/systemd-host debian/tmp/usr/share/lxc/hooks
 
 	cp -r debian/local/preseed debian/tmp/usr/share/lxc
-	cp -r debian/local/templates/* debian/tmp/usr/share/lxc
+	cp -r debian/local/templates/* debian/tmp/usr/share/lxc/templates
 
 	# replacing upstreams debian template
 	rm -f debian/tmp/usr/share/lxc/templates/lxc-debian
