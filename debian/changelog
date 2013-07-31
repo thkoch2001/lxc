@@ -1,3 +1,11 @@
+lxc (0.9.0-15) experimental; urgency=low
+
+  * Updating example preseed file.
+  * Adding sample includeable preseed files for progress-linux.
+  * Moving templates to local subdirectory within packaging.
+
+ -- Daniel Baumann <mail@daniel-baumann.ch>  Wed, 31 Jul 2013 16:01:47 +0200
+
 lxc (0.9.0-14) experimental; urgency=low
 
   * Adding temporary workaround to run chrooted commands in lxc-debconfig
