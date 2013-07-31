@@ -8,7 +8,7 @@ cat > "${_PRESEED_FILE}" << EOF
 lxc-debconfig lxc-debconfig/include-preseed-files string 
 EOF
 
-for _SCRIPT in $(ls ../lxc-debconfig.d/????-* | grep -v ".templates")
+for _SCRIPT in $(ls ../templates/lxc-debconfig.d/????-* | grep -v '\.templates')
 do
 	_SCRIPT_NAME="$(basename ${_SCRIPT} | sed -e 's|^[0-9][0-9][0-9][0-9]-||')"
 
@@ -22,7 +22,7 @@ do
 				_TYPE=""
 			else
 				_COMMENT=""
-				_TYPE=" $(grep -A1 -m1 "^Template: ${_DEBCONF}" ../lxc-debconfig.d/*-${_SCRIPT_NAME}.templates | awk '/^Type: / { print $2 }')"
+				_TYPE=" $(grep -A1 -m1 "^Template: ${_DEBCONF}" ../templates/lxc-debconfig.d/*-${_SCRIPT_NAME}.templates | awk '/^Type: / { print $2 }')"
 			fi
 
 
