@@ -25,7 +25,7 @@ boot parameter needs to be used:
 In order to enable the swap controller for Debian wheezy, the following
 boot parameter needs to be used:
 
-	swapaccount
+	swapaccount=1
 
 In order to enable apparmor which lxc can make use of, the following
 boot parameter needs to be used:
