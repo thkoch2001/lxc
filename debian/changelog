@@ -1,3 +1,11 @@
+lxc (0.9.0-17) experimental; urgency=low
+
+  * Updating vcs fields.
+  * Updating swapaccount parameter in readme for linux 3, thanks to Michal
+    Hocko <mstsxfx@gmail.com> (Closes: #719774).
+
+ -- Daniel Baumann <mail@daniel-baumann.ch>  Sat, 17 Aug 2013 15:49:51 +0200
+
 lxc (0.9.0-16) experimental; urgency=low
 
   * Correcting template location.
