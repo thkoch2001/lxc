@@ -682,6 +682,35 @@ Local_archives ()
 			wget -q "${_KEY}" -O "${_TMPDIR}/sources.list.d/$(basename ${_LIST} .list).key"
 		fi
 
+		_PREFERENCES_PACKAGE=""
+		_PREFERENCES_PIN=""
+		_PREFERENCES_PIN_PRIORITY=""
+		if db_get lxc-debconfig/archives${_NUMBER}/preferences-package
+		then
+			_PREFERENCES_PACKAGE="${RET}"
+
+			if db_get lxc-debconfig/archives${_NUMBER}/preferences-pin
+			then
+				_PREFERENCES_PIN="${RET}"
+			fi
+
+			if db_get lxc-debconfig/archives${_NUMBER}/preferences-pin-priority
+			then
+				_PREFERENCES_PIN_PRIORITY="${RET}"
+			fi
+
+			if [ -n "${_PREFERENCES_PACKAGES}" ] || [ -n "${_PREFERENCES_PIN}" ] || [ -n "${_PREFERENCES_PIN_PRIORITY}" ]
+			then
+
+cat > "${_TMPDIR}/sources.list.d/$(basename ${_LIST} .list).pref" << EOF
+Package: ${_PREFERENCES_PACKAGE}
+Pin: ${_PREFERENCES_PIN}
+Pin-Priority: ${_PREFERENCES_PIN_PRIORITY}
+EOF
+
+			fi
+		fi
+
 		_NUMBER="$((${_NUMBER} + 1))"
 	done
 }

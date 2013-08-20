@@ -714,6 +714,11 @@ Copy_system ()
 			done
 		fi
 
+		if ls "${_TMPDIR}/sources.list.d"/*.pref > /dev/null 2>&1
+		then
+			cp "${_TMPDIR}/sources.list.d"/*.pref "${_ROOTFS}/etc/apt/preferences.d"
+		fi
+
 		Upgrade_system "${_ROOTFS}"
 		Cleanup_system "${_ROOTFS}"
 	fi
