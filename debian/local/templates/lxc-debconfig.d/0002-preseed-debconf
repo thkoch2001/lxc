@@ -30,8 +30,8 @@ then
 			do
 				if [ -e "${_INCLUDE_PRESEED_FILE}" ]
 				then
-					# Use included files before including files
-					_PRESEED_FILES="${_INCLUDE_PRESEED_FILE} ${_PRESEED_FILES}"
+					# Use including files before included files
+					_PRESEED_FILES="${_PRESEED_FILES} ${_INCLUDE_PRESEED_FILE}"
 				fi
 			done
 
