@@ -24,13 +24,16 @@ then
 		if grep -qs '^ *lxc-debconfig *lxc-debconfig/include-preseed-files' "${_PRESEED_FILE}"
 		then
 			# First expansion
-			_INCLUDE_PRESEED_FILES="$(cat ${_PRESEED_FILE} | grep '^ *lxc-debconfig *lxc-debconfig/include-preseed-files' | awk '{ print $4 }')"
+			_INCLUDE_PRESEED_FILES="$(for _FILE in ${_PRESEED_FILE}; do cat ${_FILE} | grep '^ *lxc-debconfig *lxc-debconfig/include-preseed-files' | awk '{ $1=$2=$3=""; print $0 }'; done)"
 
-			if [ -e "${_INCLUDE_PRESEED_FILES}" ]
-			then
-				# Use included files before including files
-				_PRESEED_FILES="${_INCLUDE_PRESEED_FILES} ${_PRESEED_FILES}"
-			fi
+			for _INCLUDE_PRESEED_FILE in ${_INCLUDE_PRESEED_FILES}
+			do
+				if [ -e "${_INCLUDE_PRESEED_FILE}" ]
+				then
+					# Use included files before including files
+					_PRESEED_FILES="${_INCLUDE_PRESEED_FILE} ${_PRESEED_FILES}"
+				fi
+			done
 
 			# Second (recursive) expansion
 			_PRESEED_FILE="${_INCLUDE_PRESEED_FILES}"
