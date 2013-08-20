@@ -1,3 +1,15 @@
+lxc (0.9.0-18) experimental; urgency=low
+
+  * Adding patch from James Cook <bonkabonka@gmail.com> to weaken mode on
+    pts for compliance with eglibc 2.18 within containers (Closes:
+    #720122).
+    The origin of the patch referenced in the bts implies that this allows
+    unprivileged users access to the ttys, should that be the case, an
+    unprivileged user can access the host systems terminal (read-write),
+    thus needs further testing before moving this to unstable.
+
+ -- Daniel Baumann <mail@daniel-baumann.ch>  Tue, 20 Aug 2013 10:12:46 +0200
+
 lxc (0.9.0-17) experimental; urgency=low
 
   * Updating vcs fields.
