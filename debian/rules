@@ -27,6 +27,7 @@ override_dh_auto_install:
 	# debian local additions
 	mkdir -p debian/lxc/usr/bin
 	cp debian/local/lxc debian/lxc/usr/bin
+	cp debian/local/lxc-all debian/lxc/usr/bin
 	cp debian/local/lxc-backup debian/lxc/usr/bin
 	cp debian/local/lxc-halt debian/lxc/usr/bin
 	cp debian/local/lxc-list debian/lxc/usr/bin

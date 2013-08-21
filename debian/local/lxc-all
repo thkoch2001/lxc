@@ -1,0 +1,125 @@
+#!/bin/sh
+
+## Copyright (C) 2006-2013 Daniel Baumann <mail@daniel-baumann.ch>
+##
+## This program comes with ABSOLUTELY NO WARRANTY; for details see COPYING.
+## This is free software, and you are welcome to redistribute it
+## under certain conditions; see COPYING for details.
+
+
+set -e
+
+. /usr/share/lxc/lxc.functions
+
+_LXC_DIRECTORY="${lxc_path}"
+
+. /lib/lsb/init-functions
+
+for _CONFFILE in /etc/default/lxc /etc/default/lxc.d/*
+do
+	if [ -e ${_CONFFILE} ]
+	then
+		. ${_CONFFILE} || true
+	fi
+done
+
+LXC_AUTO="${LXC_AUTO:-true}"
+
+Lxc ()
+{
+	_PROGRAM="${1}"
+	shift
+
+	_OPTIONS="${@}"
+
+	# no containers available
+	if ! ls /etc/lxc/auto/* > /dev/null 2>&1
+	then
+		log_progress_msg "(none)"
+		log_end_msg 0
+
+		exit 0
+	fi
+
+	for _CONFIG in /etc/lxc/auto/*
+	do
+		if [ -L "${_CONFIG}" ] && [ ! -e "${_CONFIG}" ]
+		then
+			# dangling symlink
+			log_progress_msg "$(basename ${_CONFIG}) (broken)"
+
+			continue
+		fi
+
+		_CONTAINER="$(basename $(dirname $(readlink -e ${_CONFIG})))"
+
+		case "${_PROGRAM}" in
+			start)
+				# initscript is disabled
+				case "${LXC_AUTO}" in
+					false)
+						log_progress_msg "(disabled)"
+						log_end_msg 0
+
+						exit 0
+						;;
+				esac
+
+				if ! lxc-info -n ${_CONTAINER} 2>&1 | grep -qs "RUNNING"
+				then
+					log_progress_msg "${_CONTAINER}"
+
+					lxc-start -n ${_CONTAINER} -f ${_CONFIG} -d ${_OPTIONS}
+				else
+					log_progress_msg "${_CONTAINER} (skip)"
+				fi
+				;;
+
+			*)
+				log_progress_msg "${_CONTAINER}"
+
+				lxc ${_PROGRAM} ${_CONTAINER} ${_OPTIONS}
+				;;
+		esac
+	done
+
+	log_end_msg 0
+}
+
+case "${1}" in
+	start)
+		log_daemon_msg "Starting Linux Containers"
+
+		Lxc start
+		;;
+
+	stop)
+		log_daemon_msg "Stopping Linux Containers"
+
+		Lxc shutdown -t 10
+		;;
+
+	restart|force-reload)
+		log_daemon_msg "Restarting Linux Containers"
+
+		Lxc stop
+		Lxc start
+		;;
+
+	freeze)
+		log_daemon_msg "Freezing Linux Containers"
+
+		Lxc freeze
+		;;
+
+	unfreeze)
+		log_daemon_msg "Unfreezing Linux Containers"
+
+		Lxc unfreeze
+		;;
+
+	*)
+		log_success_msg "Usage: ${0} {start|stop|restart|force-reload|freeze|unfreeze}"
+		exit 1
+		;;
+esac

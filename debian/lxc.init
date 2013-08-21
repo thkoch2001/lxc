@@ -15,116 +15,32 @@
 # X-Interactive:	true
 ### END INIT INFO
 
-if [ ! -x /usr/bin/lxc ]
+if [ ! -x /usr/bin/lxc ] || [ ! -x /usr/bin/lxc-all ]
 then
 	exit 0
 fi
 
 PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin
 
-. /lib/lsb/init-functions
-
-for _CONFFILE in /etc/default/lxc /etc/default/lxc.d/*
-do
-	if [ -e ${_CONFFILE} ]
-	then
-		. ${_CONFFILE} || true
-	fi
-done
-
-LXC_AUTO="${LXC_AUTO:-true}"
-
-Lxc ()
-{
-	_PROGRAM="${1}"
-	shift
-
-	_OPTIONS="${@}"
-
-	# no containers available
-	if ! ls /etc/lxc/auto/* > /dev/null 2>&1
-	then
-		log_progress_msg "(none)"
-		log_end_msg 0
-
-		exit 0
-	fi
-
-	for _CONFIG in /etc/lxc/auto/*
-	do
-		if [ -L "${_CONFIG}" ] && [ ! -e "${_CONFIG}" ]
-		then
-			# dangling symlink
-			log_progress_msg "$(basename ${_CONFIG}) (broken)"
-
-			continue
-		fi
-
-		_CONTAINER="$(basename $(dirname $(readlink -e ${_CONFIG})))"
-
-		case "${_PROGRAM}" in
-			start)
-				# initscript is disabled
-				case "${LXC_AUTO}" in
-					false)
-						log_progress_msg "(disabled)"
-						log_end_msg 0
-
-						exit 0
-						;;
-				esac
-
-				if ! lxc-info -n ${_CONTAINER} 2>&1 | grep -qs "RUNNING"
-				then
-					log_progress_msg "${_CONTAINER}"
-
-					lxc-start -n ${_CONTAINER} -f ${_CONFIG} -d ${_OPTIONS}
-				else
-					log_progress_msg "${_CONTAINER} (skip)"
-				fi
-				;;
-
-			*)
-				log_progress_msg "${_CONTAINER}"
-
-				lxc ${_PROGRAM} ${_CONTAINER} ${_OPTIONS}
-				;;
-		esac
-	done
-
-	log_end_msg 0
-}
-
 case "${1}" in
 	start)
-		log_daemon_msg "Starting Linux Containers"
-
-		Lxc start
+		lxc-all start
 		;;
 
 	stop)
-		log_daemon_msg "Stopping Linux Containers"
-
-		Lxc shutdown -t 10
+		lxc-all stop
 		;;
 
 	restart|force-reload)
-		log_daemon_msg "Restarting Linux Containers"
-
-		Lxc stop
-		Lxc start
+		lxc-all restart
 		;;
 
 	freeze)
-		log_daemon_msg "Freezing Linux Containers"
-
-		Lxc freeze
+		lxc-all freeze
 		;;
 
 	unfreeze)
-		log_daemon_msg "Unfreezing Linux Containers"
-
-		Lxc unfreeze
+		lxc-all unfreeze
 		;;
 
 	status)
