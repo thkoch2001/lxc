@@ -524,7 +524,7 @@ Acquire::PDiffs "false";
 // Acquire::Language "none";
 APT::Clean-Installed "true";
 APT::Get:AutomaticRemove "true";
-APT::Get::HideAutoRemove "false";
+APT::Get:HideAutoRemove "false";
 APT::Get:Show-Upgraded "true";
 APT::Install-Recommends "false";
 EOF
