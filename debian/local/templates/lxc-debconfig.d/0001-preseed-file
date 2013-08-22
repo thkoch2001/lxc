@@ -19,6 +19,8 @@ then
 	db_fset lxc-debconfig/preseed-file seen true
 elif ls /etc/lxc/debconfig/* > /dev/null 2>&1
 then
+	# user has not specified preseed file through commandline option
+	# showing debconf selection dialog for global preseed file
 	_PRESEED_FILES="$(for _FILE in $(ls /etc/lxc/debconfig/*); do echo -n "$(basename ${_FILE}), "; done | sed -e 's|, $||')"
 
 	if [ -n "${_PRESEED_FILES}" ]
