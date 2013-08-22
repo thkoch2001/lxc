@@ -24,7 +24,7 @@ then
 		if grep -qs '^ *lxc-debconfig *lxc-debconfig/include-preseed-files' "${_PRESEED_FILE}"
 		then
 			# First expansion
-			_INCLUDE_PRESEED_FILES="$(for _FILE in ${_PRESEED_FILE}; do cat ${_FILE} | grep '^ *lxc-debconfig *lxc-debconfig/include-preseed-files' | awk '{ $1=$2=$3=""; print $0 }'; done)"
+			_INCLUDE_PRESEED_FILES="$(for _FILE in ${_PRESEED_FILE}; do cat ${_FILE} | grep '^ *lxc-debconfig *lxc-debconfig/include-preseed-files' | awk '{ $1=$2=$3=""; print $0 }'; done | sed -e 's|,| |g')"
 
 			for _INCLUDE_PRESEED_FILE in ${_INCLUDE_PRESEED_FILES}
 			do
