@@ -12,15 +12,15 @@ set -e
 
 . /usr/share/debconf/confmodule
 
-if [ -e "${_PRESEED_FILE}" ]
+if [ -n "${_PRESEED_FILE}" ]
 then
-	# user specified preseed file through commandline option
+	# user specified one or more preseed files through commandline option
 	db_set lxc-debconfig/preseed-file "${_PRESEED_FILE}"
 	db_fset lxc-debconfig/preseed-file seen true
 elif ls /etc/lxc/debconfig/* > /dev/null 2>&1
 then
-	# user has not specified preseed file through commandline option
-	# showing debconf selection dialog for global preseed file
+	# user has not specified preseed files through commandline option,
+	# showing debconf selection dialog for global preseed file.
 	_PRESEED_FILES="$(for _FILE in $(ls /etc/lxc/debconfig/*); do echo -n "$(basename ${_FILE}), "; done | sed -e 's|, $||')"
 
 	if [ -n "${_PRESEED_FILES}" ]

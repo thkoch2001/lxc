@@ -15,36 +15,58 @@ then
 	. "${_TMPDIR}/debconf.default"
 fi
 
-if [ -e "${_PRESEED_FILE}" ]
+if [ -z "${_PRESEED_FILE}" ]
 then
-	_PRESEED_FILES="${_PRESEED_FILE}"
+	# user has not specified or selected any preseed files
+	exit 0
+fi
 
-	while [ -n "${_PRESEED_FILE}" ]
+# user has one or more preseed file specified through commandline option
+# or debconf selection dialog.
+_PRESEED_FILES="$(echo ${_PRESEED_FILE} | sed -e 's|,| |g')"
+
+_DEBCONF_PRESEED_FILES=""
+
+for _PRESEED_FILE in ${_PRESEED_FILES}
+do
+	if [ ! -e "${_PRESEED_FILE}" ]
+	then
+		# preseed file does not exist
+		echo "W: ${_PRESEED_FILE}: No such file."
+
+		continue
+	fi
+
+	# add preseed file to debconf
+	_DEBCONF_PRESEED_FILES="${_DEBCONF_PRESEED_FILES} ${_PRESEED_FILE}"
+
+	if ! grep -qs '^ *lxc-debconfig *lxc-debconfig/include-preseed-files' "${_PRESEED_FILE}"
+	then
+		# preseed file has no includes
+		continue
+	fi
+
+	# preseed file has includes
+	_INCLUDE_PRESEED_FILES="$(grep '^ *lxc-debconfig *lxc-debconfig/include-preseed-files' ${_PRESEED_FILE} | awk '{ $1=$2=$3=""; print $0 }' | sed -e 's|,| |g')"
+
+	# FIXME: we're supporting only *ONE* include layer for now, so no nested/recursive includes just yet
+	for _FILE in ${_INCLUDE_PRESEED_FILES}
 	do
-		if grep -qs '^ *lxc-debconfig *lxc-debconfig/include-preseed-files' "${_PRESEED_FILE}"
+		if [ -e "${_FILE}" ]
 		then
-			# First expansion
-			_INCLUDE_PRESEED_FILES="$(for _FILE in ${_PRESEED_FILE}; do cat ${_FILE} | grep '^ *lxc-debconfig *lxc-debconfig/include-preseed-files' | awk '{ $1=$2=$3=""; print $0 }'; done | sed -e 's|,| |g')"
-
-			for _INCLUDE_PRESEED_FILE in ${_INCLUDE_PRESEED_FILES}
-			do
-				if [ -e "${_INCLUDE_PRESEED_FILE}" ]
-				then
-					# Use including files before included files
-					_PRESEED_FILES="${_PRESEED_FILES} ${_INCLUDE_PRESEED_FILE}"
-				fi
-			done
-
-			# Second (recursive) expansion
-			_PRESEED_FILE="${_INCLUDE_PRESEED_FILES}"
+			_DEBCONF_PRESEED_FILES="${_DEBCONF_PRESEED_FILES} ${_FILE}"
 		else
-			break
+			# included preseed file does not exist
+			echo "W: ${_INCLUDE_PRESEED_FILE}: No such file - included from ${_PRESEED_FILE}"
 		fi
 	done
+done
 
-	for _PRESEED_FILE in ${_PRESEED_FILES}
-	do
-		# Apply user specified preseed files
-		debconf-set-selections "${_PRESEED_FILE}"
-	done
-fi
+for _DEBCONF_PRESEED_FILE in ${_DEBCONF_PRESEED_FILES}
+do
+	# Apply user specified preseed files
+	debconf-set-selections "${_DEBCONF_PRESEED_FILE}"
+done
+
+# Write expanded list of debconf preseed files
+echo "_PRESEED_FILE=\"${_DEBCONF_PRESEED_FILES}\"" >> "${_TMPDIR}/debconf.default"
