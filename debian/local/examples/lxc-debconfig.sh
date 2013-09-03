@@ -1,6 +1,6 @@
 #!/bin/sh
 
-_PRESEED_FILE="preseed.cfg"
+_PRESEED_FILE="lxc-debconfig.cfg"
 
 cat > "${_PRESEED_FILE}" << EOF
 # lxc-debconfig ($(dpkg-parsechangelog -l../../changelog | awk '/^Version: / { print $2 }'))
