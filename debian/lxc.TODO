@@ -1,7 +1,7 @@
 lxc:
   * check for newly added --with-*/--enable-* configure flags if they're useful for us.
   * add native systemd job to complement sysvinit initscript.
-  * add debconf question about ipv4 forward enabling.
+  * add debconf question about ipv4 forward enabling (already in live-debconfig).
   * add a lxc-config script similar to git-config.
   * clear tty and enable them dynamically
   * enable console log by default and rotate them if necessary
@@ -43,3 +43,6 @@ lxc-debconfig:
     doesn't re-ask already preseeded values
   * bug: if no network is configured via live-debconfig, then lxc-debconfig
     should not add network entries in the container config file.
+  * support /etc/lxc/debconf/$FQDN.d/*.cfg as valid preseeds
+  * if exit with error, do unmount pseudo-fs (use a trap, rather than rely on flock/set +x)
+  * use /etc/lxc/default.conf as an include from $container/config
