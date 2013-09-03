@@ -80,7 +80,22 @@ In case you're doing things manually, make sure that /var/lib/lxc is a symlink
 pointing to your lxc directory at all times.
 
 
-5. Bugs
+5. Hierarchy of Preseed Files
+
+The lxc-debconfig template script can be fully preseeded. Such preseed files
+can include one or more preseed files themselfs (currently, only one layer of
+includes is supported, no nested or recursive includes).
+
+The general rule of 'the later preseed file overwrites the earlier' applies.
+lxc-debconfig reads the main preseed file (specified either on command line or
+by debconf selection/input dialog) completely, and then any included preseed
+files in there.
+
+That means that debconf values *after* the include statement in the main preseed
+file can be overwriten by the includes.
+
+
+6. Bugs
 
   * veth not removed on container stop
 
