@@ -1,3 +1,28 @@
+lxc (0.9.0-20) experimental; urgency=low
+
+  * Allowing comma seperated list for multiple includes as well as
+    whitespace seperated lists.
+  * Clarifing comment about reading-in preseed files.
+  * Explicitly setting list of enabled component for live-debconfig in
+    includable example preseeds for progress-linux to include all used
+    components rather than minimal default only.
+  * Completing support for multiple preseed files for the first (non-
+    chrooted) part of lxc-debconfig, one level of recursion only for now.
+  * Adding support for multiple preseed files for the second (chrooted)
+    part of lxc-debconfig.
+  * Showing error message if updating the cache has failed with note about
+    removing the cache.
+  * Adding note about hierarchy of preseed files in readme file.
+  * Moving preseed examples to subdirectory within
+    /usr/share/doc/lxc/examples.
+  * Renaming lxc-debconfig preseed file to proper name for use in example
+    directory.
+  * Adding comments in rules for removed upstream stuff.
+  * Updating example preseed files for live-debconfig 4.0~a27-1.
+  * Updating todo file.
+
+ -- Daniel Baumann <mail@daniel-baumann.ch>  Tue, 03 Sep 2013 13:36:36 +0200
+
 lxc (0.9.0-19) experimental; urgency=low
 
   * Adding preseding support for pinning of local repositories.
