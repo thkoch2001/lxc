@@ -273,9 +273,12 @@ EOF
 	rm -f "${_ROOTFS}"/etc/ssh/ssh_host_*_key.pub
 
 	# Preseed system
-	if [ -e "${_PRESEED_FILE}" ]
+	if [ -n "${_PRESEED_FILE}" ]
 	then
-		cat "${_PRESEED_FILE}" > "${_ROOTFS}/preseed.cfg"
+		for _FILE in ${_PRESEED_FILE}
+		do
+			cat "${_FILE}" >> "${_ROOTFS}/preseed.cfg"
+		done
 
 		Chroot "${_ROOTFS}" "debconf-set-selections preseed.cfg"
 
@@ -285,10 +288,18 @@ EOF
 	# FIXME: All packages of priority of essential need to be reconfigured to reflect choices from preseeding
 
 	# Manual hack to workaround broken preseeding in tzdata package
-	if grep -qs tzdata "${_PRESEED_FILE}"
+	if [ -n "${_PRESEED_FILE}" ]
 	then
-		rm -f "${_ROOTFS}/etc/timezone"
-		Chroot "${_ROOTFS}" "DEBIAN_FRONTEND=noninteractive DEBIAN_PRIORITY=criticial dpkg-reconfigure tzdata"
+		for _FILE in ${_PRESEED_FILE}
+		do
+			if grep -qs tzdata "${_FILE}"
+			then
+				rm -f "${_ROOTFS}/etc/timezone"
+				Chroot "${_ROOTFS}" "DEBIAN_FRONTEND=noninteractive DEBIAN_PRIORITY=criticial dpkg-reconfigure tzdata"
+
+				break
+			fi
+		done
 	fi
 
 	case "${LXC_DEBCONFIG_WITH_LIVE_DEBCONFIG}" in
@@ -330,9 +341,12 @@ live-debconfig live-debconfig/rsyslog/imklog boolean false
 live-debconfig live-debconfig/selinux/enable boolean false
 EOF
 
-			if [ -e "${_PRESEED_FILE}" ]
+			if [ -n "${_PRESEED_FILE}" ]
 			then
-				grep -E '^ *live-debconfig' "${_PRESEED_FILE}" >> "${_ROOTFS}/preseed.cfg"
+				for _FILE in ${_PRESEED_FILE}
+				do
+					grep -E '^ *live-debconfig' "${_FILE}" >> "${_ROOTFS}/preseed.cfg"
+				done
 			fi
 
 			# Apply preseed information
@@ -370,9 +384,17 @@ EOF
 
 	case "${_ROOT_RANDOM_PASSWORD}" in
 		true)
-			if ! grep -qs -E '^ *live-debconfig live-debconfig/passwd/root-password' "${_PRESEED_FILE}"
+			if [ -n "${_PRESEED_FILE}" ]
 			then
-				echo "P: Setting root password to ${_ROOT_PASSWORD}"
+				for _FILE in ${_PRESEED_FILE}
+				do
+					if grep -qs -E '^ *live-debconfig live-debconfig/passwd/root-password' "${_PRESEED_FILE}"
+					then
+						continue
+					fi
+
+					echo "P: Setting root password to ${_ROOT_PASSWORD}"
+				done
 			fi
 			;;
 	esac
