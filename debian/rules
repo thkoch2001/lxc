@@ -56,9 +56,9 @@ override_dh_auto_install:
 	ln -s lxc-debconfig.d debian/tmp/usr/share/lxc/templates/lxc-progress-linux.d
 
 	# removing useless files
-	rm -f debian/tmp/usr/bin/lxc-ls
-	rm -f debian/tmp/usr/share/lxc/templates/lxc-busybox
-	rm -f debian/tmp/usr/share/lxc/templates/lxc-lenny
+	rm -f debian/tmp/usr/bin/lxc-ls # superseeded by local version until python-lxc is ready
+	rm -f debian/tmp/usr/share/lxc/templates/lxc-busybox # doesn't work
+	rm -f debian/tmp/usr/share/lxc/templates/lxc-lenny # doesn't work anymore since lenny EOL
 
 override_dh_builddeb:
 	dh_builddeb -- -Zxz
