@@ -712,7 +712,7 @@ Copy_system ()
 		# local cache from bootstrap
 
 		# Upgrade cache before copying it
-		Upgrade_system "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}"
+		Upgrade_system "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}" || echo "W: If upgrading the system failed, try removing the cache for your distribution in /var/cache/lxc"
 		Cleanup_system "${_CACHE}/${_DISTRIBUTION}_${_ARCHITECTURE}"
 
 		# make a local copy of the minimal system
