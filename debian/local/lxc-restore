@@ -18,7 +18,7 @@ _OPTIONS="$(getopt -o n:,P: -l name:,lxcpath: -- "${@}")"
 if [ "${?}" -ne 0 ]
 then
 	echo "Usage: $(basename ${0}) -n|--name CONTAINER [-P|--lxcpath DIRECTORY]" >&2
-	echo "Usage: $(basename ${0}) -n|--name CONTAINER [-P|--lxcpath DIRECTORY] [BACKUP_NUMBER]" >&2
+	echo "Usage: $(basename ${0}) -n|--name CONTAINER [-P|--lxcpath DIRECTORY] [SUFFIX]" >&2
 	exit 1
 fi
 
@@ -79,24 +79,17 @@ then
 	exit 1
 fi
 
-if ls ${_LXC_DIRECTORY}/${_CONTAINER}/rootfs.backup* > /dev/null 2>&1
+if ls ${_LXC_DIRECTORY}/${_CONTAINER}/rootfs.* > /dev/null 2>&1
 then
-#	if [ -n "${2}" ]
-#	then
-#		_BACKUP="${2}"
-#	else
-#		_BACKUP="1"
-#
-#		while [ -e "${_LXC_DIRECTORY}/${_CONTAINER}/rootfs.backup${_BACKUP}" ]
-#		do
-#			_BACKUP="$((${_BACKUP} + 1))"
-#		done
-#
-#		_BACKUP="$((${_BACKUP} - 1))"
-#	fi
+	if [ -n "${2}" ]
+	then
+		_SUFFIX="${2}"
+	else
+		echo "E: No suffix specified."
+	fi
 
-	rsync -aPHv --delete --progress ${_LXC_DIRECTORY}/${_CONTAINER}/rootfs.backup${_BACKUP}/ ${_LXC_DIRECTORY}/${_CONTAINER}/rootfs
+	rsync -aPHv --numeric-ids --delete --progress ${_LXC_DIRECTORY}/${_CONTAINER}/rootfs.${_SUFFIX}/ ${_LXC_DIRECTORY}/${_CONTAINER}/rootfs
 else
-	echo "E: ${_LXC_DIRECTORY}/${_CONTAINER}/rootfs.backup* - no such directories" >&2
+	echo "E: ${_LXC_DIRECTORY}/${_CONTAINER}/rootfs.* - no such directories" >&2
 	exit 1
 fi

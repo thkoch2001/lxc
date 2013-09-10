@@ -18,7 +18,7 @@ _OPTIONS="$(getopt -o n:,P: -l name:,lxcpath: -- "${@}")"
 if [ "${?}" -ne 0 ]
 then
 	echo "Usage: $(basename ${0}) -n|--name CONTAINER [-P|--lxcpath DIRECTORY]" >&2
-	echo "Usage: $(basename ${0}) -n|--name CONTAINER [-P|--lxcpath DIRECTORY] [BACKUP_NUMBER]" >&2
+	echo "Usage: $(basename ${0}) -n|--name CONTAINER [-P|--lxcpath DIRECTORY] [SUFFIX]" >&2
 	exit 1
 fi
 
@@ -81,19 +81,21 @@ fi
 
 if [ -d "${_LXC_DIRECTORY}/${_CONTAINER}/rootfs" ]
 then
-#	if [ -n "${2}" ]
-#	then
-#		_BACKUP="${2}"
-#	else
-#		_BACKUP="1"
-#
-#		while [ -e "${_LXC_DIRECTORY}/${_CONTAINER}/rootfs.backup${_BACKUP}" ]
-#		do
-#			_BACKUP="$((${_BACKUP} + 1))"
-#		done
-#	fi
+	if [ -n "${2}" ]
+	then
+		_SUFFIX="${2}"
+		_NUMBER=""
+	else
+		_SUFFIX="$(date +%Y%m%d)-"
+		_NUMBER="1"
 
-	rsync -aPHv --delete --progress ${_LXC_DIRECTORY}/${_CONTAINER}/rootfs/ ${_LXC_DIRECTORY}/${_CONTAINER}/rootfs.backup${_BACKUP}
+		while [ -e "${_LXC_DIRECTORY}/${_CONTAINER}/rootfs.${_SUFFIX}${_NUMBER}" ]
+		do
+			_NUMBER="$((${_NUMBER} + 1))"
+		done
+	fi
+
+	rsync -aPHv --numeric-ids --delete --progress ${_LXC_DIRECTORY}/${_CONTAINER}/rootfs/ ${_LXC_DIRECTORY}/${_CONTAINER}/rootfs.${_SUFFIX}${_NUMBER}
 else
 	echo "E: ${_LXC_DIRECTORY}/${_CONTAINER}/rootfs - no such directory" >&2
 	exit 1
