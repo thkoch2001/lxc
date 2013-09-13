@@ -88,11 +88,10 @@ includes is supported, no nested or recursive includes).
 
 The general rule of 'the later preseed file overwrites the earlier' applies.
 lxc-debconfig reads the main preseed file (specified either on command line or
-by debconf selection/input dialog) completely, and then any included preseed
-files in there.
+by debconf selection/input dialog) after any included preseed files in there.
 
 That means that debconf values *after* the include statement in the main preseed
-file can be overwriten by the includes.
+file can overwrite any values specified in the included preseed files.
 
 
 6. Bugs

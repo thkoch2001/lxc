@@ -54,7 +54,7 @@ do
 	do
 		if [ -e "${_FILE}" ]
 		then
-			_DEBCONF_PRESEED_FILES="${_DEBCONF_PRESEED_FILES} ${_FILE}"
+			_DEBCONF_PRESEED_FILES="${_FILE} ${_DEBCONF_PRESEED_FILES}"
 		else
 			# included preseed file does not exist
 			echo "W: ${_INCLUDE_PRESEED_FILE}: No such file - included from ${_PRESEED_FILE}"
