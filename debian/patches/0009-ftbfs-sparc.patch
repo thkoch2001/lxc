@@ -4,7 +4,7 @@ Description: Fixes FTBFS on sparc (Closes: #709454).
 diff -Naurp lxc.orig/src/lxc/log.c lxc/src/lxc/log.c
 --- lxc.orig/src/lxc/log.c
 +++ lxc/src/lxc/log.c
-@@ -66,15 +66,17 @@ static int log_append_logfile(const stru
+@@ -70,15 +70,17 @@ static int log_append_logfile(const stru
  {
  	char buffer[LXC_LOG_BUFFER_SIZE];
  	int n;
