@@ -1,4 +1,3 @@
-0001-lxc-configuration-path.patch
 0002-lxc-debconfig.patch
 0003-lxc-destroy-symlinks.patch
 0004-lxc-clone-mac.patch
