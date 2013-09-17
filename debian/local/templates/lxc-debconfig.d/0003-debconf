@@ -699,7 +699,7 @@ Local_archives ()
 				_PREFERENCES_PIN_PRIORITY="${RET}"
 			fi
 
-			if [ -n "${_PREFERENCES_PACKAGES}" ] || [ -n "${_PREFERENCES_PIN}" ] || [ -n "${_PREFERENCES_PIN_PRIORITY}" ]
+			if [ -n "${_PREFERENCES_PACKAGE}" ] || [ -n "${_PREFERENCES_PIN}" ] || [ -n "${_PREFERENCES_PIN_PRIORITY}" ]
 			then
 
 cat > "${_TMPDIR}/sources.list.d/$(basename ${_LIST} .list).pref" << EOF
