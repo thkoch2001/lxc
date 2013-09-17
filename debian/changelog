@@ -1,3 +1,25 @@
+lxc (1.0.0~alpha1-1) experimental; urgency=low
+
+  * Merging upstream version 1.0.0~alpha1.
+  * Building with autoreconf again.
+  * Removing lxc-configuration-path.patch, not needed anymore.
+  * Removing lxc-debconfig.patch, not needed anymore.
+  * Removing lxc-destroy-symlinks.patch, not needed anymore.
+  * Removing lxc-clone-mac.patch, not needed anymore.
+  * Removing lxc-init-path.patch, not needed anymore.
+  * Removing lxc-quote-arguments.patch, not needed anymore.
+  * Removing lxc-unshare-manpage.patch. not needed anymore.
+  * Removing lxc-path.patch, not needed anymore.
+  * Rediffing ftbfs-sparc.patch.
+  * Rediffing ptsmode.patch.
+  * Renumbering patches.
+  * Removing removal of removed templates in rules.
+  * Reincluding lxc-busybox template.
+  * Keeping local lxc-list for now, but not as the default lxc-list.
+  * Sourcing init-functions in initscript.
+
+ -- Daniel Baumann <mail@daniel-baumann.ch>  Tue, 17 Sep 2013 14:40:47 +0200
+
 lxc (0.9.0-21) experimental; urgency=low
 
   * Updating lxc-backup/lxc-restore.
