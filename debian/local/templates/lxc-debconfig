@@ -802,7 +802,7 @@ cat >> "${_PATH}/config" << EOF
 
 ## Container
 lxc.utsname                             = ${_NAME}
-lxc.rootfs                              = ${_ROOTFS}
+lxc.rootfs                              = ${_PATH}/rootfs
 EOF
 
 	case "${_ARCHITECTURE}" in
@@ -961,17 +961,17 @@ EOF
 		# Adding shared data directory if existing
 		if [ -d "/srv/share/${_NAME}" ]
 		then
-			echo "lxc.mount.entry                         = /srv/share/${_NAME} ${_ROOTFS}/srv/${_NAME} none defaults,bind 0 0" >> "${_PATH}/config"
-			mkdir -p "${_ROOTFS}/srv/${_NAME}"
+			echo "lxc.mount.entry                         = /srv/share/${_NAME} ${_PATH}/rootfs/srv/${_NAME} none defaults,bind 0 0" >> "${_PATH}/config"
+			mkdir -p "${_PATH}/rootfs/srv/${_NAME}"
 		elif [ -d "/srv/${_NAME}" ]
 		then
-			echo "lxc.mount.entry                         = /srv/${_NAME} ${_ROOTFS}/srv/${_NAME} none defaults,bind 0 0" >> "${_PATH}/config"
-			mkdir -p "${_ROOTFS}/srv/${_NAME}"
+			echo "lxc.mount.entry                         = /srv/${_NAME} ${_PATH}/rootfs/srv/${_NAME} none defaults,bind 0 0" >> "${_PATH}/config"
+			mkdir -p "${_PATH}/rootfs/srv/${_NAME}"
 		elif [ -d "/srv/share" ]
 		then
-			echo "#lxc.mount.entry                        = /srv/share/${_NAME} ${_ROOTFS}/srv/${_NAME} none defaults,bind 0 0" >> "${_PATH}/config"
+			echo "#lxc.mount.entry                        = /srv/share/${_NAME} ${_PATH}/rootfs/srv/${_NAME} none defaults,bind 0 0" >> "${_PATH}/config"
 		else
-			echo "#lxc.mount.entry                        = /srv/${_NAME} ${_ROOTFS}/srv/${_NAME} none defaults,bind 0 0" >> "${_PATH}/config"
+			echo "#lxc.mount.entry                        = /srv/${_NAME} ${_PATH}/rootfs/srv/${_NAME} none defaults,bind 0 0" >> "${_PATH}/config"
 		fi
 	fi
 
@@ -1104,7 +1104,7 @@ do
 	fi
 done
 
-_OPTIONS="$(getopt -o d:hp:n:c -l apt-recommends:,debconf-frontend:,debconf-priority:,distribution:,preseed-file:,help,path:,name:,clean -- "$@")"
+_OPTIONS="$(getopt -o d:hp:n:c -l apt-recommends:,debconf-frontend:,debconf-priority:,distribution:,preseed-file:,help,rootfs:,path:,name:,clean -- "$@")"
 
 if [ "${?}" -ne 0 ]
 then
@@ -1144,6 +1144,11 @@ do
 		-h|--help)
 			Usage
 			exit 0
+			;;
+
+		--rootfs)
+			LXC_ROOTFS="${2}"
+			shift 2
 			;;
 
 		-p|--path)
@@ -1197,7 +1202,19 @@ then
 	exit 1
 fi
 
-_ROOTFS="${_PATH}/rootfs"
+_ROOTFS="${LXC_ROOTFS}"
+
+if [ -z "${_ROOTFS}" ]
+then
+	if grep -Eqs '^ *lxc.rootfs' "${_PATH}/rootfs"
+	then
+		_ROOTFS="$(grep -E '* ^lxc.rootfs' ${_PATH}/rootfs | awk -F= '{ print $2 }')"
+	else
+		_ROOTFS="${_PATH}/rootfs"
+	fi
+fi
+
+mkdir -p "${_ROOTFS}"
 
 # Get distributor from template filename
 _MODE="$(basename ${0} | sed -e 's|^lxc-||' -e 's|debconf||')"
