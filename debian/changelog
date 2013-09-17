@@ -1,3 +1,10 @@
+lxc (1.0.0~alpha1-2) experimental; urgency=low
+
+  * Adding now required --rootfs handling to lxc-debconfig template.
+  * Keeping local lxc-list for the time being.
+
+ -- Daniel Baumann <mail@daniel-baumann.ch>  Tue, 17 Sep 2013 15:59:32 +0200
+
 lxc (1.0.0~alpha1-1) experimental; urgency=low
 
   * Merging upstream version 1.0.0~alpha1.
