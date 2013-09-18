@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: lxc\n"
 "Report-Msgid-Bugs-To: lxc@packages.debian.org\n"
-"POT-Creation-Date: 2012-11-12 14:51+0100\n"
+"POT-Creation-Date: 2013-10-20 07:43+0200\n"
 "PO-Revision-Date: 2012-03-12 07:52+0100\n"
 "Last-Translator: Christian Perrier <bubulle@debian.org>\n"
 "Language-Team: French <debian-l10n-french@lists.debian.org>\n"
@@ -19,19 +19,19 @@ msgstr ""
 
 #. Type: title
 #. Description
-#: ../lxc.templates:1001
+#: ../lxc-stuff.templates:1001
 msgid "Linux Containers: LXC setup"
 msgstr "Conteneurs Linux : configuration de LXC"
 
 #. Type: boolean
 #. Description
-#: ../lxc.templates:2001
+#: ../lxc-stuff.templates:2001
 msgid "Automatically start Linux Containers on boot?"
 msgstr "Lancer automatiquement les conteneurs Linux à l'amorçage du système ?"
 
 #. Type: boolean
 #. Description
-#: ../lxc.templates:2001
+#: ../lxc-stuff.templates:2001
 msgid ""
 "Linux Containers that have their configuration files copied or symlinked to "
 "the /etc/lxc/auto directory can be automatically started during system boot, "
@@ -44,19 +44,25 @@ msgstr ""
 
 #. Type: boolean
 #. Description
-#: ../lxc.templates:2001
+#: ../lxc-stuff.templates:2001
 msgid "If unsure, choose yes (default)."
 msgstr "Dans le doute, vous pouvez choisir cette option."
 
 #. Type: string
+#. Default
+#: ../lxc-stuff.templates:3001
+msgid "/var/lib/lxc"
+msgstr ""
+
+#. Type: string
 #. Description
-#: ../lxc.templates:3001
+#: ../lxc-stuff.templates:3002
 msgid "LXC directory:"
 msgstr "Répertoire de LXC :"
 
 #. Type: string
 #. Description
-#: ../lxc.templates:3001
+#: ../lxc-stuff.templates:3002
 msgid ""
 "Please specify the directory that will be used to store the Linux Containers."
 msgstr ""
@@ -64,6 +70,6 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../lxc.templates:3001
+#: ../lxc-stuff.templates:3002
 msgid "If unsure, use /var/lib/lxc (default)."
 msgstr "Il est recommandé de choisir /var/lib/lxc."

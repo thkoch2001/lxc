@@ -24,13 +24,8 @@ Depends:
  ${misc:Depends},
  ${shlibs:Depends},
 Recommends:
- debootstrap | cdebootstrap,
+ lxc-stuff,
  libcap2-bin,
-Suggests:
- live-debconfig-doc,
- gpgv,
- debian-keyring,
- rsync,
 Description: Linux Containers userspace tools
  Containers are insulated areas inside a system, which have their own namespace
  for filesystem, network, PID, IPC, CPU and memory allocation and which can be
@@ -40,6 +35,27 @@ Description: Linux Containers userspace tools
  This package provides the lxc-* tools, which can be used to start a single
  daemon in a container, or to boot an entire "containerized" system, and to
  manage and debug your containers.
+
+Package: lxc-stuff
+Architecture: all
+Depends:
+ ${misc:Depends},
+ lxc (>= ${source:Version}),
+Breaks: lxc (<< 1.0.0~alpha2-2~)
+Replaces: lxc
+Recommends: debootstrap
+Suggests:
+ live-debconfig-doc,
+ gpgv,
+ debian-keyring,
+ rsync,
+Description: Linux Containers userspace tools (additional utilities)
+ Containers are insulated areas inside a system, which have their own namespace
+ for filesystem, network, PID, IPC, CPU and memory allocation and which can be
+ created using the Control Group and Namespace features included in the Linux
+ kernel.
+ .
+ This package provides additional utilities for lxc.
 
 Package: lxc-dbg
 Section: debug

@@ -14,7 +14,7 @@ _Description: Automatically start Linux Containers on boot?
 
 Template: lxc/directory
 Type: string
-Default: /var/lib/lxc
+_Default: /var/lib/lxc
 _Description: LXC directory:
  Please specify the directory that will be used to store the Linux
  Containers.

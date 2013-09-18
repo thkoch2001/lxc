@@ -12,46 +12,8 @@ override_dh_auto_install:
 	dh_auto_install
 
 	# currently hardcoding lxc directory
-	echo "lxcpath=/var/lib/lxc" >> debian/tmp/etc/lxc/lxc.conf
-
-	# creating lxc directories
-	mkdir -p debian/tmp/etc/lxc/auto
-	mkdir -p debian/tmp/etc/lxc/debconfig
-	mkdir -p debian/tmp/usr/share/lxc/cache
-	mkdir -p debian/tmp/usr/share/lxc/includes
-	mkdir -p debian/tmp/usr/share/lxc/packages
-	mkdir -p debian/tmp/var/log/lxc
-
-	# debian local additions
-	mkdir -p debian/lxc/usr/bin
-	cp debian/local/lxc debian/lxc/usr/bin
-	cp debian/local/lxc-all debian/lxc/usr/bin
-	cp debian/local/lxc-backup debian/lxc/usr/bin
-	cp debian/local/lxc-halt debian/lxc/usr/bin
-	cp debian/local/lxc-list debian/lxc/usr/bin/lxc-list
-	cp debian/local/lxc-ls debian/lxc/usr/bin
-	cp debian/local/lxc-restore debian/lxc/usr/bin
-
-	mkdir -p debian/lxc/etc/bash_completion.d
-	cp debian/local/lxc.sh debian/lxc/etc/bash_completion.d
-
-	cp debian/local/hooks/systemd-container debian/tmp/usr/share/lxc/hooks
-	cp debian/local/hooks/systemd-host debian/tmp/usr/share/lxc/hooks
-
-	mkdir -p debian/lxc/usr/share/doc/examples/preseed
-	cp debian/local/examples/*.cfg debian/lxc/usr/share/doc/examples/preseed
-
-	cp -r debian/local/preseed debian/tmp/usr/share/lxc
-	cp -r debian/local/templates/* debian/tmp/usr/share/lxc/templates
-
-	# replacing upstreams debian template
-	rm -f debian/tmp/usr/share/lxc/templates/lxc-debian
-	ln -s lxc-debconfig debian/tmp/usr/share/lxc/templates/lxc-debian
-	ln -s lxc-debconfig.d debian/tmp/usr/share/lxc/templates/lxc-debian.d
-
-	# adding progress-linux template symlink
-	ln -s lxc-debconfig debian/tmp/usr/share/lxc/templates/lxc-progress-linux
-	ln -s lxc-debconfig.d debian/tmp/usr/share/lxc/templates/lxc-progress-linux.d
+	mkdir -p debian/lxc/etc/lxc
+	echo "lxcpath=/var/lib/lxc" >> debian/lxc/etc/lxc/lxc.conf
 
 	# removing useless files
 	rm -f debian/tmp/usr/bin/lxc-ls # superseeded by local version until python-lxc is ready
@@ -63,16 +25,11 @@ override_dh_builddeb:
 override_dh_compress:
 	dh_compress -X.cfg
 
-override_dh_fixperms:
-	dh_fixperms
-
-	chmod 0700 debian/lxc/var/log/lxc
-
 override_dh_install:
 	dh_install --fail-missing
 
 override_dh_installinit:
-	dh_installinit --no-restart-on-upgrade
+	dh_installinit --no-restart-on-upgrade --name lxc
 
 override_dh_strip:
 	dh_strip --dbg-package=lxc-dbg
