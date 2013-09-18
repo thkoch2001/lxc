@@ -15,7 +15,7 @@
 # X-Interactive:	true
 ### END INIT INFO
 
-if [ ! -x /usr/bin/lxc ] || [ ! -x /usr/bin/lxc-all ]
+if [ ! -x /usr/bin/lxc-start ] || [ ! -x /usr/bin/lxc-all ]
 then
 	exit 0
 fi

@@ -1,0 +1,6 @@
+debian/local/bin/*		/usr/bin
+debian/local/etc/*		/etc/bash_completion.d
+debian/local/hooks		/usr/share/lxc
+debian/local/examples/*.cfg	/usr/share/doc/lxc-stuff/examples
+debian/local/preseed		/usr/share/lxc
+debian/local/templates		/usr/share/lxc
