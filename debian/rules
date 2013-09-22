@@ -1,7 +1,5 @@
 #!/usr/bin/make -f
 
-SHELL := sh -e
-
 DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
 
 %:
