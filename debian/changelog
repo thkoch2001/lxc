@@ -1,3 +1,11 @@
+lxc (1.0.0~alpha1-3) experimental; urgency=low
+
+  * Moving local additions to separate binary package lxc-stuff.
+  * Removing set -e from rules for shell commands, not needed anymore.
+  * Updating copyright file.
+
+ -- Daniel Baumann <mail@daniel-baumann.ch>  Sun, 20 Oct 2013 07:22:28 +0200
+
 lxc (1.0.0~alpha1-2) experimental; urgency=low
 
   * Adding now required --rootfs handling to lxc-debconfig template.
