@@ -72,10 +72,9 @@
 #include "lxc.h"	/* for lxc_cgroup_set() */
 #include "caps.h"       /* for lxc_caps_last_cap() */
 #include "bdev.h"
-
-#if HAVE_APPARMOR
-#include <apparmor.h>
-#endif
+#include "cgroup.h"
+#include "lxclock.h"
+#include "lsm/lsm.h"
 
 #if HAVE_SYS_CAPABILITY_H
 #include <sys/capability.h>
@@ -295,11 +294,15 @@ static char *mkifname(char *template)
 	getifaddrs(&ifaddr);
 
 	/* Initialize the random number generator */
+	process_lock();
 	urandom = fopen ("/dev/urandom", "r");
+	process_unlock();
 	if (urandom != NULL) {
 		if (fread (&seed, sizeof(seed), 1, urandom) <= 0)
 			seed = time(0);
+		process_lock();
 		fclose(urandom);
+		process_unlock();
 	}
 	else
 		seed = time(0);
@@ -349,7 +352,9 @@ static int run_buffer(char *buffer)
 	char *output;
 	int ret;
 
+	process_lock();
 	f = popen(buffer, "r");
+	process_unlock();
 	if (!f) {
 		SYSERROR("popen failed");
 		return -1;
@@ -358,7 +363,9 @@ static int run_buffer(char *buffer)
 	output = malloc(LXC_LOG_BUFFER_SIZE);
 	if (!output) {
 		ERROR("failed to allocate memory for script output");
+		process_lock();
 		pclose(f);
+		process_unlock();
 		return -1;
 	}
 
@@ -367,7 +374,9 @@ static int run_buffer(char *buffer)
 
 	free(output);
 
+	process_lock();
 	ret = pclose(f);
+	process_unlock();
 	if (ret == -1) {
 		SYSERROR("Script exited on error");
 		return -1;
@@ -572,7 +581,9 @@ static int setup_lodev(const char *rootfs, int fd, struct loop_info64 *loinfo)
 	int rfd;
 	int ret = -1;
 
+	process_lock();
 	rfd = open(rootfs, O_RDWR);
+	process_unlock();
 	if (rfd < 0) {
 		SYSERROR("failed to open '%s'", rootfs);
 		return -1;
@@ -594,7 +605,9 @@ static int setup_lodev(const char *rootfs, int fd, struct loop_info64 *loinfo)
 
 	ret = 0;
 out:
+	process_lock();
 	close(rfd);
+	process_unlock();
 
 	return ret;
 }
@@ -607,7 +620,9 @@ static int mount_rootfs_file(const char *rootfs, const char *target)
 	DIR *dir;
 	char path[MAXPATHLEN];
 
+	process_lock();
 	dir = opendir("/dev");
+	process_unlock();
 	if (!dir) {
 		SYSERROR("failed to open '/dev'");
 		return -1;
@@ -631,19 +646,25 @@ static int mount_rootfs_file(const char *rootfs, const char *target)
 		if (rc < 0 || rc >= MAXPATHLEN)
 			continue;
 
+		process_lock();
 		fd = open(path, O_RDWR);
+		process_unlock();
 		if (fd < 0)
 			continue;
 
 		if (ioctl(fd, LOOP_GET_STATUS64, &loinfo) == 0) {
+			process_lock();
 			close(fd);
+			process_unlock();
 			continue;
 		}
 
 		if (errno != ENXIO) {
 			WARN("unexpected error for ioctl on '%s': %m",
 			     direntp->d_name);
+			process_lock();
 			close(fd);
+			process_unlock();
 			continue;
 		}
 
@@ -652,13 +673,17 @@ static int mount_rootfs_file(const char *rootfs, const char *target)
 		ret = setup_lodev(rootfs, fd, &loinfo);
 		if (!ret)
 			ret = mount_unknow_fs(path, target, 0);
+		process_lock();
 		close(fd);
+		process_unlock();
 
 		break;
 	}
 
+	process_lock();
 	if (closedir(dir))
 		WARN("failed to close directory");
+	process_unlock();
 
 	return ret;
 }
@@ -670,9 +695,10 @@ static int mount_rootfs_block(const char *rootfs, const char *target)
 
 /*
  * pin_rootfs
- * if rootfs is a directory, then open ${rootfs}.hold for writing for the
- * duration of the container run, to prevent the container from marking the
- * underlying fs readonly on shutdown.
+ * if rootfs is a directory, then open ${rootfs}/lxc.hold for writing for
+ * the duration of the container run, to prevent the container from marking
+ * the underlying fs readonly on shutdown. unlink the file immediately so
+ * no name pollution is happens
  * return -1 on error.
  * return -2 if nothing needed to be pinned.
  * return an open fd (>=0) if we pinned it.
@@ -687,33 +713,113 @@ int pin_rootfs(const char *rootfs)
 	if (rootfs == NULL || strlen(rootfs) == 0)
 		return -2;
 
-	if (!realpath(rootfs, absrootfs)) {
-		INFO("failed to get real path for '%s', not pinning", rootfs);
+	if (!realpath(rootfs, absrootfs))
 		return -2;
-	}
 
-	if (access(absrootfs, F_OK)) {
-		SYSERROR("'%s' is not accessible", absrootfs);
+	if (access(absrootfs, F_OK))
 		return -1;
-	}
 
-	if (stat(absrootfs, &s)) {
-		SYSERROR("failed to stat '%s'", absrootfs);
+	if (stat(absrootfs, &s))
 		return -1;
-	}
 
 	if (!S_ISDIR(s.st_mode))
 		return -2;
 
-	ret = snprintf(absrootfspin, MAXPATHLEN, "%s%s", absrootfs, ".hold");
-	if (ret >= MAXPATHLEN) {
-		SYSERROR("pathname too long for rootfs hold file");
+	ret = snprintf(absrootfspin, MAXPATHLEN, "%s/lxc.hold", absrootfs);
+	if (ret >= MAXPATHLEN)
 		return -1;
+
+	process_lock();
+	fd = open(absrootfspin, O_CREAT | O_RDWR, S_IWUSR|S_IRUSR);
+	process_unlock();
+	if (fd < 0)
+		return fd;
+	(void)unlink(absrootfspin);
+	return fd;
+}
+
+static int lxc_mount_auto_mounts(struct lxc_conf *conf, int flags, struct cgroup_process_info *cgroup_info)
+{
+	int r;
+	size_t i;
+	static struct {
+		int match_mask;
+		int match_flag;
+		const char *source;
+		const char *destination;
+		const char *fstype;
+		unsigned long flags;
+		const char *options;
+	} default_mounts[] = {
+		/* Read-only bind-mounting... In older kernels, doing that required
+		 * to do one MS_BIND mount and then MS_REMOUNT|MS_RDONLY the same
+		 * one. According to mount(2) manpage, MS_BIND honors MS_RDONLY from
+		 * kernel 2.6.26 onwards. However, this apparently does not work on
+		 * kernel 3.8. Unfortunately, on that very same kernel, doing the
+		 * same trick as above doesn't seem to work either, there one needs
+		 * to ALSO specify MS_BIND for the remount, otherwise the entire
+		 * fs is remounted read-only or the mount fails because it's busy...
+		 * MS_REMOUNT|MS_BIND|MS_RDONLY seems to work for kernels as low as
+		 * 2.6.32...
+		 */
+		{ LXC_AUTO_PROC_MASK, LXC_AUTO_PROC_MIXED, "proc",                  "%r/proc",               "proc",  MS_NODEV|MS_NOEXEC|MS_NOSUID, NULL },
+		{ LXC_AUTO_PROC_MASK, LXC_AUTO_PROC_MIXED, "%r/proc/sys",           "%r/proc/sys",           NULL,    MS_BIND,                      NULL },
+		{ LXC_AUTO_PROC_MASK, LXC_AUTO_PROC_MIXED, NULL,                    "%r/proc/sys",           NULL,    MS_REMOUNT|MS_BIND|MS_RDONLY, NULL },
+		{ LXC_AUTO_PROC_MASK, LXC_AUTO_PROC_MIXED, "%r/proc/sysrq-trigger", "%r/proc/sysrq-trigger", NULL,    MS_BIND,                      NULL },
+		{ LXC_AUTO_PROC_MASK, LXC_AUTO_PROC_MIXED, NULL,                    "%r/proc/sysrq-trigger", NULL,    MS_REMOUNT|MS_BIND|MS_RDONLY, NULL },
+		{ LXC_AUTO_PROC_MASK, LXC_AUTO_PROC_RW,    "proc",                  "%r/proc",               "proc",  MS_NODEV|MS_NOEXEC|MS_NOSUID, NULL },
+		{ LXC_AUTO_SYS_MASK,  LXC_AUTO_SYS_RW,     "sysfs",                 "%r/sys",                "sysfs", 0,                            NULL },
+		{ LXC_AUTO_SYS_MASK,  LXC_AUTO_SYS_RO,     "sysfs",                 "%r/sys",                "sysfs", MS_RDONLY,                    NULL },
+		{ 0,                  0,                   NULL,                    NULL,                    NULL,    0,                            NULL }
+	};
+
+	for (i = 0; default_mounts[i].match_mask; i++) {
+		if ((flags & default_mounts[i].match_mask) == default_mounts[i].match_flag) {
+			char *source = NULL;
+			char *destination = NULL;
+			int saved_errno;
+
+			if (default_mounts[i].source) {
+				/* will act like strdup if %r is not present */
+				source = lxc_string_replace("%r", conf->rootfs.mount, default_mounts[i].source);
+				if (!source) {
+					SYSERROR("memory allocation error");
+					return -1;
+				}
+			}
+			if (default_mounts[i].destination) {
+				/* will act like strdup if %r is not present */
+				destination = lxc_string_replace("%r", conf->rootfs.mount, default_mounts[i].destination);
+				if (!destination) {
+					saved_errno = errno;
+					SYSERROR("memory allocation error");
+					free(source);
+					errno = saved_errno;
+					return -1;
+				}
+			}
+			r = mount(source, destination, default_mounts[i].fstype, default_mounts[i].flags, default_mounts[i].options);
+			saved_errno = errno;
+			if (r < 0)
+				SYSERROR("error mounting %s on %s", source, destination);
+			free(source);
+			free(destination);
+			if (r < 0) {
+				errno = saved_errno;
+				return -1;
+			}
+		}
 	}
 
-	fd = open(absrootfspin, O_CREAT | O_RDWR, S_IWUSR|S_IRUSR);
-	INFO("opened %s as fd %d\n", absrootfspin, fd);
-	return fd;
+	if (flags & LXC_AUTO_CGROUP_MASK) {
+		r = lxc_setup_mount_cgroup(conf->rootfs.mount, cgroup_info, flags & LXC_AUTO_CGROUP_MASK);
+		if (r < 0) {
+			SYSERROR("error mounting /sys/fs/cgroup");
+			return -1;
+		}
+	}
+
+	return 0;
 }
 
 static int mount_rootfs(const char *rootfs, const char *target)
@@ -802,13 +908,17 @@ static int setup_tty(const struct lxc_rootfs *rootfs,
 				ERROR("pathname too long for ttys");
 				return -1;
 			}
+			process_lock();
 			ret = creat(lxcpath, 0660);
+			process_unlock();
 			if (ret==-1 && errno != EEXIST) {
 				SYSERROR("error creating %s\n", lxcpath);
 				return -1;
 			}
+			process_lock();
 			if (ret >= 0)
 				close(ret);
+			process_unlock();
 			ret = unlink(path);
 			if (ret && errno != ENOENT) {
 				SYSERROR("error unlinking %s\n", path);
@@ -834,12 +944,17 @@ static int setup_tty(const struct lxc_rootfs *rootfs,
 		} else {
 			/* If we populated /dev, then we need to create /dev/ttyN */
 			if (access(path, F_OK)) {
+				process_lock();
 				ret = creat(path, 0660);
+				process_unlock();
 				if (ret==-1) {
 					SYSERROR("error creating %s\n", path);
 					/* this isn't fatal, continue */
-				} else
+				} else {
+					process_lock();
 					close(ret);
+					process_unlock();
+				}
 			}
 			if (mount(pty_info->name, path, "none", MS_BIND, 0)) {
 				WARN("failed to mount '%s'->'%s'",
@@ -1147,7 +1262,9 @@ int detect_shared_rootfs(void)
 	int i;
 	char *p2;
 
+	process_lock();
 	f = fopen("/proc/self/mountinfo", "r");
+	process_unlock();
 	if (!f)
 		return 0;
 	while ((p = fgets(buf, LINELEN, f))) {
@@ -1165,12 +1282,16 @@ int detect_shared_rootfs(void)
 			// this is '/'.  is it shared?
 			p = index(p2+1, ' ');
 			if (p && strstr(p, "shared:")) {
+				process_lock();
 				fclose(f);
+				process_unlock();
 				return 1;
 			}
 		}
 	}
+	process_lock();
 	fclose(f);
+	process_unlock();
 	return 0;
 }
 
@@ -1306,7 +1427,7 @@ static int setup_pts(int pts)
 	}
 
 	if (mount("devpts", "/dev/pts", "devpts", MS_MGC_VAL,
-		  "newinstance,ptmxmode=0666")) {
+		  "newinstance,ptmxmode=0666,mode=0620,gid=5")) {
 		SYSERROR("failed to mount a new instance of '/dev/pts'");
 		return -1;
 	}
@@ -1426,13 +1547,17 @@ static int setup_ttydir_console(const struct lxc_rootfs *rootfs,
 		return -1;
 	}
 
+	process_lock();
 	ret = creat(lxcpath, 0660);
+	process_unlock();
 	if (ret==-1 && errno != EEXIST) {
 		SYSERROR("error %d creating %s\n", errno, lxcpath);
 		return -1;
 	}
+	process_lock();
 	if (ret >= 0)
 		close(ret);
+	process_unlock();
 
 	if (console->master < 0) {
 		INFO("no console");
@@ -1748,7 +1873,9 @@ static int setup_mount(const struct lxc_rootfs *rootfs, const char *fstab,
 	if (!fstab)
 		return 0;
 
+	process_lock();
 	file = setmntent(fstab, "r");
+	process_unlock();
 	if (!file) {
 		SYSERROR("failed to use '%s'", fstab);
 		return -1;
@@ -1756,7 +1883,9 @@ static int setup_mount(const struct lxc_rootfs *rootfs, const char *fstab,
 
 	ret = mount_file_entries(rootfs, file, lxc_name);
 
+	process_lock();
 	endmntent(file);
+	process_unlock();
 	return ret;
 }
 
@@ -1768,7 +1897,9 @@ static int setup_mount_entries(const struct lxc_rootfs *rootfs, struct lxc_list 
 	char *mount_entry;
 	int ret;
 
+	process_lock();
 	file = tmpfile();
+	process_unlock();
 	if (!file) {
 		ERROR("tmpfile error: %m");
 		return -1;
@@ -1783,7 +1914,9 @@ static int setup_mount_entries(const struct lxc_rootfs *rootfs, struct lxc_list 
 
 	ret = mount_file_entries(rootfs, file, lxc_name);
 
+	process_lock();
 	fclose(file);
+	process_unlock();
 	return ret;
 }
 
@@ -1928,14 +2061,18 @@ static int setup_hw_addr(char *hwaddr, const char *ifname)
 	memcpy(ifr.ifr_name, ifname, IFNAMSIZ);
 	memcpy((char *) &ifr.ifr_hwaddr, (char *) &sockaddr, sizeof(sockaddr));
 
+	process_lock();
 	fd = socket(AF_INET, SOCK_DGRAM, 0);
+	process_unlock();
 	if (fd < 0) {
 		ERROR("socket failure : %s", strerror(errno));
 		return -1;
 	}
 
 	ret = ioctl(fd, SIOCSIFHWADDR, &ifr);
+	process_lock();
 	close(fd);
+	process_unlock();
 	if (ret)
 		ERROR("ioctl failure : %s", strerror(errno));
 
@@ -2182,20 +2319,26 @@ static int setup_private_host_hw_addr(char *veth1)
 	int err;
 	int sockfd;
 
+	process_lock();
 	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+	process_unlock();
 	if (sockfd < 0)
 		return -errno;
 
 	snprintf((char *)ifr.ifr_name, IFNAMSIZ, "%s", veth1);
 	err = ioctl(sockfd, SIOCGIFHWADDR, &ifr);
 	if (err < 0) {
+		process_lock();
 		close(sockfd);
+		process_unlock();
 		return -errno;
 	}
 
 	ifr.ifr_hwaddr.sa_data[0] = 0xfe;
 	err = ioctl(sockfd, SIOCSIFHWADDR, &ifr);
+	process_lock();
 	close(sockfd);
+	process_unlock();
 	if (err < 0)
 		return -errno;
 
@@ -2253,12 +2396,9 @@ struct lxc_conf *lxc_conf_init(void)
 	lxc_list_init(&new->id_map);
 	for (i=0; i<NUM_LXC_HOOKS; i++)
 		lxc_list_init(&new->hooks[i]);
-#if HAVE_APPARMOR
-	new->aa_profile = NULL;
-#endif
-#if HAVE_APPARMOR /* || HAVE_SMACK || HAVE_SELINUX */
+	new->lsm_aa_profile = NULL;
+	new->lsm_se_context = NULL;
 	new->lsm_umount_proc = 0;
-#endif
 
 	return new;
 }
@@ -2637,7 +2777,9 @@ static int write_id_mapping(enum idtype idtype, pid_t pid, const char *buf,
 		fprintf(stderr, "%s: path name too long", __func__);
 		return -E2BIG;
 	}
+	process_lock();
 	f = fopen(path, "w");
+	process_unlock();
 	if (!f) {
 		perror("open");
 		return -EINVAL;
@@ -2645,7 +2787,9 @@ static int write_id_mapping(enum idtype idtype, pid_t pid, const char *buf,
 	ret = fwrite(buf, buf_size, 1, f);
 	if (ret < 0)
 		SYSERROR("writing id mapping");
+	process_lock();
 	closeret = fclose(f);
+	process_unlock();
 	if (closeret)
 		SYSERROR("writing id mapping");
 	return ret < 0 ? ret : closeret;
@@ -2743,7 +2887,7 @@ int lxc_find_gateway_addresses(struct lxc_handler *handler)
 int lxc_create_tty(const char *name, struct lxc_conf *conf)
 {
 	struct lxc_tty_info *tty_info = &conf->tty_info;
-	int i;
+	int i, ret;
 
 	/* no tty in the configuration */
 	if (!conf->tty)
@@ -2760,8 +2904,11 @@ int lxc_create_tty(const char *name, struct lxc_conf *conf)
 
 		struct lxc_pty_info *pty_info = &tty_info->pty_info[i];
 
-		if (openpty(&pty_info->master, &pty_info->slave,
-			    pty_info->name, NULL, NULL)) {
+		process_lock();
+		ret = openpty(&pty_info->master, &pty_info->slave,
+			    pty_info->name, NULL, NULL);
+		process_unlock();
+		if (ret) {
 			SYSERROR("failed to create pty #%d", i);
 			tty_info->nbtty = i;
 			lxc_delete_tty(tty_info);
@@ -2792,8 +2939,10 @@ void lxc_delete_tty(struct lxc_tty_info *tty_info)
 	for (i = 0; i < tty_info->nbtty; i++) {
 		struct lxc_pty_info *pty_info = &tty_info->pty_info[i];
 
+		process_lock();
 		close(pty_info->master);
 		close(pty_info->slave);
+		process_unlock();
 	}
 
 	free(tty_info->pty_info);
@@ -2887,12 +3036,8 @@ int uid_shift_ttys(int pid, struct lxc_conf *conf)
 	return 0;
 }
 
-int lxc_setup(const char *name, struct lxc_conf *lxc_conf, const char *lxcpath)
+int lxc_setup(const char *name, struct lxc_conf *lxc_conf, const char *lxcpath, struct cgroup_process_info *cgroup_info)
 {
-#if HAVE_APPARMOR /* || HAVE_SMACK || HAVE_SELINUX */
-	int mounted;
-#endif
-
 	if (setup_utsname(lxc_conf->utsname)) {
 		ERROR("failed to setup the utsname for '%s'", name);
 		return -1;
@@ -2920,6 +3065,14 @@ int lxc_setup(const char *name, struct lxc_conf *lxc_conf, const char *lxcpath)
 		}
 	}
 
+	/* do automatic mounts (mainly /proc and /sys), but exclude
+	 * those that need to wait until other stuff has finished
+	 */
+	if (lxc_mount_auto_mounts(lxc_conf, lxc_conf->auto_mounts & ~LXC_AUTO_CGROUP_MASK, cgroup_info) < 0) {
+		ERROR("failed to setup the automatic mounts for '%s'", name);
+		return -1;
+	}
+
 	if (setup_mount(&lxc_conf->rootfs, lxc_conf->fstab, name)) {
 		ERROR("failed to setup the mounts for '%s'", name);
 		return -1;
@@ -2927,6 +3080,15 @@ int lxc_setup(const char *name, struct lxc_conf *lxc_conf, const char *lxcpath)
 
 	if (!lxc_list_empty(&lxc_conf->mount_list) && setup_mount_entries(&lxc_conf->rootfs, &lxc_conf->mount_list, name)) {
 		ERROR("failed to setup the mount entries for '%s'", name);
+		return -1;
+	}
+
+	/* now mount only cgroup, if wanted;
+	 * before, /sys could not have been mounted
+	 * (is either mounted automatically or via fstab entries)
+	 */
+	if (lxc_mount_auto_mounts(lxc_conf, lxc_conf->auto_mounts & LXC_AUTO_CGROUP_MASK, cgroup_info) < 0) {
+		ERROR("failed to setup the automatic mounts for '%s'", name);
 		return -1;
 	}
 
@@ -2961,24 +3123,11 @@ int lxc_setup(const char *name, struct lxc_conf *lxc_conf, const char *lxcpath)
 		return -1;
 	}
 
-#if HAVE_APPARMOR /* || HAVE_SMACK || HAVE_SELINUX */
-	INFO("rootfs path is .%s., mount is .%s.", lxc_conf->rootfs.path,
-		lxc_conf->rootfs.mount);
-	if (lxc_conf->rootfs.path == NULL || strlen(lxc_conf->rootfs.path) == 0) {
-		if (mount("proc", "/proc", "proc", 0, NULL)) {
-			SYSERROR("Failed mounting /proc, proceeding");
-			mounted = 0;
-		} else
-			mounted = 1;
-	} else
-		mounted = lsm_mount_proc_if_needed(lxc_conf->rootfs.path, lxc_conf->rootfs.mount);
-	if (mounted == -1) {
-		SYSERROR("failed to mount /proc in the container.");
+	/* mount /proc if needed for LSM transition */
+	if (lsm_proc_mount(lxc_conf) < 0) {
+		ERROR("failed to LSM mount proc for '%s'", name);
 		return -1;
-	} else if (mounted == 1) {
-		lxc_conf->lsm_umount_proc = 1;
 	}
-#endif
 
 	if (setup_pivot_root(&lxc_conf->rootfs)) {
 		ERROR("failed to set rootfs for '%s'", name);
@@ -3309,10 +3458,10 @@ void lxc_conf_free(struct lxc_conf *conf)
 	if (conf->rcfile)
 		free(conf->rcfile);
 	lxc_clear_config_network(conf);
-#if HAVE_APPARMOR
-	if (conf->aa_profile)
-		free(conf->aa_profile);
-#endif
+	if (conf->lsm_aa_profile)
+		free(conf->lsm_aa_profile);
+	if (conf->lsm_se_context)
+		free(conf->lsm_se_context);
 	lxc_seccomp_free(conf);
 	lxc_clear_config_caps(conf);
 	lxc_clear_config_keepcaps(conf);

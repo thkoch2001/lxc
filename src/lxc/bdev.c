@@ -70,6 +70,8 @@ static int do_rsync(const char *src, const char *dest)
 		return -1;
 	if (pid > 0)
 		return wait_for_pid(pid);
+
+	process_unlock(); // we're no longer sharing
 	l = strlen(src) + 2;
 	s = malloc(l);
 	if (!s)
@@ -93,11 +95,15 @@ static int blk_getsize(struct bdev *bdev, unsigned long *size)
 	if (strcmp(bdev->type, "loop") == 0)
 		path = bdev->src + 5;
 
+	process_lock();
 	fd = open(path, O_RDONLY);
+	process_unlock();
 	if (fd < 0)
 		return -1;
 	ret = ioctl(fd, BLKGETSIZE64, size);
+	process_lock();
 	close(fd);
+	process_unlock();
 	return ret;
 }
 
@@ -194,6 +200,7 @@ static int do_mkfs(const char *path, const char *fstype)
 	if (pid > 0)
 		return wait_for_pid(pid);
 
+	process_unlock(); // we're no longer sharing
 	// If the file is not a block device, we don't want mkfs to ask
 	// us about whether to proceed.
 	close(0);
@@ -252,16 +259,23 @@ static int detect_fs(struct bdev *bdev, char *type, int len)
 	if (strcmp(bdev->type, "loop") == 0)
 		srcdev = bdev->src + 5;
 
-	if (pipe(p) < 0)
+	process_lock();
+	ret = pipe(p);
+	process_unlock();
+	if (ret < 0)
 		return -1;
 	if ((pid = fork()) < 0)
 		return -1;
 	if (pid > 0) {
 		int status;
+		process_lock();
 		close(p[1]);
+		process_unlock();
 		memset(type, 0, len);
 		ret = read(p[0], type, len-1);
+		process_lock();
 		close(p[0]);
+		process_unlock();
 		if (ret < 0) {
 			SYSERROR("error reading from pipe");
 			wait(&status);
@@ -277,6 +291,7 @@ static int detect_fs(struct bdev *bdev, char *type, int len)
 		return ret;
 	}
 
+	process_unlock(); // we're no longer sharing
 	if (unshare(CLONE_NEWNS) < 0)
 		exit(1);
 
@@ -488,7 +503,10 @@ static int zfs_list_entry(const char *path, char *output, size_t inlen)
 	FILE *f;
 	int found=0;
 
-	if ((f = popen("zfs list 2> /dev/null", "r")) == NULL) {
+	process_lock();
+	f = popen("zfs list 2> /dev/null", "r");
+	process_unlock();
+	if (f == NULL) {
 		SYSERROR("popen failed");
 		return 0;
 	}
@@ -498,7 +516,9 @@ static int zfs_list_entry(const char *path, char *output, size_t inlen)
 			break;
 		}
 	}
+	process_lock();
 	(void) pclose(f);
+	process_unlock();
 
 	return found;
 }
@@ -566,6 +586,8 @@ static int zfs_clone(const char *opath, const char *npath, const char *oname,
 			return -1;
 		if (!pid) {
 			char dev[MAXPATHLEN];
+
+			process_unlock(); // we're no longer sharing
 			ret = snprintf(dev, MAXPATHLEN, "%s/%s", zfsroot, nname);
 			if (ret < 0  || ret >= MAXPATHLEN)
 				exit(1);
@@ -589,6 +611,7 @@ static int zfs_clone(const char *opath, const char *npath, const char *oname,
 		if ((pid = fork()) < 0)
 			return -1;
 		if (!pid) {
+			process_unlock(); // we're no longer sharing
 			execlp("zfs", "zfs", "destroy", path1, NULL);
 			exit(1);
 		}
@@ -599,6 +622,7 @@ static int zfs_clone(const char *opath, const char *npath, const char *oname,
 		if ((pid = fork()) < 0)
 			return -1;
 		if (!pid) {
+			process_unlock(); // we're no longer sharing
 			execlp("zfs", "zfs", "snapshot", path1, NULL);
 			exit(1);
 		}
@@ -609,6 +633,7 @@ static int zfs_clone(const char *opath, const char *npath, const char *oname,
 		if ((pid = fork()) < 0)
 			return -1;
 		if (!pid) {
+			process_unlock(); // we're no longer sharing
 			execlp("zfs", "zfs", "clone", option, path1, path2, NULL);
 			exit(1);
 		}
@@ -659,6 +684,7 @@ static int zfs_destroy(struct bdev *orig)
 	if (pid)
 		return wait_for_pid(pid);
 
+	process_unlock(); // we're no longer sharing
 	if (!zfs_list_entry(orig->src, output, MAXPATHLEN)) {
 		ERROR("Error: zfs entry for %s not found", orig->src);
 		return -1;
@@ -703,6 +729,7 @@ static int zfs_create(struct bdev *bdev, const char *dest, const char *n,
 	if (pid)
 		return wait_for_pid(pid);
 
+	process_unlock(); // we're no longer sharing
 	char dev[MAXPATHLEN];
 	ret = snprintf(dev, MAXPATHLEN, "%s/%s", zfsroot, n);
 	if (ret < 0  || ret >= MAXPATHLEN)
@@ -750,11 +777,15 @@ static int lvm_detect(const char *path)
 		ERROR("lvm uuid pathname too long");
 		return 0;
 	}
+	process_lock();
 	fout = fopen(devp, "r");
+	process_unlock();
 	if (!fout)
 		return 0;
 	ret = fread(buf, 1, 4, fout);
+	process_lock();
 	fclose(fout);
+	process_unlock();
 	if (ret != 4 || strncmp(buf, "LVM-", 4) != 0)
 		return 0;
 	return 1;
@@ -785,7 +816,7 @@ static int lvm_umount(struct bdev *bdev)
  * not yet exist.  This function will attempt to create /dev/$vg/$lv of
  * size $size.
  */
-static int do_lvm_create(const char *path, unsigned long size)
+static int do_lvm_create(const char *path, unsigned long size, const char *thinpool)
 {
 	int ret, pid;
 	char sz[24], *pathdup, *vg, *lv;
@@ -797,6 +828,7 @@ static int do_lvm_create(const char *path, unsigned long size)
 	if (pid > 0)
 		return wait_for_pid(pid);
 
+	process_unlock(); // we're no longer sharing
 	// lvcreate default size is in M, not bytes.
 	ret = snprintf(sz, 24, "%lu", size/1000000);
 	if (ret < 0 || ret >= 24)
@@ -816,9 +848,61 @@ static int do_lvm_create(const char *path, unsigned long size)
 	if (!vg)
 		exit(1);
 	vg++;
-	execlp("lvcreate", "lvcreate", "-L", sz, vg, "-n", lv, (char *)NULL);
+	if (!thinpool) {
+	    execlp("lvcreate", "lvcreate", "-L", sz, vg, "-n", lv, (char *)NULL);
+	} else {
+	    execlp("lvcreate", "lvcreate", "--thinpool", thinpool, "-V", sz, vg, "-n", lv, (char *)NULL);
+	}
 	free(pathdup);
 	exit(1);
+}
+
+static int lvm_is_thin_volume(const char *path)
+{
+	FILE *f;
+	int ret, len, start=0;
+	char *cmd, output[12];
+	const char *lvscmd = "lvs --unbuffered --noheadings -o lv_attr %s 2>/dev/null";
+
+	len = strlen(lvscmd) + strlen(path) - 1;
+	cmd = alloca(len);
+
+	ret = snprintf(cmd, len, lvscmd, path);
+	if (ret < 0 || ret >= len)
+		return -1;
+
+	process_lock();
+	f = popen(cmd, "r");
+	process_unlock();
+
+	if (f == NULL) {
+		SYSERROR("popen failed");
+		return -1;
+	}
+
+	if (fgets(output, 12, f) == NULL) {
+		process_lock();
+		(void) pclose(f);
+		process_unlock();
+		return -1;
+	}
+
+	process_lock();
+	ret = pclose(f);
+	process_unlock();
+
+	if (!WIFEXITED(ret)) {
+		SYSERROR("error executing lvs");
+		return -1;
+	}
+
+	len = strlen(output);
+	while(start < len && output[start] == ' ') start++;
+
+	if (start + 6 < len && output[start + 6] == 't')
+		return 1;
+
+	return 0;
 }
 
 static int lvm_snapshot(const char *orig, const char *path, unsigned long size)
@@ -832,6 +916,8 @@ static int lvm_snapshot(const char *orig, const char *path, unsigned long size)
 	}
 	if (pid > 0)
 		return wait_for_pid(pid);
+
+	process_unlock(); // we're no longer sharing
 	// lvcreate default size is in M, not bytes.
 	ret = snprintf(sz, 24, "%lu", size/1000000);
 	if (ret < 0 || ret >= 24)
@@ -848,7 +934,18 @@ static int lvm_snapshot(const char *orig, const char *path, unsigned long size)
 	*lv = '\0';
 	lv++;
 
-	ret = execlp("lvcreate", "lvcreate", "-s", "-L", sz, "-n", lv, orig, (char *)NULL);
+	// check if the original lv is backed by a thin pool, in which case we
+	// cannot specify a size that's different from the original size.
+	ret = lvm_is_thin_volume(orig);
+	if (ret == -1)
+		return -1;
+
+	if (!ret) {
+		ret = execlp("lvcreate", "lvcreate", "-s", "-L", sz, "-n", lv, orig, (char *)NULL);
+	} else {
+		ret = execlp("lvcreate", "lvcreate", "-s", "-n", lv, orig, (char *)NULL);
+	}
+
 	free(pathdup);
 	exit(1);
 }
@@ -931,7 +1028,7 @@ static int lvm_clonepaths(struct bdev *orig, struct bdev *new, const char *oldna
 			return -1;
 		}
 	} else {
-		if (do_lvm_create(new->src, size) < 0) {
+		if (do_lvm_create(new->src, size, NULL) < 0) {
 			ERROR("Error creating new lvm blockdev");
 			return -1;
 		}
@@ -952,6 +1049,7 @@ static int lvm_destroy(struct bdev *orig)
 	if ((pid = fork()) < 0)
 		return -1;
 	if (!pid) {
+		process_unlock(); // we're no longer sharing
 		execlp("lvremove", "lvremove", "-f", orig->src, NULL);
 		exit(1);
 	}
@@ -963,7 +1061,7 @@ static int lvm_destroy(struct bdev *orig)
 static int lvm_create(struct bdev *bdev, const char *dest, const char *n,
 			struct bdev_specs *specs)
 {
-	const char *vg, *fstype, *lv = n;
+	const char *vg, *thinpool, *fstype, *lv = n;
 	unsigned long sz;
 	int ret, len;
 
@@ -973,6 +1071,8 @@ static int lvm_create(struct bdev *bdev, const char *dest, const char *n,
 	vg = specs->u.lvm.vg;
 	if (!vg)
 		vg = default_lvm_vg();
+
+	thinpool = specs->u.lvm.thinpool;
 
 	/* /dev/$vg/$lv */
 	if (specs->u.lvm.lv)
@@ -992,7 +1092,7 @@ static int lvm_create(struct bdev *bdev, const char *dest, const char *n,
 		sz = DEFAULT_FS_SIZE;
 
 	INFO("Error creating new lvm blockdev %s size %lu", bdev->src, sz);
-	if (do_lvm_create(bdev->src, sz) < 0) {
+	if (do_lvm_create(bdev->src, sz, thinpool) < 0) {
 		ERROR("Error creating new lvm blockdev %s size %lu", bdev->src, sz);
 		return -1;
 	}
@@ -1052,13 +1152,17 @@ static bool is_btrfs_fs(const char *path)
 	struct btrfs_ioctl_space_args sargs;
 
 	// make sure this is a btrfs filesystem
+	process_lock();
 	fd = open(path, O_RDONLY);
+	process_unlock();
 	if (fd < 0)
 		return false;
 	sargs.space_slots = 0;
 	sargs.total_spaces = 0;
 	ret = ioctl(fd, BTRFS_IOC_SPACE_INFO, &sargs);
+	process_lock();
 	close(fd);
+	process_unlock();
 	if (ret < 0)
 		return false;
 
@@ -1155,7 +1259,10 @@ static int btrfs_subvolume_create(const char *path)
 	}
 	*p = '\0';
 
-	if ((fd = open(newfull, O_RDONLY)) < 0) {
+	process_lock();
+	fd = open(newfull, O_RDONLY);
+	process_unlock();
+	if (fd < 0) {
 		ERROR("Error opening %s", newfull);
 		free(newfull);
 		return -1;
@@ -1168,7 +1275,9 @@ static int btrfs_subvolume_create(const char *path)
 	INFO("btrfs: snapshot create ioctl returned %d", ret);
 
 	free(newfull);
+	process_lock();
 	close(fd);
+	process_unlock();
 	return ret;
 }
 
@@ -1190,12 +1299,14 @@ static int btrfs_snapshot(const char *orig, const char *new)
 	}
 	newname = basename(newfull);
 	newdir = dirname(newfull);
+	process_lock();
 	fd = open(orig, O_RDONLY);
+	fddst = open(newdir, O_RDONLY);
+	process_unlock();
 	if (fd < 0) {
 		SYSERROR("Error opening original rootfs %s", orig);
 		goto out;
 	}
-	fddst = open(newdir, O_RDONLY);
 	if (fddst < 0) {
 		SYSERROR("Error opening new container dir %s", newdir);
 		goto out;
@@ -1209,10 +1320,12 @@ static int btrfs_snapshot(const char *orig, const char *new)
 	INFO("btrfs: snapshot create ioctl returned %d", ret);
 
 out:
+	process_lock();
 	if (fddst != -1)
 		close(fddst);
 	if (fd != -1)
 		close(fd);
+	process_unlock();
 	if (newfull)
 		free(newfull);
 	return ret;
@@ -1282,7 +1395,10 @@ static int btrfs_destroy(struct bdev *orig)
 	}
 	*p = '\0';
 
-	if ((fd = open(newfull, O_RDONLY)) < 0) {
+	process_lock();
+	fd = open(newfull, O_RDONLY);
+	process_unlock();
+	if (fd < 0) {
 		ERROR("Error opening %s", newfull);
 		free(newfull);
 		return -1;
@@ -1295,7 +1411,9 @@ static int btrfs_destroy(struct bdev *orig)
 	INFO("btrfs: snapshot create ioctl returned %d", ret);
 
 	free(newfull);
+	process_lock();
 	close(fd);
+	process_unlock();
 	return ret;
 }
 
@@ -1335,7 +1453,10 @@ static int find_free_loopdev(int *retfd, char *namep)
 	DIR *dir;
 	int fd = -1;
 
-	if (!(dir = opendir("/dev"))) {
+	process_lock();
+	dir = opendir("/dev");
+	process_unlock();
+	if (!dir) {
 		SYSERROR("Error opening /dev");
 		return -1;
 	}
@@ -1345,10 +1466,15 @@ static int find_free_loopdev(int *retfd, char *namep)
 			break;
 		if (strncmp(direntp->d_name, "loop", 4) != 0)
 			continue;
-		if ((fd = openat(dirfd(dir), direntp->d_name, O_RDWR)) < 0)
+		process_lock();
+		fd = openat(dirfd(dir), direntp->d_name, O_RDWR);
+		process_unlock();
+		if (fd < 0)
 			continue;
 		if (ioctl(fd, LOOP_GET_STATUS64, &lo) == 0 || errno != ENXIO) {
+			process_lock();
 			close(fd);
+			process_unlock();
 			fd = -1;
 			continue;
 		}
@@ -1356,7 +1482,9 @@ static int find_free_loopdev(int *retfd, char *namep)
 		snprintf(namep, 100, "/dev/%s", direntp->d_name);
 		break;
 	}
+	process_lock();
 	closedir(dir);
+	process_unlock();
 	if (fd == -1) {
 		ERROR("No loop device found");
 		return -1;
@@ -1379,7 +1507,10 @@ static int loop_mount(struct bdev *bdev)
 	if (find_free_loopdev(&lfd, loname) < 0)
 		return -22;
 
-	if ((ffd = open(bdev->src + 5, O_RDWR)) < 0) {
+	process_lock();
+	ffd = open(bdev->src + 5, O_RDWR);
+	process_unlock();
+	if (ffd < 0) {
 		SYSERROR("Error opening backing file %s\n", bdev->src);
 		goto out;
 	}
@@ -1402,12 +1533,14 @@ static int loop_mount(struct bdev *bdev)
 		bdev->lofd = lfd;
 
 out:
+	process_lock();
 	if (ffd > -1)
 		close(ffd);
 	if (ret < 0) {
 		close(lfd);
 		bdev->lofd = -1;
 	}
+	process_unlock();
 	return ret;
 }
 
@@ -1421,7 +1554,9 @@ static int loop_umount(struct bdev *bdev)
 		return -22;
 	ret = umount(bdev->dest);
 	if (bdev->lofd >= 0) {
+		process_lock();
 		close(bdev->lofd);
+		process_unlock();
 		bdev->lofd = -1;
 	}
 	return ret;
@@ -1429,9 +1564,11 @@ static int loop_umount(struct bdev *bdev)
 
 static int do_loop_create(const char *path, unsigned long size, const char *fstype)
 {
-	int fd;
+	int fd, ret;
 	// create the new loopback file.
+	process_lock();
 	fd = creat(path, S_IRUSR|S_IWUSR);
+	process_unlock();
 	if (fd < 0)
 		return -1;
 	if (lseek(fd, size, SEEK_SET) < 0) {
@@ -1444,7 +1581,10 @@ static int do_loop_create(const char *path, unsigned long size, const char *fsty
 		close(fd);
 		return -1;
 	}
-	if (close(fd) < 0) {
+	process_lock();
+	ret = close(fd);
+	process_unlock();
+	if (ret < 0) {
 		SYSERROR("Error closing new loop file");
 		return -1;
 	}
@@ -1975,6 +2115,7 @@ struct bdev *bdev_copy(const char *src, const char *oldname, const char *cname,
 		return new;
 	}
 
+	process_unlock(); // we're no longer sharing
 	if (unshare(CLONE_NEWNS) < 0) {
 		SYSERROR("unshare CLONE_NEWNS");
 		exit(1);

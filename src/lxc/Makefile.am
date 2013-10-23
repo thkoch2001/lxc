@@ -37,6 +37,18 @@ sodir=$(libdir)
 # use PROGRAMS to avoid complains from automake
 so_PROGRAMS = liblxc.so
 
+LSM_SOURCES = \
+	lsm/nop.c \
+	lsm/lsm.h lsm/lsm.c
+
+if ENABLE_APPARMOR
+LSM_SOURCES += lsm/apparmor.c
+endif
+
+if ENABLE_SELINUX
+LSM_SOURCES += lsm/selinux.c
+endif
+
 liblxc_so_SOURCES = \
 	arguments.c arguments.h \
 	bdev.c bdev.h \
@@ -73,10 +85,11 @@ liblxc_so_SOURCES = \
 	af_unix.c af_unix.h \
 	\
 	lxcutmp.c lxcutmp.h \
-	apparmor.c apparmor.h \
 	lxclock.h lxclock.c \
 	lxccontainer.c lxccontainer.h \
-	version.c version.h
+	version.c version.h \
+	\
+	$(LSM_SOURCES)
 
 if IS_BIONIC
 liblxc_so_SOURCES += \
@@ -100,10 +113,15 @@ AM_CFLAGS=-I$(top_srcdir)/src \
 	-DLOGPATH=\"$(LOGPATH)\" \
 	-DLXC_DEFAULT_CONFIG=\"$(LXC_DEFAULT_CONFIG)\" \
 	-DLXC_USERNIC_DB=\"$(LXC_USERNIC_DB)\" \
-	-DLXC_USERNIC_CONF=\"$(LXC_USERNIC_CONF)\"
+	-DLXC_USERNIC_CONF=\"$(LXC_USERNIC_CONF)\" \
+	-DDEFAULT_CGROUP_PATTERN=\"$(DEFAULT_CGROUP_PATTERN)\"
 
 if ENABLE_APPARMOR
 AM_CFLAGS += -DHAVE_APPARMOR
+endif
+
+if ENABLE_SELINUX
+AM_CFLAGS += -DHAVE_SELINUX
 endif
 
 if HAVE_NEWUIDMAP
@@ -171,7 +189,8 @@ bin_PROGRAMS = \
 	lxc-config \
 	lxc-destroy \
 	lxc-create \
-	lxc-user-nic
+	lxc-user-nic \
+	lxc-snapshot
 
 if HAVE_NEWUIDMAP
 bin_PROGRAMS += lxc-usernsexec
@@ -207,6 +226,7 @@ lxc_unshare_SOURCES = lxc_unshare.c
 lxc_wait_SOURCES = lxc_wait.c
 lxc_kill_SOURCES = lxc_kill.c
 lxc_create_SOURCES = lxc_create.c
+lxc_snapshot_SOURCES = lxc_snapshot.c
 lxc_usernsexec_SOURCES = lxc_usernsexec.c
 lxc_user_nic_SOURCES = lxc_user_nic.c
 
@@ -214,7 +234,6 @@ install-exec-local: install-soPROGRAMS
 	mkdir -p $(DESTDIR)$(datadir)/lxc
 	install -c -m 644 lxc.functions $(DESTDIR)$(datadir)/lxc
 	mv $(DESTDIR)$(libdir)/liblxc.so $(DESTDIR)$(libdir)/liblxc.so.$(VERSION)
-	/sbin/ldconfig -l $(DESTDIR)$(libdir)/liblxc.so.$(VERSION)
 	cd $(DESTDIR)$(libdir); \
 	ln -sf liblxc.so.$(VERSION) liblxc.so.$(firstword $(subst ., ,$(VERSION))); \
 	ln -sf liblxc.so.$(firstword $(subst ., ,$(VERSION))) liblxc.so

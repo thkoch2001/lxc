@@ -1,5 +1,9 @@
 SUBDIRS = examples rootfs
-DIST_SUBDIRS = examples rootfs
+DIST_SUBDIRS = examples rootfs ja
+
+if USE_DOCBOOK2X
+SUBDIRS += ja
+endif
 
 EXTRA_DIST = \
 	FAQ.txt
@@ -22,6 +26,7 @@ man_MANS = \
 	lxc-netstat.1 \
 	lxc-ps.1 \
 	lxc-restart.1 \
+	lxc-snapshot.1 \
 	lxc-start.1 \
 	lxc-stop.1 \
 	lxc-unfreeze.1 \

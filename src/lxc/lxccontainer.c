@@ -27,10 +27,11 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <sched.h>
+#include <dirent.h>
 #include "config.h"
 #include "lxc.h"
 #include "state.h"
-#include "lxccontainer.h"
+#include <lxc/lxccontainer.h>
 #include "conf.h"
 #include "confile.h"
 #include "console.h"
@@ -68,6 +69,19 @@ static bool file_exists(char *f)
 	return stat(f, &statbuf) == 0;
 }
 
+static bool config_file_exists(const char *lxcpath, const char *cname)
+{
+	/* $lxcpath + '/' + $cname + '/config' + \0 */
+	int ret, len = strlen(lxcpath) + strlen(cname) + 9;
+	char *fname = alloca(len);
+
+	ret = snprintf(fname, len,  "%s/%s/config", lxcpath, cname);
+	if (ret < 0 || ret >= len)
+		return false;
+
+	return file_exists(fname);
+}
+
 /*
  * A few functions to help detect when a container creation failed.
  * If a container creation was killed partway through, then trying
@@ -92,12 +106,12 @@ int ongoing_create(struct lxc_container *c)
 
 	if (!file_exists(path))
 		return 0;
-	if (process_lock())
-		return -1;
-	if ((fd = open(path, O_RDWR)) < 0) {
+	process_lock();
+	fd = open(path, O_RDWR);
+	process_unlock();
+	if (fd < 0) {
 		// give benefit of the doubt
 		SYSERROR("Error opening partial file");
-		process_unlock();
 		return 0;
 	}
 	lk.l_type = F_WRLCK;
@@ -107,11 +121,13 @@ int ongoing_create(struct lxc_container *c)
 	lk.l_pid = -1;
 	if (fcntl(fd, F_GETLK, &lk) == 0 && lk.l_pid != -1) {
 		// create is still ongoing
+		process_lock();
 		close(fd);
 		process_unlock();
 		return 1;
 	}
 	// create completed but partial is still there.
+	process_lock();
 	close(fd);
 	process_unlock();
 	return 2;
@@ -130,8 +146,7 @@ int create_partial(struct lxc_container *c)
 		ERROR("Error writing partial pathname");
 		return -1;
 	}
-	if (process_lock())
-		return -1;
+	process_lock();
 	if ((fd=open(path, O_RDWR | O_CREAT | O_EXCL, 0755)) < 0) {
 		SYSERROR("Erorr creating partial file");
 		process_unlock();
@@ -159,17 +174,16 @@ void remove_partial(struct lxc_container *c, int fd)
 	char *path = alloca(len);
 	int ret;
 
+	process_lock();
 	close(fd);
+	process_unlock();
 	ret = snprintf(path, len, "%s/%s/partial", c->config_path, c->name);
 	if (ret < 0 || ret >= len) {
 		ERROR("Error writing partial pathname");
 		return;
 	}
-	if (process_lock())
-		return;
 	if (unlink(path) < 0)
 		SYSERROR("Error unlink partial file %s", path);
-	process_unlock();
 }
 
 /* LOCKING
@@ -448,6 +462,19 @@ static void lxcapi_want_daemonize(struct lxc_container *c)
 	container_mem_unlock(c);
 }
 
+static bool lxcapi_want_close_all_fds(struct lxc_container *c)
+{
+	if (!c || !c->lxc_conf)
+		return false;
+	if (container_mem_lock(c)) {
+		ERROR("Error getting mem lock");
+		return false;
+	}
+	c->lxc_conf->close_all_fds = 1;
+	container_mem_unlock(c);
+	return true;
+}
+
 static bool lxcapi_wait(struct lxc_container *c, const char *state, int timeout)
 {
 	int ret;
@@ -538,20 +565,15 @@ static bool lxcapi_start(struct lxc_container *c, int useinit, char * const argv
 			return false;
 		lxc_monitord_spawn(c->config_path);
 
-		if (process_lock())
-			return false;
 		pid_t pid = fork();
 		if (pid < 0) {
 			lxc_container_put(c);
-			process_unlock();
 			return false;
 		}
-		if (pid != 0) {
-			ret = wait_on_daemonized_start(c);
-			process_unlock();
-			return ret;
-		}
-		process_unlock();
+		if (pid != 0)
+			return wait_on_daemonized_start(c);
+
+		process_unlock(); // we're no longer sharing
 		/* second fork to be reparented by init */
 		pid = fork();
 		if (pid < 0) {
@@ -704,38 +726,32 @@ static struct bdev *do_bdev_create(struct lxc_container *c, const char *type,
 /*
  * Given the '-t' template option to lxc-create, figure out what to
  * do.  If the template is a full executable path, use that.  If it
- * is something like 'sshd', then return $templatepath/lxc-sshd.  If
- * no template was passed in, return NULL  (this is ok).
- * On error return (char *) -1.
+ * is something like 'sshd', then return $templatepath/lxc-sshd.
+ * On success return the template, on error return NULL.
  */
-char *get_template_path(const char *t)
+static char *get_template_path(const char *t)
 {
 	int ret, len;
 	char *tpath;
 
-	if (!t)
-		return NULL;
-
 	if (t[0] == '/' && access(t, X_OK) == 0) {
 		tpath = strdup(t);
-		if (!tpath)
-			return (char *) -1;
 		return tpath;
 	}
 
 	len = strlen(LXCTEMPLATEDIR) + strlen(t) + strlen("/lxc-") + 1;
 	tpath = malloc(len);
 	if (!tpath)
-		return (char *) -1;
+		return NULL;
 	ret = snprintf(tpath, len, "%s/lxc-%s", LXCTEMPLATEDIR, t);
 	if (ret < 0 || ret >= len) {
 		free(tpath);
-		return (char *) -1;
+		return NULL;
 	}
 	if (access(tpath, X_OK) < 0) {
 		SYSERROR("bad template: %s\n", t);
 		free(tpath);
-		return (char *) -1;
+		return NULL;
 	}
 
 	return tpath;
@@ -770,6 +786,7 @@ static bool create_run_template(struct lxc_container *c, char *tpath, bool quiet
 		int ret, len, nargs = 0;
 		char **newargv;
 
+		process_unlock(); // we're no longer sharing
 		if (quiet) {
 			close(0);
 			close(1);
@@ -872,71 +889,58 @@ bool prepend_lxc_header(char *path, const char *t, char *const argv[])
 	long flen;
 	char *contents;
 	FILE *f;
+	int ret = -1;
 #if HAVE_LIBGNUTLS
-	int i, ret;
+	int i;
 	unsigned char md_value[SHA_DIGEST_LENGTH];
 	char *tpath;
-	bool have_tpath = false;
 #endif
 
-	if ((f = fopen(path, "r")) == NULL) {
-		SYSERROR("Opening old config");
+	process_lock();
+	f = fopen(path, "r");
+	process_unlock();
+	if (f == NULL)
 		return false;
-	}
-	if (fseek(f, 0, SEEK_END) < 0) {
-		SYSERROR("Seeking to end of old config file");
-		fclose(f);
-		return false;
-	}
-	if ((flen = ftell(f)) < 0) {
-		SYSERROR("telling size of old config");
-		fclose(f);
-		return false;
-	}
-	if (fseek(f, 0, SEEK_SET) < 0) {
-		SYSERROR("rewinding old config");
-		fclose(f);
-		return false;
-	}
-	if ((contents = malloc(flen + 1)) == NULL) {
-		SYSERROR("out of memory");
-		fclose(f);
-		return false;
-	}
-	if (fread(contents, 1, flen, f) != flen) {
-		SYSERROR("Reading old config");
-		free(contents);
-		fclose(f);
-		return false;
-	}
+
+	if (fseek(f, 0, SEEK_END) < 0)
+		goto out_error;
+	if ((flen = ftell(f)) < 0)
+		goto out_error;
+	if (fseek(f, 0, SEEK_SET) < 0)
+		goto out_error;
+	if ((contents = malloc(flen + 1)) == NULL)
+		goto out_error;
+	if (fread(contents, 1, flen, f) != flen)
+		goto out_free_contents;
+
 	contents[flen] = '\0';
-	if (fclose(f) < 0) {
-		SYSERROR("closing old config");
-		free(contents);
-		return false;
-	}
+	process_lock();
+	ret = fclose(f);
+	process_unlock();
+	f = NULL;
+	if (ret < 0)
+		goto out_free_contents;
 
 #if HAVE_LIBGNUTLS
 	tpath = get_template_path(t);
-	if (tpath == (char *) -1) {
+	if (!tpath) {
 		ERROR("bad template: %s\n", t);
-		free(contents);
-		return false;
+		goto out_free_contents;
 	}
 
-	if (tpath) {
-		have_tpath = true;
-		ret = sha1sum_file(tpath, md_value);
-		if (ret < 0) {
-			ERROR("Error getting sha1sum of %s", tpath);
-			free(contents);
-			return false;
-		}
+	ret = sha1sum_file(tpath, md_value);
+	if (ret < 0) {
+		ERROR("Error getting sha1sum of %s", tpath);
 		free(tpath);
+		goto out_free_contents;
 	}
+	free(tpath);
 #endif
 
-	if ((f = fopen(path, "w")) == NULL) {
+	process_lock();
+	f = fopen(path, "w");
+	process_unlock();
+	if (f == NULL) {
 		SYSERROR("reopening config for writing");
 		free(contents);
 		return false;
@@ -951,22 +955,33 @@ bool prepend_lxc_header(char *path, const char *t, char *const argv[])
 		fprintf(f, "\n");
 	}
 #if HAVE_LIBGNUTLS
-	if (have_tpath) {
-		fprintf(f, "# Template script checksum (SHA-1): ");
-		for (i=0; i<SHA_DIGEST_LENGTH; i++)
-			fprintf(f, "%02x", md_value[i]);
-		fprintf(f, "\n");
-	}
+	fprintf(f, "# Template script checksum (SHA-1): ");
+	for (i=0; i<SHA_DIGEST_LENGTH; i++)
+		fprintf(f, "%02x", md_value[i]);
+	fprintf(f, "\n");
 #endif
 	if (fwrite(contents, 1, flen, f) != flen) {
 		SYSERROR("Writing original contents");
 		free(contents);
+		process_lock();
 		fclose(f);
+		process_unlock();
 		return false;
 	}
+	ret = 0;
+out_free_contents:
 	free(contents);
-	if (fclose(f) < 0) {
-		SYSERROR("Closing config file after write");
+out_error:
+	if (f) {
+		int newret;
+		process_lock();
+		newret = fclose(f);
+		process_unlock();
+		if (ret == 0)
+			ret = newret;
+	}
+	if (ret < 0) {
+		SYSERROR("Error prepending header");
 		return false;
 	}
 	return true;
@@ -993,16 +1008,18 @@ static bool lxcapi_create(struct lxc_container *c, const char *t,
 {
 	bool bret = false;
 	pid_t pid;
-	char *tpath;
+	char *tpath = NULL;
 	int partial_fd;
 
 	if (!c)
 		return false;
 
-	tpath = get_template_path(t);
-	if (tpath == (char *) -1) {
-		ERROR("bad template: %s\n", t);
-		goto out;
+	if (t) {
+		tpath = get_template_path(t);
+		if (!tpath) {
+			ERROR("bad template: %s\n", t);
+			goto out;
+		}
 	}
 
 	if (!c->save_config(c, NULL)) {
@@ -1036,6 +1053,7 @@ static bool lxcapi_create(struct lxc_container *c, const char *t,
 	if (pid == 0) { // child
 		struct bdev *bdev = NULL;
 
+		process_unlock(); // we're no longer sharing
 		if (!(bdev = do_bdev_create(c, bdevtype, specs))) {
 			ERROR("Error creating backing store type %s for %s",
 				bdevtype ? bdevtype : "(none)", c->name);
@@ -1171,23 +1189,30 @@ static bool lxcapi_clear_config_item(struct lxc_container *c, const char *key)
 	return ret == 0;
 }
 
-char** lxcapi_get_ips(struct lxc_container *c, char* interface, char* family, int scope)
-{
-	int count = 0;
-	struct ifaddrs *interfaceArray = NULL, *tempIfAddr = NULL;
-	char addressOutputBuffer[INET6_ADDRSTRLEN];
-	void *tempAddrPtr = NULL;
-	char **addresses = NULL, **temp;
-	char *address = NULL;
+static inline void exit_from_ns(struct lxc_container *c, int *old_netns, int *new_netns) {
+	/* Switch back to original netns */
+	if (*old_netns >= 0 && setns(*old_netns, CLONE_NEWNET))
+		SYSERROR("failed to setns");
+	process_lock();
+	if (*new_netns >= 0)
+		close(*new_netns);
+	if (*old_netns >= 0)
+		close(*old_netns);
+	process_unlock();
+}
+
+static inline bool enter_to_ns(struct lxc_container *c, int *old_netns, int *new_netns) {
+	int ret = 0;
 	char new_netns_path[MAXPATHLEN];
-	int old_netns = -1, new_netns = -1, ret = 0;
 
 	if (!c->is_running(c))
 		goto out;
 
 	/* Save reference to old netns */
-	old_netns = open("/proc/self/ns/net", O_RDONLY);
-	if (old_netns < 0) {
+	process_lock();
+	*old_netns = open("/proc/self/ns/net", O_RDONLY);
+	process_unlock();
+	if (*old_netns < 0) {
 		SYSERROR("failed to open /proc/self/ns/net");
 		goto out;
 	}
@@ -1197,16 +1222,34 @@ char** lxcapi_get_ips(struct lxc_container *c, char* interface, char* family, in
 	if (ret < 0 || ret >= MAXPATHLEN)
 		goto out;
 
-	new_netns = open(new_netns_path, O_RDONLY);
-	if (new_netns < 0) {
+	process_lock();
+	*new_netns = open(new_netns_path, O_RDONLY);
+	process_unlock();
+	if (*new_netns < 0) {
 		SYSERROR("failed to open %s", new_netns_path);
 		goto out;
 	}
 
-	if (setns(new_netns, CLONE_NEWNET)) {
+	if (setns(*new_netns, CLONE_NEWNET)) {
 		SYSERROR("failed to setns");
 		goto out;
 	}
+	return true;
+out:
+	exit_from_ns(c, old_netns, new_netns);
+	return false;
+}
+
+static char** lxcapi_get_interfaces(struct lxc_container *c)
+{
+	int count = 0, i;
+	bool found = false;
+	struct ifaddrs *interfaceArray = NULL, *tempIfAddr = NULL;
+	char **interfaces = NULL, **temp;
+	int old_netns = -1, new_netns = -1;
+
+	if (!enter_to_ns(c, &old_netns, &new_netns))
+		goto out;
 
 	/* Grab the list of interfaces */
 	if (getifaddrs(&interfaceArray)) {
@@ -1216,6 +1259,68 @@ char** lxcapi_get_ips(struct lxc_container *c, char* interface, char* family, in
 
 	/* Iterate through the interfaces */
 	for (tempIfAddr = interfaceArray; tempIfAddr != NULL; tempIfAddr = tempIfAddr->ifa_next) {
+		/*
+		 * WARNING: Following "for" loop does a linear search over the interfaces array
+		 * For the containers with lots of interfaces this may be problematic.
+		 * I'm not expecting this to be the common usage but if it turns out to be
+		 *     than using binary search or a hash table could be more elegant solution.
+		 */
+		for (i = 0; i < count; i++) {
+			if (strcmp(interfaces[i], tempIfAddr->ifa_name) == 0) {
+				found = true;
+				break;
+			}
+		}
+
+		if (!found) {
+			count += 1;
+			temp = realloc(interfaces, count * sizeof(*interfaces));
+			if (!temp) {
+				count -= 1;
+				goto out;
+			}
+			interfaces = temp;
+			interfaces[count - 1] = strdup(tempIfAddr->ifa_name);
+		}
+		found = false;
+    }
+
+out:
+       if (interfaceArray)
+               freeifaddrs(interfaceArray);
+
+       exit_from_ns(c, &old_netns, &new_netns);
+
+       /* Append NULL to the array */
+       interfaces = (char **)lxc_append_null_to_array((void **)interfaces, count);
+
+       return interfaces;
+}
+
+static char** lxcapi_get_ips(struct lxc_container *c, char* interface, char* family, int scope)
+{
+	int count = 0;
+	struct ifaddrs *interfaceArray = NULL, *tempIfAddr = NULL;
+	char addressOutputBuffer[INET6_ADDRSTRLEN];
+	void *tempAddrPtr = NULL;
+	char **addresses = NULL, **temp;
+	char *address = NULL;
+	int old_netns = -1, new_netns = -1;
+
+	if (!enter_to_ns(c, &old_netns, &new_netns))
+		goto out;
+
+	/* Grab the list of interfaces */
+	if (getifaddrs(&interfaceArray)) {
+		SYSERROR("failed to get interfaces list");
+		goto out;
+	}
+
+	/* Iterate through the interfaces */
+	for (tempIfAddr = interfaceArray; tempIfAddr != NULL; tempIfAddr = tempIfAddr->ifa_next) {
+		if (tempIfAddr->ifa_addr == NULL)
+			continue;
+
 		if(tempIfAddr->ifa_addr->sa_family == AF_INET) {
 			if (family && strcmp(family, "inet"))
 				continue;
@@ -1257,28 +1362,10 @@ out:
 	if(interfaceArray)
 		freeifaddrs(interfaceArray);
 
-	/* Switch back to original netns */
-	if (old_netns >= 0 && setns(old_netns, CLONE_NEWNET))
-		SYSERROR("failed to setns");
-	if (new_netns >= 0)
-		close(new_netns);
-	if (old_netns >= 0)
-		close(old_netns);
+	exit_from_ns(c, &old_netns, &new_netns);
 
 	/* Append NULL to the array */
-	if (count) {
-		count++;
-		temp = realloc(addresses, count * sizeof(*addresses));
-		if (!temp) {
-			int i;
-			for (i = 0; i < count-1; i++)
-				free(addresses[i]);
-			free(addresses);
-			return NULL;
-		}
-		addresses = temp;
-		addresses[count - 1] = NULL;
-	}
+	addresses = (char **)lxc_append_null_to_array((void **)addresses, count);
 
 	return addresses;
 }
@@ -1382,25 +1469,36 @@ static bool mod_rdep(struct lxc_container *c, bool inc)
 			c->name);
 	if (ret < 0 || ret > MAXPATHLEN)
 		goto out;
+	process_lock();
 	f = fopen(path, "r");
+	process_unlock();
 	if (f) {
 		ret = fscanf(f, "%d", &v);
+		process_lock();
 		fclose(f);
+		process_unlock();
 		if (ret != 1) {
 			ERROR("Corrupted file %s", path);
 			goto out;
 		}
 	}
 	v += inc ? 1 : -1;
+	process_lock();
 	f = fopen(path, "w");
+	process_unlock();
 	if (!f)
 		goto out;
 	if (fprintf(f, "%d\n", v) < 0) {
 		ERROR("Error writing new snapshots value");
+		process_lock();
 		fclose(f);
+		process_unlock();
 		goto out;
 	}
-	if (fclose(f) != 0) {
+	process_lock();
+	ret = fclose(f);
+	process_unlock();
+	if (ret != 0) {
 		SYSERROR("Error writing to or closing snapshots file");
 		goto out;
 	}
@@ -1435,7 +1533,10 @@ static void mod_all_rdeps(struct lxc_container *c, bool inc)
 		ERROR("Path name too long");
 		return;
 	}
-	if ((f = fopen(path, "r")) == NULL)
+	process_lock();
+	f = fopen(path, "r");
+	process_unlock();
+	if (f == NULL)
 		return;
 	while (getline(&lxcpath, &pathlen, f) != -1) {
 		if (getline(&lxcname, &namelen, f) == -1) {
@@ -1457,7 +1558,9 @@ static void mod_all_rdeps(struct lxc_container *c, bool inc)
 out:
 	if (lxcpath) free(lxcpath);
 	if (lxcname) free(lxcname);
+	process_lock();
 	fclose(f);
+	process_unlock();
 }
 
 static bool has_snapshots(struct lxc_container *c)
@@ -1471,11 +1574,15 @@ static bool has_snapshots(struct lxc_container *c)
 			c->name);
 	if (ret < 0 || ret > MAXPATHLEN)
 		goto out;
+	process_lock();
 	f = fopen(path, "r");
+	process_unlock();
 	if (!f)
 		goto out;
 	ret = fscanf(f, "%d", &v);
+	process_lock();
 	fclose(f);
+	process_unlock();
 	if (ret != 1)
 		goto out;
 	bret = v != 0;
@@ -1665,7 +1772,7 @@ static bool lxcapi_set_cgroup_item(struct lxc_container *c, const char *subsys, 
 	if (container_disk_lock(c))
 		return false;
 
-	ret = lxc_cgroup_set(c->name, subsys, value, c->config_path);
+	ret = lxc_cgroup_set(subsys, value, c->name, c->config_path);
 
 	container_disk_unlock(c);
 	return ret == 0;
@@ -1684,7 +1791,7 @@ static int lxcapi_get_cgroup_item(struct lxc_container *c, const char *subsys, c
 	if (container_disk_lock(c))
 		return -1;
 
-	ret = lxc_cgroup_get(c->name, subsys, retv, inlen, c->config_path);
+	ret = lxc_cgroup_get(subsys, retv, inlen, c->name, c->config_path);
 
 	container_disk_unlock(c);
 	return ret;
@@ -1698,6 +1805,11 @@ const char *lxc_get_default_config_path(void)
 const char *lxc_get_default_lvm_vg(void)
 {
 	return default_lvm_vg();
+}
+
+const char *lxc_get_default_lvm_thin_pool(void)
+{
+	return default_lvm_thin_pool();
 }
 
 const char *lxc_get_default_zfs_root(void)
@@ -1727,15 +1839,21 @@ static int copy_file(char *old, char *new)
 		return -1;
 	}
 
+	process_lock();
 	in = open(old, O_RDONLY);
+	process_unlock();
 	if (in < 0) {
 		SYSERROR("Error opening original file %s", old);
 		return -1;
 	}
+	process_lock();
 	out = open(new, O_CREAT | O_EXCL | O_WRONLY, 0644);
+	process_unlock();
 	if (out < 0) {
 		SYSERROR("Error opening new file %s", new);
+		process_lock();
 		close(in);
+		process_unlock();
 		return -1;
 	}
 
@@ -1753,8 +1871,10 @@ static int copy_file(char *old, char *new)
 			goto err;
 		}
 	}
+	process_lock();
 	close(in);
 	close(out);
+	process_unlock();
 
 	// we set mode, but not owner/group
 	ret = chmod(new, sbuf.st_mode);
@@ -1766,8 +1886,10 @@ static int copy_file(char *old, char *new)
 	return 0;
 
 err:
+	process_lock();
 	close(in);
 	close(out);
+	process_unlock();
 	return -1;
 }
 
@@ -1807,13 +1929,18 @@ static int copyhooks(struct lxc_container *oldc, struct lxc_container *c)
 
 static void new_hwaddr(char *hwaddr)
 {
-	FILE *f = fopen("/dev/urandom", "r");
+	FILE *f;
+	process_lock();
+	f = fopen("/dev/urandom", "r");
+	process_unlock();
 	if (f) {
 		unsigned int seed;
 		int ret = fread(&seed, sizeof(seed), 1, f);
 		if (ret != 1)
 			seed = time(NULL);
+		process_lock();
 		fclose(f);
+		process_unlock();
 		srand(seed);
 	} else
 		srand(time(NULL));
@@ -1903,15 +2030,19 @@ static bool add_rdepends(struct lxc_container *c, struct lxc_container *c0)
 		c->name);
 	if (ret < 0 || ret >= MAXPATHLEN)
 		return false;
+	process_lock();
 	f = fopen(path, "a");
+	process_unlock();
 	if (!f)
 		return false;
 	bret = true;
 	// if anything goes wrong, just return an error
 	if (fprintf(f, "%s\n%s\n", c0->config_path, c0->name) < 0)
 		bret = false;
+	process_lock();
 	if (fclose(f) != 0)
 		bret = false;
+	process_unlock();
 	return bret;
 }
 
@@ -1968,6 +2099,7 @@ static int clone_update_rootfs(struct lxc_container *c0,
 	if (pid > 0)
 		return wait_for_pid(pid);
 
+	process_unlock(); // we're no longer sharing
 	if (unshare(CLONE_NEWNS) < 0) {
 		ERROR("error unsharing mounts");
 		exit(1);
@@ -2089,13 +2221,17 @@ struct lxc_container *lxcapi_clone(struct lxc_container *c, const char *newname,
 	}
 
 	// copy the configuration, tweak it as needed,
+	process_lock();
 	fout = fopen(newpath, "w");
+	process_unlock();
 	if (!fout) {
 		SYSERROR("open %s", newpath);
 		goto out;
 	}
 	write_config(fout, c->lxc_conf);
+	process_lock();
 	fclose(fout);
+	process_unlock();
 
 	sprintf(newpath, "%s/%s/rootfs", l, n);
 	if (mkdir(newpath, 0755) < 0) {
@@ -2192,6 +2328,297 @@ static int lxcapi_attach_run_wait(struct lxc_container *c, lxc_attach_options_t 
 	return lxc_wait_for_pid_status(pid);
 }
 
+int get_next_index(const char *lxcpath, char *cname)
+{
+	char *fname;
+	struct stat sb;
+	int i = 0, ret;
+
+	fname = alloca(strlen(lxcpath) + 20);
+	while (1) {
+		sprintf(fname, "%s/snap%d", lxcpath, i);
+		ret = stat(fname, &sb);
+		if (ret != 0)
+			return i;
+		i++;
+	}
+}
+
+static int lxcapi_snapshot(struct lxc_container *c, char *commentfile)
+{
+	int i, flags, ret;
+	struct lxc_container *c2;
+	char snappath[MAXPATHLEN], newname[20];
+
+	// /var/lib/lxc -> /var/lib/lxcsnaps \0
+	ret = snprintf(snappath, MAXPATHLEN, "%ssnaps/%s", c->config_path, c->name);
+	if (ret < 0 || ret >= MAXPATHLEN)
+		return -1;
+	i = get_next_index(snappath, c->name);
+
+	if (mkdir_p(snappath, 0755) < 0) {
+		ERROR("Failed to create snapshot directory %s", snappath);
+		return -1;
+	}
+
+	ret = snprintf(newname, 20, "snap%d", i);
+	if (ret < 0 || ret >= 20)
+		return -1;
+
+	flags = LXC_CLONE_SNAPSHOT | LXC_CLONE_KEEPMACADDR | LXC_CLONE_KEEPNAME;
+	c2 = c->clone(c, newname, snappath, flags, NULL, NULL, 0, NULL);
+	if (!c2) {
+		ERROR("clone of %s:%s failed\n", c->config_path, c->name);
+		return -1;
+	}
+
+	lxc_container_put(c2);
+
+	// Now write down the creation time
+	time_t timer;
+	char buffer[25];
+	struct tm* tm_info;
+	FILE *f;
+
+	time(&timer);
+	tm_info = localtime(&timer);
+
+	strftime(buffer, 25, "%Y:%m:%d %H:%M:%S", tm_info);
+
+	char *dfnam = alloca(strlen(snappath) + strlen(newname) + 5);
+	sprintf(dfnam, "%s/%s/ts", snappath, newname);
+	process_lock();
+	f = fopen(dfnam, "w");
+	process_unlock();
+	if (!f) {
+		ERROR("Failed to open %s\n", dfnam);
+		return -1;
+	}
+	if (fprintf(f, "%s", buffer) < 0) {
+		SYSERROR("Writing timestamp");
+		fclose(f);
+		return -1;
+	}
+	process_lock();
+	ret = fclose(f);
+	process_unlock();
+	if (ret != 0) {
+		SYSERROR("Writing timestamp");
+		return -1;
+	}
+
+	if (commentfile) {
+		// $p / $name / comment \0
+		int len = strlen(snappath) + strlen(newname) + 10;
+		char *path = alloca(len);
+		sprintf(path, "%s/%s/comment", snappath, newname);
+		return copy_file(commentfile, path) < 0 ? -1 : i;
+	}
+
+	return i;
+}
+
+static void lxcsnap_free(struct lxc_snapshot *s)
+{
+	if (s->name)
+		free(s->name);
+	if (s->comment_pathname)
+		free(s->comment_pathname);
+	if (s->timestamp)
+		free(s->timestamp);
+	if (s->lxcpath)
+		free(s->lxcpath);
+}
+
+static char *get_snapcomment_path(char* snappath, char *name)
+{
+	// $snappath/$name/comment
+	int ret, len = strlen(snappath) + strlen(name) + 10;
+	char *s = malloc(len);
+
+	if (s) {
+		ret = snprintf(s, len, "%s/%s/comment", snappath, name);
+		if (ret < 0 || ret >= len) {
+			free(s);
+			s = NULL;
+		}
+	}
+	return s;
+}
+
+static char *get_timestamp(char* snappath, char *name)
+{
+	char path[MAXPATHLEN], *s = NULL;
+	int ret, len;
+	FILE *fin;
+
+	ret = snprintf(path, MAXPATHLEN, "%s/%s/ts", snappath, name);
+	if (ret < 0 || ret >= MAXPATHLEN)
+		return NULL;
+	process_lock();
+	fin = fopen(path, "r");
+	process_unlock();
+	if (!fin)
+		return NULL;
+	(void) fseek(fin, 0, SEEK_END);
+	len = ftell(fin);
+	(void) fseek(fin, 0, SEEK_SET);
+	if (len > 0) {
+		s = malloc(len+1);
+		if (s) {
+			s[len] = '\0';
+			if (fread(s, 1, len, fin) != len) {
+				SYSERROR("reading timestamp");
+				free(s);
+				s = NULL;
+			}
+		}
+	}
+	process_lock();
+	fclose(fin);
+	process_unlock();
+	return s;
+}
+
+static int lxcapi_snapshot_list(struct lxc_container *c, struct lxc_snapshot **ret_snaps)
+{
+	char snappath[MAXPATHLEN], path2[MAXPATHLEN];
+	int dirlen, count = 0, ret;
+	struct dirent dirent, *direntp;
+	struct lxc_snapshot *snaps =NULL, *nsnaps;
+	DIR *dir;
+
+	if (!c || !lxcapi_is_defined(c))
+		return -1;
+	// snappath is ${lxcpath}snaps/${lxcname}/
+	dirlen = snprintf(snappath, MAXPATHLEN, "%ssnaps/%s", c->config_path, c->name);
+	if (dirlen < 0 || dirlen >= MAXPATHLEN) {
+		ERROR("path name too long");
+		return -1;
+	}
+	process_lock();
+	dir = opendir(snappath);
+	process_unlock();
+	if (!dir) {
+		INFO("failed to open %s - assuming no snapshots", snappath);
+		return 0;
+	}
+
+	while (!readdir_r(dir, &dirent, &direntp)) {
+		if (!direntp)
+			break;
+
+		if (!strcmp(direntp->d_name, "."))
+			continue;
+
+		if (!strcmp(direntp->d_name, ".."))
+			continue;
+
+		ret = snprintf(path2, MAXPATHLEN, "%s/%s/config", snappath, direntp->d_name);
+		if (ret < 0 || ret >= MAXPATHLEN) {
+			ERROR("pathname too long");
+			goto out_free;
+		}
+		if (!file_exists(path2))
+			continue;
+		nsnaps = realloc(snaps, (count + 1)*sizeof(*snaps));
+		if (!nsnaps) {
+			SYSERROR("Out of memory");
+			goto out_free;
+		}
+		snaps = nsnaps;
+		snaps[count].free = lxcsnap_free;
+		snaps[count].name = strdup(direntp->d_name);
+		if (!snaps[count].name)
+			goto out_free;
+		snaps[count].lxcpath = strdup(snappath);
+		if (!snaps[count].lxcpath) {
+			free(snaps[count].name);
+			goto out_free;
+		}
+		snaps[count].comment_pathname = get_snapcomment_path(snappath, direntp->d_name);
+		snaps[count].timestamp = get_timestamp(snappath, direntp->d_name);
+		count++;
+	}
+
+	process_lock();
+	if (closedir(dir))
+		WARN("failed to close directory");
+	process_unlock();
+
+	*ret_snaps = snaps;
+	return count;
+
+out_free:
+	if (snaps) {
+		int i;
+		for (i=0; i<count; i++)
+			lxcsnap_free(&snaps[i]);
+		free(snaps);
+	}
+	process_lock();
+	if (closedir(dir))
+		WARN("failed to close directory");
+	process_unlock();
+	return -1;
+}
+
+static bool lxcapi_snapshot_restore(struct lxc_container *c, char *snapname, char *newname)
+{
+	char clonelxcpath[MAXPATHLEN];
+	int ret;
+	struct lxc_container *snap, *rest;
+	struct bdev *bdev;
+	bool b = false;
+
+	if (!c || !c->name || !c->config_path)
+		return false;
+
+	bdev = bdev_init(c->lxc_conf->rootfs.path, c->lxc_conf->rootfs.mount, NULL);
+	if (!bdev) {
+		ERROR("Failed to find original backing store type");
+		return false;
+	}
+
+	if (!newname)
+		newname = c->name;
+	if (strcmp(c->name, newname) == 0) {
+		if (!lxcapi_destroy(c)) {
+			ERROR("Could not destroy existing container %s", newname);
+			bdev_put(bdev);
+			return false;
+		}
+	}
+	ret = snprintf(clonelxcpath, MAXPATHLEN, "%ssnaps/%s", c->config_path, c->name);
+	if (ret < 0 || ret >= MAXPATHLEN) {
+		bdev_put(bdev);
+		return false;
+	}
+	// how should we lock this?
+
+	snap = lxc_container_new(snapname, clonelxcpath);
+	if (!snap || !lxcapi_is_defined(snap)) {
+		ERROR("Could not open snapshot %s", snapname);
+		if (snap) lxc_container_put(snap);
+		bdev_put(bdev);
+		return false;
+	}
+
+	rest = lxcapi_clone(snap, newname, c->config_path, 0, bdev->type, NULL, 0, NULL);
+	bdev_put(bdev);
+	if (rest && lxcapi_is_defined(rest))
+		b = true;
+	if (rest)
+		lxc_container_put(rest);
+	lxc_container_put(snap);
+	return b;
+}
+
+static bool lxcapi_may_control(struct lxc_container *c)
+{
+	return lxc_try_cmd(c->name, c->config_path) == 0;
+}
+
 static int lxcapi_attach_run_waitl(struct lxc_container *c, lxc_attach_options_t *options, const char *program, const char *arg, ...)
 {
 	va_list ap;
@@ -2237,6 +2664,7 @@ struct lxc_container *lxc_container_new(const char *name, const char *configpath
 		goto err;
 	}
 
+	remove_trailing_slashes(c->config_path);
 	c->name = malloc(strlen(name)+1);
 	if (!c->name) {
 		fprintf(stderr, "Error allocating lxc_container name\n");
@@ -2281,6 +2709,7 @@ struct lxc_container *lxc_container_new(const char *name, const char *configpath
 	c->init_pid = lxcapi_init_pid;
 	c->load_config = lxcapi_load_config;
 	c->want_daemonize = lxcapi_want_daemonize;
+	c->want_close_all_fds = lxcapi_want_close_all_fds;
 	c->start = lxcapi_start;
 	c->startl = lxcapi_startl;
 	c->stop = lxcapi_stop;
@@ -2301,10 +2730,15 @@ struct lxc_container *lxc_container_new(const char *name, const char *configpath
 	c->get_config_path = lxcapi_get_config_path;
 	c->set_config_path = lxcapi_set_config_path;
 	c->clone = lxcapi_clone;
+	c->get_interfaces = lxcapi_get_interfaces;
 	c->get_ips = lxcapi_get_ips;
 	c->attach = lxcapi_attach;
 	c->attach_run_wait = lxcapi_attach_run_wait;
 	c->attach_run_waitl = lxcapi_attach_run_waitl;
+	c->snapshot = lxcapi_snapshot;
+	c->snapshot_list = lxcapi_snapshot_list;
+	c->snapshot_restore = lxcapi_snapshot_restore;
+	c->may_control = lxcapi_may_control;
 
 	/* we'll allow the caller to update these later */
 	if (lxc_log_init(NULL, "none", NULL, "lxc_container", 0, c->config_path)) {
@@ -2327,4 +2761,226 @@ int lxc_get_wait_states(const char **states)
 		for (i=0; i<MAX_STATE; i++)
 			states[i] = lxc_state2str(i);
 	return MAX_STATE;
+}
+
+
+static bool add_to_names(char ***names, char *cname, int pos)
+{
+	char **newnames = realloc(*names, (pos+1) * sizeof(char *));
+	if (!newnames) {
+		ERROR("Out of memory");
+		return false;
+	}
+	*names = newnames;
+	newnames[pos] = strdup(cname);
+	if (!newnames[pos])
+		return false;
+	return true;
+}
+
+static bool add_to_clist(struct lxc_container ***list, struct lxc_container *c, int pos)
+{
+	struct lxc_container **newlist = realloc(*list, (pos+1) * sizeof(struct lxc_container *));
+	if (!newlist) {
+		ERROR("Out of memory");
+		return false;
+	}
+
+	*list = newlist;
+	newlist[pos] = c;
+	return true;
+}
+
+/*
+ * These next two could probably be done smarter with reusing a common function
+ * with different iterators and tests...
+ */
+int list_defined_containers(const char *lxcpath, char ***names, struct lxc_container ***cret)
+{
+	DIR *dir;
+	int i, cfound = 0, nfound = 0;
+	struct dirent dirent, *direntp;
+	struct lxc_container *c;
+
+	if (!lxcpath)
+		lxcpath = default_lxc_path();
+
+	process_lock();
+	dir = opendir(lxcpath);
+	process_unlock();
+
+	if (!dir) {
+		SYSERROR("opendir on lxcpath");
+		return -1;
+	}
+
+	if (cret)
+		*cret = NULL;
+	if (names)
+		*names = NULL;
+
+	while (!readdir_r(dir, &dirent, &direntp)) {
+		if (!direntp)
+			break;
+		if (!strcmp(direntp->d_name, "."))
+			continue;
+		if (!strcmp(direntp->d_name, ".."))
+			continue;
+
+		if (!config_file_exists(lxcpath, direntp->d_name))
+			continue;
+
+		if (names) {
+			if (!add_to_names(names, direntp->d_name, cfound))
+				goto free_bad;
+		}
+		cfound++;
+
+		if (!cret) {
+			nfound++;
+			continue;
+		}
+
+		c = lxc_container_new(direntp->d_name, lxcpath);
+		if (!c) {
+			INFO("Container %s:%s has a config but could not be loaded",
+				lxcpath, direntp->d_name);
+			if (names)
+				free((*names)[cfound--]);
+			continue;
+		}
+		if (!lxcapi_is_defined(c)) {
+			INFO("Container %s:%s has a config but is not defined",
+				lxcpath, direntp->d_name);
+			if (names)
+				free((*names)[cfound--]);
+			lxc_container_put(c);
+			continue;
+		}
+
+		if (!add_to_clist(cret, c, nfound)) {
+			lxc_container_put(c);
+			goto free_bad;
+		}
+		nfound++;
+	}
+
+	process_lock();
+	closedir(dir);
+	process_unlock();
+	return nfound;
+
+free_bad:
+	if (names && *names) {
+		for (i=0; i<cfound; i++)
+			free((*names)[i]);
+		free(*names);
+	}
+	if (cret && *cret) {
+		for (i=0; i<nfound; i++)
+			lxc_container_put((*cret)[i]);
+		free(*cret);
+	}
+	process_lock();
+	closedir(dir);
+	process_unlock();
+	return -1;
+}
+
+int list_active_containers(const char *lxcpath, char ***names, struct lxc_container ***cret)
+{
+	int i, cfound = 0, nfound = 0;
+	int lxcpath_len;
+	char *line = NULL;
+	size_t len = 0;
+	struct lxc_container *c;
+
+	if (!lxcpath)
+		lxcpath = default_lxc_path();
+	lxcpath_len = strlen(lxcpath);
+
+	if (cret)
+		*cret = NULL;
+	if (names)
+		*names = NULL;
+
+	process_lock();
+	FILE *f = fopen("/proc/net/unix", "r");
+	process_unlock();
+	if (!f)
+		return -1;
+
+	while (getline(&line, &len, f) != -1) {
+		char *p = strrchr(line, ' '), *p2;
+		if (!p)
+			continue;
+		p++;
+		if (*p != 0x40)
+			continue;
+		p++;
+		if (strncmp(p, lxcpath, lxcpath_len) != 0)
+			continue;
+		p += lxcpath_len;
+		while (*p == '/')
+			p++;
+
+		// Now p is the start of lxc_name
+		p2 = index(p, '/');
+		if (!p2 || strncmp(p2, "/command", 8) != 0)
+			continue;
+		*p2 = '\0';
+
+		if (names) {
+			if (!add_to_names(names, p, nfound))
+				goto free_bad;
+		}
+		cfound++;
+
+		if (!cret) {
+			nfound++;
+			continue;
+		}
+
+		c = lxc_container_new(p, lxcpath);
+		if (!c) {
+			INFO("Container %s:%s is running but could not be loaded",
+				lxcpath, p);
+			if (names)
+				free((*names)[cfound--]);
+			continue;
+		}
+
+		/*
+		 * If this is an anonymous container, then is_defined *can*
+		 * return false.  So we don't do that check.  Count on the
+		 * fact that the command socket exists.
+		 */
+
+		if (!add_to_clist(cret, c, nfound)) {
+			lxc_container_put(c);
+			goto free_bad;
+		}
+		nfound++;
+	}
+
+	process_lock();
+	fclose(f);
+	process_unlock();
+	return nfound;
+
+free_bad:
+	if (names && *names) {
+		for (i=0; i<cfound; i++)
+			free((*names)[i]);
+		free(*names);
+	}
+	if (cret && *cret) {
+		for (i=0; i<nfound; i++)
+			lxc_container_put((*cret)[i]);
+		free(*cret);
+	}
+	process_lock();
+	fclose(f);
+	process_unlock();
+	return -1;
 }

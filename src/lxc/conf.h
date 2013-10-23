@@ -222,6 +222,29 @@ struct lxc_rootfs {
 };
 
 /*
+ * Automatic mounts for LXC to perform inside the container
+ */
+enum {
+	LXC_AUTO_PROC_RW              = 0x001,   /* /proc read-write */
+	LXC_AUTO_PROC_MIXED           = 0x002,   /* /proc/sys and /proc/sysrq-trigger read-only */
+	LXC_AUTO_PROC_MASK            = 0x003,
+
+	LXC_AUTO_SYS_RW               = 0x004,   /* /sys */
+	LXC_AUTO_SYS_RO               = 0x008,   /* /sys read-only */
+	LXC_AUTO_SYS_MASK             = 0x00C,
+
+	LXC_AUTO_CGROUP_RO            = 0x010,   /* /sys/fs/cgroup (partial mount, read-only) */
+	LXC_AUTO_CGROUP_RW            = 0x020,   /* /sys/fs/cgroup (partial mount, read-write) */
+	LXC_AUTO_CGROUP_MIXED         = 0x030,   /* /sys/fs/cgroup (partial mount, paths r/o, cgroup r/w) */
+	LXC_AUTO_CGROUP_FULL_RO       = 0x040,   /* /sys/fs/cgroup (full mount, read-only) */
+	LXC_AUTO_CGROUP_FULL_RW       = 0x050,   /* /sys/fs/cgroup (full mount, read-write) */
+	LXC_AUTO_CGROUP_FULL_MIXED    = 0x060,   /* /sys/fs/cgroup (full mount, parent r/o, own r/w) */
+	LXC_AUTO_CGROUP_MASK          = 0x070,
+
+	LXC_AUTO_ALL_MASK             = 0x07F,   /* all known settings */
+};
+
+/*
  * Defines the global container configuration
  * @rootfs     : root directory to run the container
  * @pivotdir   : pivotdir path, if not set default will be used
@@ -237,9 +260,8 @@ struct lxc_rootfs {
  * @tty_info   : tty data
  * @console    : console data
  * @ttydir     : directory (under /dev) in which to create console and ttys
-#if HAVE_APPARMOR
- * @aa_profile : apparmor profile to switch to
-#endif
+ * @lsm_aa_profile : apparmor profile to switch to or NULL
+ * @lsm_se_context : selinux type to switch to or NULL
  */
 enum lxchooks {
 	LXCHOOK_PRESTART, LXCHOOK_PREMOUNT, LXCHOOK_MOUNT, LXCHOOK_AUTODEV,
@@ -265,6 +287,7 @@ struct lxc_conf {
 	struct lxc_list network;
 	struct saved_nic *saved_nics;
 	int num_savednics;
+	int auto_mounts;
 	struct lxc_list mount_list;
 	struct lxc_list caps;
 	struct lxc_list keepcaps;
@@ -274,13 +297,10 @@ struct lxc_conf {
 	char *ttydir;
 	int close_all_fds;
 	struct lxc_list hooks[NUM_LXC_HOOKS];
-#if HAVE_APPARMOR
-	char *aa_profile;
-#endif
 
-#if HAVE_APPARMOR /* || HAVE_SELINUX || HAVE_SMACK */
+	char *lsm_aa_profile;
+	char *lsm_se_context;
 	int lsm_umount_proc;
-#endif
 	char *seccomp;  // filename with the seccomp rules
 #if HAVE_SCMP_FILTER_CTX
 	scmp_filter_ctx *seccomp_ctx;
@@ -336,8 +356,9 @@ extern int uid_shift_ttys(int pid, struct lxc_conf *conf);
  * Configure the container from inside
  */
 
+struct cgroup_process_info;
 extern int lxc_setup(const char *name, struct lxc_conf *lxc_conf,
-			const char *lxcpath);
+			const char *lxcpath, struct cgroup_process_info *cgroup_info);
 
 extern void lxc_rename_phys_nics_on_shutdown(struct lxc_conf *conf);
 #endif

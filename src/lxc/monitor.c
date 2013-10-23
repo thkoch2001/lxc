@@ -28,6 +28,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <fcntl.h>
+#include <inttypes.h>
+#include <stdint.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/param.h>
@@ -40,6 +42,7 @@
 #include "af_unix.h"
 
 #include <lxc/log.h>
+#include <lxc/lxclock.h>
 #include <lxc/state.h>
 #include <lxc/monitor.h>
 #include <lxc/utils.h>
@@ -47,19 +50,49 @@
 lxc_log_define(lxc_monitor, lxc);
 
 /* routines used by monitor publishers (containers) */
+int lxc_monitor_fifo_name(const char *lxcpath, char *fifo_path, size_t fifo_path_sz,
+			  int do_mkdirp)
+{
+	int ret;
+	const char *rundir;
+
+	rundir = get_rundir();
+	if (do_mkdirp) {
+		ret = snprintf(fifo_path, fifo_path_sz, "%s/lxc/%s", rundir, lxcpath);
+		if (ret < 0 || ret >= fifo_path_sz) {
+			ERROR("rundir/lxcpath (%s/%s) too long for monitor fifo", rundir, lxcpath);
+			return -1;
+		}
+		process_lock();
+		ret = mkdir_p(fifo_path, 0755);
+		process_unlock();
+		if (ret < 0) {
+			ERROR("unable to create monitor fifo dir %s", fifo_path);
+			return ret;
+		}
+	}
+	ret = snprintf(fifo_path, fifo_path_sz, "%s/lxc/%s/monitor-fifo", rundir, lxcpath);
+	if (ret < 0 || ret >= fifo_path_sz) {
+		ERROR("rundir/lxcpath (%s/%s) too long for monitor fifo", rundir, lxcpath);
+		return -1;
+	}
+	return 0;
+}
+
 static void lxc_monitor_fifo_send(struct lxc_msg *msg, const char *lxcpath)
 {
 	int fd,ret;
 	char fifo_path[PATH_MAX];
 
 	BUILD_BUG_ON(sizeof(*msg) > PIPE_BUF); /* write not guaranteed atomic */
-	ret = snprintf(fifo_path, sizeof(fifo_path), "%s/monitor-fifo", lxcpath);
-	if (ret < 0 || ret >= sizeof(fifo_path)) {
-		ERROR("lxcpath too long to open monitor fifo");
-		return;
-	}
 
+	ret = lxc_monitor_fifo_name(lxcpath, fifo_path, sizeof(fifo_path), 0);
+	if (ret < 0)
+		return;
+
+	process_lock();
 	fd = open(fifo_path, O_WRONLY);
+	process_unlock();
 	if (fd < 0) {
 		/* it is normal for this open to fail when there is no monitor
 		 * running, so we don't log it
@@ -69,12 +102,16 @@ static void lxc_monitor_fifo_send(struct lxc_msg *msg, const char *lxcpath)
 
 	ret = write(fd, msg, sizeof(*msg));
 	if (ret != sizeof(*msg)) {
+		process_lock();
 		close(fd);
+		process_unlock();
 		SYSERROR("failed to write monitor fifo %s", fifo_path);
 		return;
 	}
 
+	process_lock();
 	close(fd);
+	process_unlock();
 }
 
 void lxc_monitor_send_state(const char *name, lxc_state_t state, const char *lxcpath)
@@ -91,26 +128,64 @@ void lxc_monitor_send_state(const char *name, lxc_state_t state, const char *lxc
 /* routines used by monitor subscribers (lxc-monitor) */
 int lxc_monitor_close(int fd)
 {
-	return close(fd);
+	int ret;
+
+	process_lock();
+	ret = close(fd);
+	process_unlock();
+	return ret;
+}
+
+/* Note we don't use SHA-1 here as we don't want to depend on HAVE_GNUTLS.
+ * FNV has good anti collision properties and we're not worried
+ * about pre-image resistance or one-way-ness, we're just trying to make
+ * the name unique in the 108 bytes of space we have.
+ */
+#define FNV1A_64_INIT ((uint64_t)0xcbf29ce484222325ULL)
+static uint64_t fnv_64a_buf(void *buf, size_t len, uint64_t hval)
+{
+	unsigned char *bp;
+
+	for(bp = buf; bp < (unsigned char *)buf + len; bp++)
+	{
+		/* xor the bottom with the current octet */
+		hval ^= (uint64_t)*bp;
+
+		/* gcc optimised:
+		 * multiply by the 64 bit FNV magic prime mod 2^64
+		 */
+		hval += (hval << 1) + (hval << 4) + (hval << 5) +
+			(hval << 7) + (hval << 8) + (hval << 40);
+	}
+
+	return hval;
 }
 
 int lxc_monitor_sock_name(const char *lxcpath, struct sockaddr_un *addr) {
 	size_t len;
 	int ret;
-	char *sockname = &addr->sun_path[0]; // 1 for abstract
+	char *sockname = &addr->sun_path[1];
+	char path[PATH_MAX+18];
+	uint64_t hash;
 
-	/* addr.sun_path is only 108 bytes.
-	 * should we take a hash of lxcpath? a subset of it? ftok()? we need
-	 * to make sure it is unique.
+	/* addr.sun_path is only 108 bytes, so we hash the full name and
+	 * then append as much of the name as we can fit.
 	 */
 	memset(addr, 0, sizeof(*addr));
 	addr->sun_family = AF_UNIX;
 	len = sizeof(addr->sun_path) - 1;
-	ret = snprintf(sockname, len, "%s/monitor-sock", lxcpath);
-	if (ret < 0 || ret >= len) {
-		ERROR("lxcpath too long for unix socket");
+	ret = snprintf(path, sizeof(path), "lxc/%s/monitor-sock", lxcpath);
+	if (ret < 0 || ret >= sizeof(path)) {
+		ERROR("lxcpath %s too long for monitor unix socket", lxcpath);
 		return -1;
 	}
+
+	hash = fnv_64a_buf(path, ret, FNV1A_64_INIT);
+	ret = snprintf(sockname, len, "lxc/%016" PRIx64 "/%s", hash, lxcpath);
+	if (ret < 0)
+		return -1;
+	sockname[sizeof(addr->sun_path)-2] = '\0';
+	INFO("using monitor sock name %s", sockname);
 	return 0;
 }
 
@@ -123,7 +198,9 @@ int lxc_monitor_open(const char *lxcpath)
 	if (lxc_monitor_sock_name(lxcpath, &addr) < 0)
 		return -1;
 
+	process_lock();
 	fd = socket(PF_UNIX, SOCK_STREAM, 0);
+	process_unlock();
 	if (fd < 0) {
 		ERROR("socket : %s", strerror(errno));
 		return -1;
@@ -143,7 +220,9 @@ int lxc_monitor_open(const char *lxcpath)
 	}
 	return fd;
 err1:
+	process_lock();
 	close(fd);
+	process_unlock();
 	return ret;
 }
 
@@ -229,6 +308,7 @@ int lxc_monitord_spawn(const char *lxcpath)
 		return 0;
 	}
 
+	process_unlock(); // we're no longer sharing
 	if (pipe(pipefd) < 0) {
 		SYSERROR("failed to create pipe");
 		exit(EXIT_FAILURE);

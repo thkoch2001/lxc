@@ -46,7 +46,6 @@ static char *lxclock_name(const char *p, const char *n)
 	int len;
 	char *dest;
 	const char *rundir;
-	struct stat sb;
 
 	/* lockfile will be:
 	 * "/run" + "/lock/lxc/$lxcpath/$lxcname + '\0' if root
@@ -56,10 +55,7 @@ static char *lxclock_name(const char *p, const char *n)
 
 	/* length of "/lock/lxc/" + $lxcpath + "/" + $lxcname + '\0' */
 	len = strlen("/lock/lxc/") + strlen(n) + strlen(p) + 2;
-	rundir = getenv("XDG_RUNTIME_DIR");
-	if (geteuid() == 0 || rundir == NULL)
-		rundir = "/run";
-
+	rundir = get_rundir();
 	len += strlen(rundir);
 
 	if ((dest = malloc(len)) == NULL)
@@ -76,15 +72,6 @@ static char *lxclock_name(const char *p, const char *n)
 	if (ret < 0) {
 		free(dest);
 		return NULL;
-	}
-
-	ret = stat(p, &sb);
-	if (ret == 0) {
-		// best effort.  If this fails, ignore it
-		if (chown(dest, sb.st_uid, sb.st_gid) < 0)
-			ERROR("Failed ot set owner for lockdir %s\n", dest);
-		if (chmod(dest, sb.st_mode) < 0)
-			ERROR("Failed to set mode for lockdir %s\n", dest);
 	}
 
 	ret = snprintf(dest, len, "%s/lock/lxc/%s/%s", rundir, p, n);
@@ -274,13 +261,14 @@ void lxc_putlock(struct lxc_lock *l)
 	free(l);
 }
 
-int process_lock(void)
+void process_lock(void)
 {
 	int ret;
-	ret = pthread_mutex_lock(&thread_mutex);
-	if (ret != 0)
+
+	if ((ret = pthread_mutex_lock(&thread_mutex)) != 0) {
 		ERROR("pthread_mutex_lock returned:%d %s", ret, strerror(ret));
-	return ret;
+		exit(1);
+	}
 }
 
 void process_unlock(void)

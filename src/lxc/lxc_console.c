@@ -38,7 +38,7 @@
 #include <sys/poll.h>
 #include <sys/ioctl.h>
 
-#include "../lxc/lxccontainer.h"
+#include <lxc/lxccontainer.h>
 #include "error.h"
 #include "lxc.h"
 #include "log.h"
@@ -97,6 +97,9 @@ int main(int argc, char *argv[])
 	if (ret)
 		return EXIT_FAILURE;
 
+	if (!my_args.log_file)
+		my_args.log_file = "none";
+
 	ret = lxc_log_init(my_args.name, my_args.log_file, my_args.log_priority,
 			   my_args.progname, my_args.quiet, my_args.lxcpath[0]);
 	if (ret)
@@ -108,14 +111,23 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
+	if (!c->may_control(c)) {
+		fprintf(stderr, "Insufficent privileges to control %s\n", my_args.name);
+		lxc_container_put(c);
+		return -1;
+	}
+
 	if (!c->is_running(c)) {
 		fprintf(stderr, "%s is not running\n", my_args.name);
+		lxc_container_put(c);
 		exit(EXIT_FAILURE);
 	}
 
 	ret = c->console(c, my_args.ttynum, 0, 1, 2, my_args.escape);
 	if (ret < 0) {
+		lxc_container_put(c);
 		exit(EXIT_FAILURE);
 	}
+	lxc_container_put(c);
 	return EXIT_SUCCESS;
 }

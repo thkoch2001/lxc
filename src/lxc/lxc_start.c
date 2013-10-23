@@ -43,7 +43,7 @@
 #include "log.h"
 #include "caps.h"
 #include "lxc.h"
-#include "lxccontainer.h"
+#include <lxc/lxccontainer.h>
 #include "conf.h"
 #include "cgroup.h"
 #include "utils.h"
@@ -265,7 +265,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (my_args.close_all_fds)
-		conf->close_all_fds = 1;
+		c->want_close_all_fds(c);
 
 	err = c->start(c, 0, args) ? 0 : -1;
 

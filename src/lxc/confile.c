@@ -57,9 +57,8 @@ static int config_pts(const char *, const char *, struct lxc_conf *);
 static int config_tty(const char *, const char *, struct lxc_conf *);
 static int config_ttydir(const char *, const char *, struct lxc_conf *);
 static int config_kmsg(const char *, const char *, struct lxc_conf *);
-#if HAVE_APPARMOR
-static int config_aa_profile(const char *, const char *, struct lxc_conf *);
-#endif
+static int config_lsm_aa_profile(const char *, const char *, struct lxc_conf *);
+static int config_lsm_se_context(const char *, const char *, struct lxc_conf *);
 static int config_cgroup(const char *, const char *, struct lxc_conf *);
 static int config_idmap(const char *, const char *, struct lxc_conf *);
 static int config_loglevel(const char *, const char *, struct lxc_conf *);
@@ -100,9 +99,8 @@ static struct lxc_config_t config[] = {
 	{ "lxc.tty",                  config_tty                  },
 	{ "lxc.devttydir",            config_ttydir               },
 	{ "lxc.kmsg",                 config_kmsg                 },
-#if HAVE_APPARMOR
-	{ "lxc.aa_profile",            config_aa_profile          },
-#endif
+	{ "lxc.aa_profile",           config_lsm_aa_profile       },
+	{ "lxc.se_context",           config_lsm_se_context       },
 	{ "lxc.cgroup",               config_cgroup               },
 	{ "lxc.id_map",               config_idmap                },
 	{ "lxc.loglevel",             config_loglevel             },
@@ -212,6 +210,41 @@ int lxc_listconfigs(char *retv, int inlen)
 		strprint(retv, inlen, "%s\n", s);
 	}
 	return fulllen;
+}
+
+static int config_string_item(char **conf_item, const char *value)
+{
+	char *new_value;
+
+	if (!value || strlen(value) == 0)
+		return 0;
+
+	new_value = strdup(value);
+	if (!new_value) {
+		SYSERROR("failed to strdup '%s': %m", value);
+		return -1;
+	}
+
+	if (*conf_item)
+		free(*conf_item);
+	*conf_item = new_value;
+	return 0;
+}
+
+static int config_string_item_max(char **conf_item, const char *value,
+				  size_t max)
+{
+	if (strlen(value) >= max) {
+		ERROR("%s is too long (>= %lu)", value, (unsigned long)max);
+		return -1;
+	}
+
+	return config_string_item(conf_item, value);
+}
+
+static int config_path_item(char **conf_item, const char *value)
+{
+	return config_string_item_max(conf_item, value, PATH_MAX);
 }
 
 /*
@@ -537,22 +570,12 @@ static int config_network_hwaddr(const char *key, const char *value,
 				 struct lxc_conf *lxc_conf)
 {
 	struct lxc_netdev *netdev;
-	char *hwaddr;
 
 	netdev = network_netdev(key, value, &lxc_conf->network);
 	if (!netdev)
 		return -1;
 
-	hwaddr = strdup(value);
-	if (!hwaddr) {
-		SYSERROR("failed to dup string '%s'", value);
-		return -1;
-	}
-
-	if (netdev->hwaddr)
-		free(netdev->hwaddr);
-	netdev->hwaddr = hwaddr;
-	return 0;
+	return config_string_item(&netdev->hwaddr, value);
 }
 
 static int config_network_vlan_id(const char *key, const char *value,
@@ -574,22 +597,12 @@ static int config_network_mtu(const char *key, const char *value,
 			      struct lxc_conf *lxc_conf)
 {
 	struct lxc_netdev *netdev;
-	char *mtu;
 
 	netdev = network_netdev(key, value, &lxc_conf->network);
 	if (!netdev)
 		return -1;
 
-	mtu = strdup(value);
-	if (!mtu) {
-		SYSERROR("failed to dup string '%s'", value);
-		return -1;
-	}
-
-	if (netdev->mtu)
-		free(netdev->mtu);
-	netdev->mtu = mtu;
-	return 0;
+	return config_string_item(&netdev->mtu, value);
 }
 
 static int config_network_ipv4(const char *key, const char *value,
@@ -858,23 +871,7 @@ static int add_hook(struct lxc_conf *lxc_conf, int which, char *hook)
 static int config_seccomp(const char *key, const char *value,
 				 struct lxc_conf *lxc_conf)
 {
-	char *path;
-
-	if (lxc_conf->seccomp) {
-		ERROR("seccomp already defined");
-		return -1;
-	}
-	path = strdup(value);
-	if (!path) {
-		SYSERROR("failed to strdup '%s': %m", value);
-		return -1;
-	}
-
-	if (lxc_conf->seccomp)
-		free(lxc_conf->seccomp);
-	lxc_conf->seccomp = path;
-
-	return 0;
+	return config_path_item(&lxc_conf->seccomp, value);
 }
 
 static int config_hook(const char *key, const char *value,
@@ -940,21 +937,7 @@ static int config_tty(const char *key, const char *value,
 static int config_ttydir(const char *key, const char *value,
 			  struct lxc_conf *lxc_conf)
 {
-	char *path;
-
-	if (!value || strlen(value) == 0)
-		return 0;
-	path = strdup(value);
-	if (!path) {
-		SYSERROR("failed to strdup '%s': %m", value);
-		return -1;
-	}
-
-	if (lxc_conf->ttydir)
-		free(lxc_conf->ttydir);
-	lxc_conf->ttydir = path;
-
-	return 0;
+	return config_string_item_max(&lxc_conf->ttydir, value, NAME_MAX+1);
 }
 
 static int config_kmsg(const char *key, const char *value,
@@ -967,37 +950,29 @@ static int config_kmsg(const char *key, const char *value,
 	return 0;
 }
 
-#if HAVE_APPARMOR
-static int config_aa_profile(const char *key, const char *value,
-			     struct lxc_conf *lxc_conf)
+static int config_lsm_aa_profile(const char *key, const char *value,
+				 struct lxc_conf *lxc_conf)
 {
-	char *path;
-
-	if (!value || strlen(value) == 0)
-		return 0;
-	path = strdup(value);
-	if (!path) {
-		SYSERROR("failed to strdup '%s': %m", value);
-		return -1;
-	}
-
-	if (lxc_conf->aa_profile)
-		free(lxc_conf->aa_profile);
-	lxc_conf->aa_profile = path;
-
-	return 0;
+	return config_string_item(&lxc_conf->lsm_aa_profile, value);
 }
-#endif
+
+static int config_lsm_se_context(const char *key, const char *value,
+				 struct lxc_conf *lxc_conf)
+{
+	return config_string_item(&lxc_conf->lsm_se_context, value);
+}
 
 static int config_logfile(const char *key, const char *value,
 			     struct lxc_conf *lxc_conf)
 {
+	int ret;
+
 	// store these values in the lxc_conf, and then try to set for
 	// actual current logging.
-	if (lxc_conf->logfile)
-		free(lxc_conf->logfile);
-	lxc_conf->logfile = strdup(value);
-	return lxc_log_set_file(value);
+	ret = config_path_item(&lxc_conf->logfile, value);
+	if (ret == 0)
+		ret = lxc_log_set_file(lxc_conf->logfile);
+	return ret;
 }
 
 static int config_loglevel(const char *key, const char *value,
@@ -1208,31 +1183,73 @@ out:
 	return -1;
 }
 
-static int config_path_item(const char *key, const char *value,
-			    struct lxc_conf *lxc_conf, char **conf_item)
-{
-	char *valdup;
-	if (strlen(value) >= MAXPATHLEN) {
-		ERROR("%s path is too long", value);
-		return -1;
-	}
-
-	valdup = strdup(value);
-	if (!valdup) {
-		SYSERROR("failed to duplicate string %s", value);
-		return -1;
-	}
-	if (*conf_item)
-		free(*conf_item);
-	*conf_item = valdup;
-
-	return 0;
-}
-
 static int config_fstab(const char *key, const char *value,
 			struct lxc_conf *lxc_conf)
 {
-	return config_path_item(key, value, lxc_conf, &lxc_conf->fstab);
+	return config_path_item(&lxc_conf->fstab, value);
+}
+
+static int config_mount_auto(const char *key, const char *value,
+			     struct lxc_conf *lxc_conf)
+{
+	char *autos, *autoptr, *sptr, *token;
+	static struct { const char *token; int mask; int flag; } allowed_auto_mounts[] = {
+		{ "proc",               LXC_AUTO_PROC_MASK,      LXC_AUTO_PROC_MIXED        },
+		{ "proc:mixed",         LXC_AUTO_PROC_MASK,      LXC_AUTO_PROC_MIXED        },
+		{ "proc:rw",            LXC_AUTO_PROC_MASK,      LXC_AUTO_PROC_RW           },
+		{ "sys",                LXC_AUTO_SYS_MASK,       LXC_AUTO_SYS_RO            },
+		{ "sys:ro",             LXC_AUTO_SYS_MASK,       LXC_AUTO_SYS_RO            },
+		{ "sys:rw",             LXC_AUTO_SYS_MASK,       LXC_AUTO_SYS_RW            },
+		{ "cgroup",             LXC_AUTO_CGROUP_MASK,    LXC_AUTO_CGROUP_MIXED      },
+		{ "cgroup:mixed",       LXC_AUTO_CGROUP_MASK,    LXC_AUTO_CGROUP_MIXED      },
+		{ "cgroup:ro",          LXC_AUTO_CGROUP_MASK,    LXC_AUTO_CGROUP_RO         },
+		{ "cgroup:rw",          LXC_AUTO_CGROUP_MASK,    LXC_AUTO_CGROUP_RW         },
+		{ "cgroup-full",        LXC_AUTO_CGROUP_MASK,    LXC_AUTO_CGROUP_FULL_MIXED },
+		{ "cgroup-full:mixed",  LXC_AUTO_CGROUP_MASK,    LXC_AUTO_CGROUP_FULL_MIXED },
+		{ "cgroup-full:ro",     LXC_AUTO_CGROUP_MASK,    LXC_AUTO_CGROUP_FULL_RO    },
+		{ "cgroup-full:rw",     LXC_AUTO_CGROUP_MASK,    LXC_AUTO_CGROUP_FULL_RW    },
+		/* NB: For adding anything that ist just a single on/off, but has
+		 *     no options: keep mask and flag identical and just define the
+		 *     enum value as an unused bit so far
+		 */
+		{ NULL, 0 }
+	};
+	int i;
+	int ret = -1;
+
+	if (!strlen(value))
+		return -1;
+
+	autos = strdup(value);
+	if (!autos) {
+		SYSERROR("failed to dup '%s'", value);
+		return -1;
+	}
+
+	for (autoptr = autos; ; autoptr = NULL) {
+                token = strtok_r(autoptr, " \t", &sptr);
+                if (!token) {
+			ret = 0;
+                        break;
+		}
+
+		for (i = 0; allowed_auto_mounts[i].token; i++) {
+			if (!strcmp(allowed_auto_mounts[i].token, token))
+				break;
+		}
+
+		if (!allowed_auto_mounts[i].token) {
+			ERROR("Invalid filesystem to automount: %s", token);
+			break;
+		}
+
+		lxc_conf->auto_mounts &= ~allowed_auto_mounts[i].mask;
+		lxc_conf->auto_mounts |= allowed_auto_mounts[i].flag;
+        }
+
+	free(autos);
+
+	return ret;
 }
 
 static int config_mount(const char *key, const char *value,
@@ -1240,6 +1257,7 @@ static int config_mount(const char *key, const char *value,
 {
 	char *fstab_token = "lxc.mount";
 	char *token = "lxc.mount.entry";
+	char *auto_token = "lxc.mount.auto";
 	char *subkey;
 	char *mntelem;
 	struct lxc_list *mntlist;
@@ -1247,12 +1265,18 @@ static int config_mount(const char *key, const char *value,
 	subkey = strstr(key, token);
 
 	if (!subkey) {
-		subkey = strstr(key, fstab_token);
+		subkey = strstr(key, auto_token);
 
-		if (!subkey)
-			return -1;
+		if (!subkey) {
+			subkey = strstr(key, fstab_token);
 
-		return config_fstab(key, value, lxc_conf);
+			if (!subkey)
+				return -1;
+
+			return config_fstab(key, value, lxc_conf);
+		}
+
+		return config_mount_auto(key, value, lxc_conf);
 	}
 
 	if (!strlen(subkey))
@@ -1369,19 +1393,7 @@ static int config_cap_drop(const char *key, const char *value,
 static int config_console(const char *key, const char *value,
 			  struct lxc_conf *lxc_conf)
 {
-	char *path;
-
-	path = strdup(value);
-	if (!path) {
-		SYSERROR("failed to strdup '%s': %m", value);
-		return -1;
-	}
-
-	if (lxc_conf->console.path)
-		free(lxc_conf->console.path);
-	lxc_conf->console.path = path;
-
-	return 0;
+	return config_path_item(&lxc_conf->console.path, value);
 }
 
 static int config_includefile(const char *key, const char *value,
@@ -1393,19 +1405,19 @@ static int config_includefile(const char *key, const char *value,
 static int config_rootfs(const char *key, const char *value,
 			 struct lxc_conf *lxc_conf)
 {
-	return config_path_item(key, value, lxc_conf, &lxc_conf->rootfs.path);
+	return config_path_item(&lxc_conf->rootfs.path, value);
 }
 
 static int config_rootfs_mount(const char *key, const char *value,
 			       struct lxc_conf *lxc_conf)
 {
-	return config_path_item(key, value, lxc_conf, &lxc_conf->rootfs.mount);
+	return config_path_item(&lxc_conf->rootfs.mount, value);
 }
 
 static int config_pivotdir(const char *key, const char *value,
 			   struct lxc_conf *lxc_conf)
 {
-	return config_path_item(key, value, lxc_conf, &lxc_conf->rootfs.pivot);
+	return config_path_item(&lxc_conf->rootfs.pivot, value);
 }
 
 static int config_utsname(const char *key, const char *value,
@@ -1858,10 +1870,10 @@ int lxc_get_config_item(struct lxc_conf *c, const char *key, char *retv,
 		v = c->ttydir;
 	else if (strcmp(key, "lxc.arch") == 0)
 		return lxc_get_arch_entry(c, retv, inlen);
-#if HAVE_APPARMOR
 	else if (strcmp(key, "lxc.aa_profile") == 0)
-		v = c->aa_profile;
-#endif
+		v = c->lsm_aa_profile;
+	else if (strcmp(key, "lxc.se_context") == 0)
+		v = c->lsm_se_context;
 	else if (strcmp(key, "lxc.logfile") == 0)
 		v = lxc_log_get_file();
 	else if (strcmp(key, "lxc.loglevel") == 0)
@@ -1932,6 +1944,29 @@ void write_config(FILE *fout, struct lxc_conf *c)
 	lxc_list_for_each(it, &c->mount_list) {
 		fprintf(fout, "lxc.mount.entry = %s\n", (char *)it->elem);
 	}
+	if (c->auto_mounts & LXC_AUTO_ALL_MASK) {
+		fprintf(fout, "lxc.mount.auto =");
+		switch (c->auto_mounts & LXC_AUTO_PROC_MASK) {
+			case LXC_AUTO_PROC_MIXED:        fprintf(fout, " proc:mixed");        break;
+			case LXC_AUTO_PROC_RW:           fprintf(fout, " proc:rw");           break;
+			default: break;
+		}
+		switch (c->auto_mounts & LXC_AUTO_SYS_MASK) {
+			case LXC_AUTO_SYS_RO:            fprintf(fout, " sys:ro");            break;
+			case LXC_AUTO_SYS_RW:            fprintf(fout, " sys:rw");            break;
+			default: break;
+		}
+		switch (c->auto_mounts & LXC_AUTO_CGROUP_MASK) {
+			case LXC_AUTO_CGROUP_MIXED:      fprintf(fout, " cgroup:mixed");      break;
+			case LXC_AUTO_CGROUP_RO:         fprintf(fout, " cgroup:ro");         break;
+			case LXC_AUTO_CGROUP_RW:         fprintf(fout, " cgroup:rw");         break;
+			case LXC_AUTO_CGROUP_FULL_MIXED: fprintf(fout, " cgroup-full:mixed"); break;
+			case LXC_AUTO_CGROUP_FULL_RO:    fprintf(fout, " cgroup-full:ro");    break;
+			case LXC_AUTO_CGROUP_FULL_RW:    fprintf(fout, " cgroup-full:rw");    break;
+			default: break;
+		}
+		fprintf(fout, "\n");
+	}
 	if (c->tty)
 		fprintf(fout, "lxc.tty = %d\n", c->tty);
 	if (c->pts)
@@ -1945,10 +1980,10 @@ void write_config(FILE *fout, struct lxc_conf *c)
 	default: break;
 	}
 	#endif
-#if HAVE_APPARMOR
-	if (c->aa_profile)
-		fprintf(fout, "lxc.aa_profile = %s\n", c->aa_profile);
-#endif
+	if (c->lsm_aa_profile)
+		fprintf(fout, "lxc.aa_profile = %s\n", c->lsm_aa_profile);
+	if (c->lsm_se_context)
+		fprintf(fout, "lxc.se_context = %s\n", c->lsm_se_context);
 	if (c->loglevel != LXC_LOG_PRIORITY_NOTSET)
 		fprintf(fout, "lxc.loglevel = %s\n", lxc_log_priority_to_string(c->loglevel));
 	if (c->logfile)
