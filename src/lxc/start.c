@@ -68,9 +68,10 @@
 #include "console.h"
 #include "sync.h"
 #include "namespace.h"
-#include "apparmor.h"
 #include "lxcseccomp.h"
 #include "caps.h"
+#include "lxclock.h"
+#include "lsm/lsm.h"
 
 lxc_log_define(lxc_start, lxc);
 
@@ -86,7 +87,9 @@ int lxc_check_inherited(struct lxc_conf *conf, int fd_to_ignore)
 	DIR *dir;
 
 restart:
+	process_lock();
 	dir = opendir("/proc/self/fd");
+	process_unlock();
 	if (!dir) {
 		WARN("failed to open directory: %m");
 		return -1;
@@ -113,15 +116,19 @@ restart:
 			continue;
 
 		if (conf->close_all_fds) {
+			process_lock();
 			close(fd);
 			closedir(dir);
+			process_unlock();
 			INFO("closed inherited fd %d", fd);
 			goto restart;
 		}
 		WARN("inherited fd %d", fd);
 	}
 
+	process_lock();
 	closedir(dir); /* cannot fail */
+	process_unlock();
 	return 0;
 }
 
@@ -258,7 +265,9 @@ int lxc_poll(const char *name, struct lxc_handler *handler)
 out_mainloop_open:
 	lxc_mainloop_close(&descr);
 out_sigfd:
+	process_lock();
 	close(sigfd);
+	process_unlock();
 	return -1;
 }
 
@@ -276,7 +285,8 @@ struct lxc_handler *lxc_init(const char *name, struct lxc_conf *conf, const char
 	handler->lxcpath = lxcpath;
 	handler->pinfd = -1;
 
-	apparmor_handler_init(handler);
+	lsm_init();
+
 	handler->name = strdup(name);
 	if (!handler->name) {
 		ERROR("failed to allocate memory");
@@ -353,7 +363,9 @@ out_delete_tty:
 out_aborting:
 	lxc_set_state(name, handler, ABORTING);
 out_close_maincmd_fd:
+	process_lock();
 	close(conf->maincmd_fd);
+	process_unlock();
 	conf->maincmd_fd = -1;
 out_free_name:
 	free(handler->name);
@@ -380,11 +392,13 @@ static void lxc_fini(const char *name, struct lxc_handler *handler)
 
 	lxc_console_delete(&handler->conf->console);
 	lxc_delete_tty(&handler->conf->tty_info);
+	process_lock();
 	close(handler->conf->maincmd_fd);
+	process_unlock();
 	handler->conf->maincmd_fd = -1;
 	free(handler->name);
 	if (handler->cgroup) {
-		lxc_cgroup_destroy_desc(handler->cgroup);
+		lxc_cgroup_process_info_free_and_remove(handler->cgroup);
 		handler->cgroup = NULL;
 	}
 	free(handler);
@@ -421,20 +435,25 @@ static int container_reboot_supported(void *arg)
 
 static int must_drop_cap_sys_boot(struct lxc_conf *conf)
 {
-	FILE *f = fopen("/proc/sys/kernel/ctrl-alt-del", "r");
+	FILE *f;
 	int ret, cmd, v, flags;
         long stack_size = 4096;
         void *stack = alloca(stack_size);
         int status;
         pid_t pid;
 
+	process_lock();
+	f = fopen("/proc/sys/kernel/ctrl-alt-del", "r");
+	process_unlock();
 	if (!f) {
 		DEBUG("failed to open /proc/sys/kernel/ctrl-alt-del");
 		return 1;
 	}
 
 	ret = fscanf(f, "%d", &v);
+	process_lock();
 	fclose(f);
+	process_unlock();
 	if (ret != 1) {
 		DEBUG("Failed to read /proc/sys/kernel/ctrl-alt-del");
 		return 1;
@@ -469,6 +488,7 @@ static int must_drop_cap_sys_boot(struct lxc_conf *conf)
 static int do_start(void *data)
 {
 	struct lxc_handler *handler = data;
+	const char *lsm_label = NULL;
 
 	if (sigprocmask(SIG_SETMASK, &handler->oldmask, NULL)) {
 		SYSERROR("failed to set sigprocmask");
@@ -489,8 +509,11 @@ static int do_start(void *data)
 	lxc_sync_fini_parent(handler);
 
 	/* don't leak the pinfd to the container */
-	if (handler->pinfd >= 0)
+	if (handler->pinfd >= 0) {
+		process_lock();
 		close(handler->pinfd);
+		process_unlock();
+	}
 
 	/* Tell the parent task it can begin to configure the
 	 * container and wait for it to finish
@@ -525,7 +548,7 @@ static int do_start(void *data)
 	#endif
 
 	/* Setup the container, ip, names, utsname, ... */
-	if (lxc_setup(handler->name, handler->conf, handler->lxcpath)) {
+	if (lxc_setup(handler->name, handler->conf, handler->lxcpath, handler->cgroup)) {
 		ERROR("failed to setup the container");
 		goto out_warn_father;
 	}
@@ -534,8 +557,14 @@ static int do_start(void *data)
 	if (lxc_sync_barrier_parent(handler, LXC_SYNC_CGROUP))
 		return -1;
 
-	if (apparmor_load(handler) < 0)
+	/* Set the label to change to when we exec(2) the container's init */
+	if (!strcmp(lsm_name(), "AppArmor"))
+		lsm_label = handler->conf->lsm_aa_profile;
+	else if (!strcmp(lsm_name(), "SELinux"))
+		lsm_label = handler->conf->lsm_se_context;
+	if (lsm_process_label_set(lsm_label, 1, 1) < 0)
 		goto out_warn_father;
+	lsm_proc_unmount(handler->conf);
 
 	if (lxc_seccomp_load(handler->conf) != 0)
 		goto out_warn_father;
@@ -560,7 +589,9 @@ static int do_start(void *data)
 		goto out_warn_father;
 	}
 
+	process_lock();
 	close(handler->sigfd);
+	process_unlock();
 
 	/* after this call, we are in error because this
 	 * ops should not return as it execs */
@@ -603,11 +634,12 @@ int save_phys_nics(struct lxc_conf *conf)
 	return 0;
 }
 
-extern bool is_in_subcgroup(int pid, const char *subsystem, struct cgroup_desc *d);
 int lxc_spawn(struct lxc_handler *handler)
 {
 	int failed_before_rename = 0;
 	const char *name = handler->name;
+	struct cgroup_meta_data *cgroup_meta = NULL;
+	const char *cgroup_pattern = NULL;
 
 	if (lxc_sync_init(handler))
 		return -1;
@@ -646,16 +678,38 @@ int lxc_spawn(struct lxc_handler *handler)
 		goto out_abort;
 	}
 
+	cgroup_meta = lxc_cgroup_load_meta();
+	if (!cgroup_meta) {
+		ERROR("failed to detect cgroup metadata");
+		goto out_delete_net;
+	}
+
+	/* if we are running as root, use system cgroup pattern, otherwise
+	 * just create a cgroup under the current one. But also fall back to
+	 * that if for some reason reading the configuration fails and no
+	 * default value is available
+	 */
+	if (getuid() == 0)
+		cgroup_pattern = lxc_global_config_value("cgroup.pattern");
+	if (!cgroup_pattern)
+		cgroup_pattern = "%n";
+
+	/* Create cgroup before doing clone(), so the child will know from
+	 * handler which cgroup it is going to be put in later.
+	 */
+	if ((handler->cgroup = lxc_cgroup_create(name, cgroup_pattern, cgroup_meta, NULL)) == NULL) {
+		ERROR("failed to create cgroups for '%s'", name);
+		goto out_delete_net;
+	}
+
 	/*
 	 * if the rootfs is not a blockdev, prevent the container from
 	 * marking it readonly.
 	 */
 
 	handler->pinfd = pin_rootfs(handler->conf->rootfs.path);
-	if (handler->pinfd == -1) {
-		ERROR("failed to pin the container's rootfs");
-		goto out_delete_net;
-	}
+	if (handler->pinfd == -1)
+		INFO("failed to pin the container's rootfs");
 
 	/* Create a process in a new set of namespaces */
 	handler->pid = lxc_clone(do_start, handler, handler->clone_flags);
@@ -669,15 +723,20 @@ int lxc_spawn(struct lxc_handler *handler)
 	if (lxc_sync_wait_child(handler, LXC_SYNC_CONFIGURE))
 		failed_before_rename = 1;
 
-	if ((handler->cgroup = lxc_cgroup_path_create(name)) == NULL)
+	/* In case there is still legacy ns cgroup support in the kernel.
+	 * Should be removed at some later point in time.
+	 */
+	if (lxc_cgroup_create_legacy(handler->cgroup, name, handler->pid) < 0) {
+		ERROR("failed to create legacy ns cgroups for '%s'", name);
 		goto out_delete_net;
+	}
 
-	if (setup_cgroup(handler, &handler->conf->cgroup)) {
+	if (lxc_setup_cgroup_without_devices(handler, &handler->conf->cgroup)) {
 		ERROR("failed to setup the cgroups for '%s'", name);
 		goto out_delete_net;
 	}
 
-	if (lxc_cgroup_enter(handler->cgroup, handler->pid) < 0)
+	if (lxc_cgroup_enter(handler->cgroup, handler->pid, false) < 0)
 		goto out_delete_net;
 
 	if (failed_before_rename)
@@ -707,7 +766,7 @@ int lxc_spawn(struct lxc_handler *handler)
 	if (lxc_sync_barrier_child(handler, LXC_SYNC_POST_CONFIGURE))
 		goto out_delete_net;
 
-	if (setup_cgroup_devices(handler, &handler->conf->cgroup)) {
+	if (lxc_setup_cgroup_devices(handler, &handler->conf->cgroup)) {
 		ERROR("failed to setup the devices cgroup for '%s'", name);
 		goto out_delete_net;
 	}
@@ -739,6 +798,7 @@ int lxc_spawn(struct lxc_handler *handler)
 		goto out_abort;
 	}
 
+	lxc_cgroup_put_meta(cgroup_meta);
 	lxc_sync_fini(handler);
 
 	return 0;
@@ -747,10 +807,13 @@ out_delete_net:
 	if (handler->clone_flags & CLONE_NEWNET)
 		lxc_delete_network(handler);
 out_abort:
+	lxc_cgroup_put_meta(cgroup_meta);
 	lxc_abort(name, handler);
 	lxc_sync_fini(handler);
 	if (handler->pinfd >= 0) {
+		process_lock();
 		close(handler->pinfd);
+		process_unlock();
 		handler->pinfd = -1;
 	}
 
@@ -822,7 +885,9 @@ int __lxc_start(const char *name, struct lxc_conf *conf,
 	lxc_rename_phys_nics_on_shutdown(handler->conf);
 
 	if (handler->pinfd >= 0) {
+		process_lock();
 		close(handler->pinfd);
+		process_unlock();
 		handler->pinfd = -1;
 	}
 

@@ -38,6 +38,7 @@
 #include <lxc/conf.h>
 #include <lxc/start.h>	/* for struct lxc_handler */
 #include <lxc/utils.h>
+#include <lxc/cgroup.h>
 
 #include "commands.h"
 #include "console.h"
@@ -45,6 +46,7 @@
 #include "mainloop.h"
 #include "af_unix.h"
 #include "config.h"
+#include "lxclock.h"
 
 /*
  * This file provides the different functions for clients to
@@ -289,6 +291,36 @@ out:
 	return ret;
 }
 
+int lxc_try_cmd(const char *name, const char *lxcpath)
+{
+	int stopped, ret;
+	struct lxc_cmd_rr cmd = {
+		.req = { .cmd = LXC_CMD_GET_INIT_PID },
+	};
+
+	ret = lxc_cmd(name, &cmd, &stopped, lxcpath);
+
+	if (stopped)
+		return 0;
+	if (ret > 0 && cmd.rsp.ret < 0) {
+		errno = cmd.rsp.ret;
+		return -1;
+	}
+	if (ret > 0)
+		return 0;
+
+	/*
+	 * At this point we weren't denied access, and the
+	 * container *was* started.  There was some inexplicable
+	 * error in the protocol.
+	 * I'm not clear on whether we should return -1 here, but
+	 * we didn't receive a -EACCES, so technically it's not that
+	 * we're not allowed to control the container - it's just not
+	 * behaving.
+	 */
+	return 0;
+}
+
 /* Implentations of the commands and their callbacks */
 
 /*
@@ -351,7 +383,6 @@ static int lxc_cmd_get_clone_flags_callback(int fd, struct lxc_cmd_req *req,
 	return lxc_cmd_rsp_send(fd, &rsp);
 }
 
-extern char *cgroup_get_subsys_path(struct lxc_handler *handler, const char *subsys);
 /*
  * lxc_cmd_get_cgroup_path: Calculate a container's cgroup path for a
  * particular subsystem. This is the cgroup path relative to the root
@@ -403,8 +434,8 @@ static int lxc_cmd_get_cgroup_callback(int fd, struct lxc_cmd_req *req,
 
 	if (req->datalen < 1)
 		return -1;
-        
-	path = cgroup_get_subsys_path(handler, req->data);
+
+	path = lxc_cgroup_get_hierarchy_path_handler(req->data, handler);
 	if (!path)
 		return -1;
 	rsp.datalen = strlen(path) + 1,
@@ -560,7 +591,7 @@ static int lxc_cmd_stop_callback(int fd, struct lxc_cmd_req *req,
 	memset(&rsp, 0, sizeof(rsp));
 	rsp.ret = kill(handler->pid, stopsignal);
 	if (!rsp.ret) {
-		char *path = cgroup_get_subsys_path(handler, "freezer");
+		char *path = lxc_cgroup_get_hierarchy_path_handler("freezer", handler);
 		if (!path) {
 			ERROR("container %s:%s is not in a freezer cgroup",
 				handler->lxcpath, handler->name);
@@ -716,7 +747,9 @@ static void lxc_cmd_fd_cleanup(int fd, struct lxc_handler *handler,
 {
 	lxc_console_free(handler->conf, fd);
 	lxc_mainloop_del_handler(descr, fd);
+	process_lock();
 	close(fd);
+	process_unlock();
 }
 
 static int lxc_cmd_handler(int fd, void *data, struct lxc_epoll_descr *descr)
@@ -787,7 +820,9 @@ static int lxc_cmd_accept(int fd, void *data, struct lxc_epoll_descr *descr)
 {
 	int opt = 1, ret = -1, connection;
 
+	process_lock();
 	connection = accept(fd, NULL, 0);
+	process_unlock();
 	if (connection < 0) {
 		SYSERROR("failed to accept connection");
 		return -1;
@@ -814,7 +849,9 @@ out:
 	return ret;
 
 out_close:
+	process_lock();
 	close(connection);
+	process_unlock();
 	goto out;
 }
 
@@ -843,7 +880,9 @@ int lxc_cmd_init(const char *name, struct lxc_handler *handler,
 
 	if (fcntl(fd, F_SETFD, FD_CLOEXEC)) {
 		SYSERROR("failed to set sigfd to close-on-exec");
+		process_lock();
 		close(fd);
+		process_unlock();
 		return -1;
 	}
 
@@ -860,7 +899,9 @@ int lxc_cmd_mainloop_add(const char *name,
 	ret = lxc_mainloop_add_handler(descr, fd, lxc_cmd_accept, handler);
 	if (ret) {
 		ERROR("failed to add handler for command socket");
+		process_lock();
 		close(fd);
+		process_unlock();
 	}
 
 	return ret;

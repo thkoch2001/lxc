@@ -46,10 +46,11 @@
 #include "attach.h"
 #include "caps.h"
 #include "config.h"
-#include "apparmor.h"
 #include "utils.h"
 #include "commands.h"
 #include "cgroup.h"
+#include "lxclock.h"
+#include "lsm/lsm.h"
 
 #if HAVE_SYS_PERSONALITY_H
 #include <sys/personality.h>
@@ -78,7 +79,9 @@ struct lxc_proc_context_info *lxc_proc_get_context_info(pid_t pid)
 	/* read capabilities */
 	snprintf(proc_fn, MAXPATHLEN, "/proc/%d/status", pid);
 
+	process_lock();
 	proc_file = fopen(proc_fn, "r");
+	process_unlock();
 	if (!proc_file) {
 		SYSERROR("Could not open %s", proc_fn);
 		goto out_error;
@@ -95,7 +98,9 @@ struct lxc_proc_context_info *lxc_proc_get_context_info(pid_t pid)
 
 	if (line)
 		free(line);
+	process_lock();
 	fclose(proc_file);
+	process_unlock();
 
 	if (!found) {
 		SYSERROR("Could not read capability bounding set from %s", proc_fn);
@@ -106,27 +111,38 @@ struct lxc_proc_context_info *lxc_proc_get_context_info(pid_t pid)
 	/* read personality */
 	snprintf(proc_fn, MAXPATHLEN, "/proc/%d/personality", pid);
 
+	process_lock();
 	proc_file = fopen(proc_fn, "r");
+	process_unlock();
 	if (!proc_file) {
 		SYSERROR("Could not open %s", proc_fn);
 		goto out_error;
 	}
 
 	ret = fscanf(proc_file, "%lx", &info->personality);
+	process_lock();
 	fclose(proc_file);
+	process_unlock();
 
 	if (ret == EOF || ret == 0) {
 		SYSERROR("Could not read personality from %s", proc_fn);
 		errno = ENOENT;
 		goto out_error;
 	}
-	info->aa_profile = aa_get_profile(pid);
+	info->lsm_label = lsm_process_label_get(pid);
 
 	return info;
 
 out_error:
 	free(info);
 	return NULL;
+}
+
+static void lxc_proc_put_context_info(struct lxc_proc_context_info *ctx)
+{
+	if (ctx->lsm_label)
+		free(ctx->lsm_label);
+	free(ctx);
 }
 
 int lxc_attach_to_ns(pid_t pid, int which)
@@ -162,15 +178,19 @@ int lxc_attach_to_ns(pid_t pid, int which)
 		}
 
 		snprintf(path, MAXPATHLEN, "/proc/%d/ns/%s", pid, ns[i]);
+		process_lock();
 		fd[i] = open(path, O_RDONLY | O_CLOEXEC);
+		process_unlock();
 		if (fd[i] < 0) {
 			saved_errno = errno;
 
 			/* close all already opened file descriptors before
 			 * we return an error, so we don't leak them
 			 */
+			process_lock();
 			for (j = 0; j < i; j++)
 				close(fd[j]);
+			process_unlock();
 
 			errno = saved_errno;
 			SYSERROR("failed to open '%s'", path);
@@ -190,7 +210,9 @@ int lxc_attach_to_ns(pid_t pid, int which)
 			return -1;
 		}
 
+		process_lock();
 		close(fd[i]);
+		process_unlock();
 	}
 
 	return 0;
@@ -378,14 +400,18 @@ char *lxc_attach_getpwshell(uid_t uid)
 	 * getent program, and we need to capture its
 	 * output, so we use a pipe for that purpose
 	 */
+	process_lock();
 	ret = pipe(pipes);
+	process_unlock();
 	if (ret < 0)
 		return NULL;
 
 	pid = fork();
 	if (pid < 0) {
+		process_lock();
 		close(pipes[0]);
 		close(pipes[1]);
+		process_unlock();
 		return NULL;
 	}
 
@@ -397,9 +423,13 @@ char *lxc_attach_getpwshell(uid_t uid)
 		int found = 0;
 		int status;
 
+		process_lock();
 		close(pipes[1]);
+		process_unlock();
 
+		process_lock();
 		pipe_f = fdopen(pipes[0], "r");
+		process_unlock();
 		while (getline(&line, &line_bufsz, pipe_f) != -1) {
 			char *token;
 			char *saveptr = NULL;
@@ -456,7 +486,9 @@ char *lxc_attach_getpwshell(uid_t uid)
 		}
 
 		free(line);
+		process_lock();
 		fclose(pipe_f);
+		process_unlock();
 	again:
 		if (waitpid(pid, &status, 0) < 0) {
 			if (errno == EINTR)
@@ -489,6 +521,7 @@ char *lxc_attach_getpwshell(uid_t uid)
 			NULL
 		};
 
+		process_unlock(); // we're no longer sharing
 		close(pipes[0]);
 
 		/* we want to capture stdout */
@@ -618,8 +651,7 @@ int lxc_attach(const char* name, const char* lxcpath, lxc_attach_exec_t exec_fun
 			ERROR("failed to automatically determine the "
 			      "namespaces which the container unshared");
 			free(cwd);
-			free(init_ctx->aa_profile);
-			free(init_ctx);
+			lxc_proc_put_context_info(init_ctx);
 			return -1;
 		}
 	}
@@ -651,12 +683,13 @@ int lxc_attach(const char* name, const char* lxcpath, lxc_attach_exec_t exec_fun
 	 *   close socket                                 close socket
 	 *                                                run program
 	 */
+	process_lock();
 	ret = socketpair(PF_LOCAL, SOCK_STREAM | SOCK_CLOEXEC, 0, ipc_sockets);
+	process_unlock();
 	if (ret < 0) {
 		SYSERROR("could not set up required IPC mechanism for attaching");
 		free(cwd);
-		free(init_ctx->aa_profile);
-		free(init_ctx);
+		lxc_proc_put_context_info(init_ctx);
 		return -1;
 	}
 
@@ -677,8 +710,7 @@ int lxc_attach(const char* name, const char* lxcpath, lxc_attach_exec_t exec_fun
 	if (pid < 0) {
 		SYSERROR("failed to create first subprocess");
 		free(cwd);
-		free(init_ctx->aa_profile);
-		free(init_ctx);
+		lxc_proc_put_context_info(init_ctx);
 		return -1;
 	}
 
@@ -689,7 +721,9 @@ int lxc_attach(const char* name, const char* lxcpath, lxc_attach_exec_t exec_fun
 		/* inital thread, we close the socket that is for the
 		 * subprocesses
 		 */
+		process_lock();
 		close(ipc_sockets[1]);
+		process_unlock();
 		free(cwd);
 
 		/* get pid from intermediate process */
@@ -727,7 +761,24 @@ int lxc_attach(const char* name, const char* lxcpath, lxc_attach_exec_t exec_fun
 
 		/* attach to cgroup, if requested */
 		if (options->attach_flags & LXC_ATTACH_MOVE_TO_CGROUP) {
-			ret = lxc_cgroup_attach(attached_pid, name, lxcpath);
+			struct cgroup_meta_data *meta_data;
+			struct cgroup_process_info *container_info;
+
+			meta_data = lxc_cgroup_load_meta();
+			if (!meta_data) {
+				ERROR("could not move attached process %ld to cgroup of container", (long)attached_pid);
+				goto cleanup_error;
+			}
+
+			container_info = lxc_cgroup_get_container_info(name, lxcpath, meta_data);
+			lxc_cgroup_put_meta(meta_data);
+			if (!container_info) {
+				ERROR("could not move attached process %ld to cgroup of container", (long)attached_pid);
+				goto cleanup_error;
+			}
+
+			ret = lxc_cgroup_enter(container_info, attached_pid, false);
+			lxc_cgroup_process_info_free(container_info);
 			if (ret < 0) {
 				ERROR("could not move attached process %ld to cgroup of container", (long)attached_pid);
 				goto cleanup_error;
@@ -744,9 +795,10 @@ int lxc_attach(const char* name, const char* lxcpath, lxc_attach_exec_t exec_fun
 
 		/* now shut down communication with child, we're done */
 		shutdown(ipc_sockets[0], SHUT_RDWR);
+		process_lock();
 		close(ipc_sockets[0]);
-		free(init_ctx->aa_profile);
-		free(init_ctx);
+		process_unlock();
+		lxc_proc_put_context_info(init_ctx);
 
 		/* we're done, the child process should now execute whatever
 		 * it is that the user requested. The parent can now track it
@@ -761,14 +813,16 @@ int lxc_attach(const char* name, const char* lxcpath, lxc_attach_exec_t exec_fun
 		 * otherwise the pid we're waiting for may never exit
 		 */
 		shutdown(ipc_sockets[0], SHUT_RDWR);
+		process_lock();
 		close(ipc_sockets[0]);
+		process_unlock();
 		if (to_cleanup_pid)
 			(void) wait_for_pid(to_cleanup_pid);
-		free(init_ctx->aa_profile);
-		free(init_ctx);
+		lxc_proc_put_context_info(init_ctx);
 		return -1;
 	}
 
+	process_unlock(); // we're no longer sharing
 	/* first subprocess begins here, we close the socket that is for the
 	 * initial thread
 	 */
@@ -862,15 +916,6 @@ int attach_child_main(void* data)
 		ERROR("error using IPC to receive notification from initial process (0)");
 		shutdown(ipc_socket, SHUT_RDWR);
 		rexit(-1);
-	}
-
-	/* load apparmor profile */
-	if ((options->namespaces & CLONE_NEWNS) && (options->attach_flags & LXC_ATTACH_APPARMOR)) {
-		ret = attach_apparmor(init_ctx->aa_profile);
-		if (ret < 0) {
-			shutdown(ipc_socket, SHUT_RDWR);
-			rexit(-1);
-		}
 	}
 
 	/* A description of the purpose of this functionality is
@@ -969,8 +1014,18 @@ int attach_child_main(void* data)
 
 	shutdown(ipc_socket, SHUT_RDWR);
 	close(ipc_socket);
-	free(init_ctx->aa_profile);
-	free(init_ctx);
+
+	/* set new apparmor profile/selinux context */
+	if ((options->namespaces & CLONE_NEWNS) && (options->attach_flags & LXC_ATTACH_LSM)) {
+		int on_exec;
+
+		on_exec = options->attach_flags & LXC_ATTACH_LSM_EXEC ? 1 : 0;
+		ret = lsm_process_label_set(init_ctx->lsm_label, 0, on_exec);
+		if (ret < 0) {
+			rexit(-1);
+		}
+	}
+	lxc_proc_put_context_info(init_ctx);
 
 	/* The following is done after the communication socket is
 	 * shut down. That way, all errors that might (though

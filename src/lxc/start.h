@@ -50,12 +50,9 @@ struct lxc_handler {
 	struct lxc_operations *ops;
 	void *data;
 	int sv[2];
-#if HAVE_APPARMOR
-	int aa_enabled;
-#endif
 	int pinfd;
 	const char *lxcpath;
-	struct cgroup_desc *cgroup;
+	struct cgroup_process_info *cgroup;
 };
 
 extern struct lxc_handler *lxc_init(const char *name, struct lxc_conf *, const char *);

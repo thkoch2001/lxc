@@ -38,6 +38,8 @@
 
 struct bdev_specs;
 
+struct lxc_snapshot;
+
 struct lxc_container {
 	// private fields
 	char *name;
@@ -66,6 +68,7 @@ struct lxc_container {
 	bool (*startl)(struct lxc_container *c, int useinit, ...);
 	bool (*stop)(struct lxc_container *c);
 	void (*want_daemonize)(struct lxc_container *c);
+	bool (*want_close_all_fds)(struct lxc_container *c);
 	// Return current config file name.  The result is strdup()d, so free the result.
 	char *(*config_file_name)(struct lxc_container *c);
 	// for wait, timeout == -1 means wait forever, timeout == 0 means don't wait.
@@ -88,6 +91,9 @@ struct lxc_container {
 	 * the length which was our would be printed. */
 	int (*get_config_item)(struct lxc_container *c, const char *key, char *retv, int inlen);
 	int (*get_keys)(struct lxc_container *c, const char *key, char *retv, int inlen);
+	// Return interface names.  The result is strdup()d, so free the result.
+	char** (*get_interfaces)(struct lxc_container *c);
+	// Return IP addresses.  The result is strdup()d, so free the result.
 	char** (*get_ips)(struct lxc_container *c, char* interface, char* family, int scope);
 	/*
 	 * get_cgroup_item returns the number of bytes read, or an error (<0).
@@ -177,6 +183,60 @@ struct lxc_container {
 	/* run program in container, wait for it to exit */
 	int (*attach_run_wait)(struct lxc_container *c, lxc_attach_options_t *options, const char *program, const char * const argv[]);
 	int (*attach_run_waitl)(struct lxc_container *c, lxc_attach_options_t *options, const char *program, const char *arg, ...);
+
+	/*
+	* snapshot:
+	* If you have /var/lib/lxc/c1 and call c->snapshot() the firs time, it
+	* will return 0, and the container will be /var/lib/lxcsnaps/c1/snap0.
+	* The second call will return 1, and the snapshot will be
+	* /var/lib/lxcsnaps/c1/snap1.
+	*
+	* On error, returns -1.
+	*/
+	int (*snapshot)(struct lxc_container *c, char *commentfile);
+
+	/*
+	 * snapshot_list() will return a description of all snapshots of c in
+	 * a simple array.  See src/tests/snapshot.c for the proper way to
+	 * free the allocated results.
+	 *
+	 * Returns the number of snapshots.
+	 */
+	int (*snapshot_list)(struct lxc_container *, struct lxc_snapshot **);
+
+	/*
+	 * snapshot_restore() will create a new container based on a snapshot.
+	 * c is the container whose snapshot we look for, and snapname is the
+	 * specific snapshot name (i.e. "snap0").  newname is the name to be
+	 * used for the restored container.  If newname is the same as
+	 * c->name, then c will first be destroyed.  That will fail if the
+	 * snapshot is overlayfs-based, since the snapshots will pin the
+	 * original container.
+	 *
+	 * The restored container will be a copy (not snapshot) of the snapshot,
+	 * and restored in the lxcpath of the original container.
+	 *
+	 * As an example, c might be /var/lib/lxc/c1, snapname  might be 'snap0'
+	 * which stands for /var/lib/lxcsnaps/c1/snap0.  If newname is c2,
+	 * then snap0 will be copied to /var/lib/lxc/c2.
+	 *
+	 * Returns true on success, false on failure.
+	 */
+	bool (*snapshot_restore)(struct lxc_container *c, char *snapname, char *newname);
+
+	/*
+	 * Return false if there is a control socket for the container monitor,
+	 * and the caller may not access it.  Return true otherwise.
+	 */
+	bool (*may_control)(struct lxc_container *c);
+};
+
+struct lxc_snapshot {
+	char *name;
+	char *comment_pathname;
+	char *timestamp;
+	char *lxcpath;
+	void (*free)(struct lxc_snapshot *);
 };
 
 struct lxc_container *lxc_container_new(const char *name, const char *configpath);
@@ -185,8 +245,30 @@ int lxc_container_put(struct lxc_container *c);
 int lxc_get_wait_states(const char **states);
 const char *lxc_get_default_config_path(void);
 const char *lxc_get_default_lvm_vg(void);
+const char *lxc_get_default_lvm_thin_pool(void);
 const char *lxc_get_default_zfs_root(void);
 const char *lxc_get_version(void);
+
+/*
+ * Get a list of defined containers in a lxcpath.
+ * @lxcpath: lxcpath under which to look.
+ * @names: if not null, then a list of container names will be returned here.
+ * @cret: if not null, then a list of lxc_containers will be returned here.
+ *
+ * Returns the number of containers found, or -1 on error.
+ */
+int list_defined_containers(const char *lxcpath, char ***names, struct lxc_container ***cret);
+
+/*
+ * Get a list of active containers in a lxcpath.  Note that some of these
+ * containers may not be "defined".
+ * @lxcpath: lxcpath under which to look
+ * @names: if not null, then a list of container names will be returned here.
+ * @cret: if not null, then a list of lxc_containers will be returned here.
+ *
+ * Returns the number of containers found, or -1 on error.
+ */
+int list_active_containers(const char *lxcpath, char ***names, struct lxc_container ***cret);
 
 #if 0
 char ** lxc_get_valid_keys();

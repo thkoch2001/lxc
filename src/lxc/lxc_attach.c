@@ -141,7 +141,7 @@ Options :\n\
   -e, --elevated-privileges\n\
                     Use elevated privileges (capabilities, cgroup\n\
                     restrictions) instead of those of the container.\n\
-                    WARNING: This may leak privleges into the container.\n\
+                    WARNING: This may leak privileges into the container.\n\
                     Use with care.\n\
   -a, --arch=ARCH   Use ARCH for program instead of container's own\n\
                     architecture.\n\
@@ -188,6 +188,9 @@ int main(int argc, char *argv[])
 	if (ret)
 		return ret;
 
+	if (!my_args.log_file)
+		my_args.log_file = "none";
+
 	ret = lxc_log_init(my_args.name, my_args.log_file, my_args.log_priority,
 			   my_args.progname, my_args.quiet, my_args.lxcpath[0]);
 	if (ret)
@@ -196,7 +199,7 @@ int main(int argc, char *argv[])
 	if (remount_sys_proc)
 		attach_options.attach_flags |= LXC_ATTACH_REMOUNT_PROC_SYS;
 	if (elevated_privileges)
-		attach_options.attach_flags &= ~(LXC_ATTACH_MOVE_TO_CGROUP | LXC_ATTACH_DROP_CAPABILITIES | LXC_ATTACH_APPARMOR);
+		attach_options.attach_flags &= ~(LXC_ATTACH_MOVE_TO_CGROUP | LXC_ATTACH_DROP_CAPABILITIES | LXC_ATTACH_LSM_EXEC);
 	attach_options.namespaces = namespace_flags;
 	attach_options.personality = new_personality;
 	attach_options.env_policy = env_policy;

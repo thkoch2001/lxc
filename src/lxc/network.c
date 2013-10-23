@@ -48,6 +48,7 @@
 #include "nl.h"
 #include "network.h"
 #include "conf.h"
+#include "lxclock.h"
 
 #ifndef IFLA_LINKMODE
 #  define IFLA_LINKMODE 17
@@ -569,14 +570,18 @@ static int proc_sys_net_write(const char *path, const char *value)
 {
 	int fd, err = 0;
 
+	process_lock();
 	fd = open(path, O_WRONLY);
+	process_unlock();
 	if (fd < 0)
 		return -errno;
 
 	if (write(fd, value, strlen(value)) < 0)
 		err = -errno;
 
+	process_lock();
 	close(fd);
+	process_unlock();
 	return err;
 }
 
@@ -877,7 +882,11 @@ static int ip_addr_get(int family, int ifindex, void **res)
 
 			ip_info = (struct ip_req *)msg;
 			if (ip_info->ifa.ifa_index == ifindex) {
-				ifa_get_local_ip(family, ip_info, res);
+				if (ifa_get_local_ip(family, ip_info, res) < 0) {
+					err = -1;
+					goto out;
+				}
+
 				/* Found a result, stop searching */
 				if (*res)
 					goto out;
@@ -994,14 +1003,18 @@ int lxc_bridge_attach(const char *bridge, const char *ifname)
 	if (!index)
 		return -EINVAL;
 
+	process_lock();
 	fd = socket(AF_INET, SOCK_STREAM, 0);
+	process_unlock();
 	if (fd < 0)
 		return -errno;
 
 	strncpy(ifr.ifr_name, bridge, IFNAMSIZ);
 	ifr.ifr_ifindex = index;
 	err = ioctl(fd, SIOCBRADDIF, &ifr);
+	process_lock();
 	close(fd);
+	process_unlock();
 	if (err)
 		err = -errno;
 

@@ -1,7 +1,7 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-AC_INIT([lxc], [1.0.0.alpha1])
+AC_INIT([lxc], [1.0.0.alpha2])
 
 AC_CONFIG_SRCDIR([configure.ac])
 AC_CONFIG_AUX_DIR([config])
@@ -14,7 +14,7 @@ AC_GNU_SOURCE
 # Detect the distribution. This is used for the default configuration and
 # for some distro-specific build options.
 AC_MSG_CHECKING([host distribution])
-AC_ARG_WITH(distro, AS_HELP_STRING([--with-distro=DISTRO], [Specify the Linux distribution to target: One of redhat, oracle, fedora, suse, gentoo, debian, arch, slackware, paldo, mandriva or pardus.]))
+AC_ARG_WITH(distro, AS_HELP_STRING([--with-distro=DISTRO], [Specify the Linux distribution to target: One of redhat, oracle, fedora, suse, gentoo, debian, arch, slackware, paldo, openmandriva or pardus.]))
 if test "z$with_distro" = "z"; then
 	with_distro=`lsb_release -is`
 fi
@@ -28,8 +28,8 @@ if test "z$with_distro" = "z"; then
 	AC_CHECK_FILE(/etc/arch-release,with_distro="arch")
 	AC_CHECK_FILE(/etc/slackware-version,with_distro="slackware")
 	AC_CHECK_FILE(/etc/frugalware-release,with_distro="frugalware")
-	AC_CHECK_FILE(/etc/mandrakelinux-release, with_distro="mandriva")
-	AC_CHECK_FILE(/etc/mandriva-release,with_distro="mandriva")
+	AC_CHECK_FILE(/etc/mandrakelinux-release, with_distro="openmandriva")
+	AC_CHECK_FILE(/etc/mandriva-release,with_distro="openmandriva")
 	AC_CHECK_FILE(/etc/pardus-release,with_distro="pardus")
 fi
 with_distro=`echo ${with_distro} | tr '[[:upper:]]' '[[:lower:]]'`
@@ -51,7 +51,9 @@ case $with_distro in
 esac
 AC_MSG_RESULT([$with_distro])
 AM_CONDITIONAL([HAVE_DEBIAN], [test x"$with_distro" = "xdebian" -o x"$with_distro" = "xubuntu"])
+AM_CONDITIONAL([DISTRO_UBUNTU], [test "x$with_distro" = "xubuntu"])
 
+# Detect the newuidmap tool (required for userns)
 AC_CHECK_PROG([NEWUIDMAP], [newuidmap], [newuidmap])
 AM_CONDITIONAL([HAVE_NEWUIDMAP], [test -n "$NEWUIDMAP"])
 
@@ -90,6 +92,7 @@ if test "x$enable_doc" = "xyes" -o "x$enable_doc" = "xauto"; then
 	AC_SUBST(db2xman)
 fi
 AM_CONDITIONAL([ENABLE_DOCBOOK], [test "x$db2xman" != "x"])
+AM_CONDITIONAL([USE_DOCBOOK2X], [test "x$db2xman" != "xdocbook2man"])
 
 if test "x$db2xman" = "xdocbook2man"; then
 	docdtd="\"-//Davenport//DTD DocBook V3.0//EN\""
@@ -114,6 +117,20 @@ AM_COND_IF([ENABLE_APPARMOR],
 	[AC_CHECK_HEADER([sys/apparmor.h],[],[AC_MSG_ERROR([You must install the AppArmor development package in order to compile lxc])])
 	AC_CHECK_LIB([apparmor], [aa_change_profile],[],[AC_MSG_ERROR([You must install the AppArmor development package in order to compile lxc])])
 	AC_SUBST([APPARMOR_LIBS], [-lapparmor])])
+
+# SELinux
+AC_ARG_ENABLE([selinux],
+	[AC_HELP_STRING([--enable-selinux], [enable SELinux support])],
+	[], [enable_selinux=check])
+
+if test "x$enable_selinux" = xcheck; then
+	AC_CHECK_LIB([selinux],[setexeccon_raw],[enable_selinux=yes],[enable_selinux=no])
+fi
+AM_CONDITIONAL([ENABLE_SELINUX], [test "x$enable_selinux" = "xyes"])
+AM_COND_IF([ENABLE_SELINUX],
+	[AC_CHECK_HEADER([selinux/selinux.h],[],[AC_MSG_ERROR([You must install the SELinux development package in order to compile lxc])])
+	AC_CHECK_LIB([selinux], [setexeccon_raw],[],[AC_MSG_ERROR([You must install the SELinux development package in order to compile lxc])])
+	AC_SUBST([SELINUX_LIBS])])
 
 # Seccomp syscall filter
 AC_ARG_ENABLE([seccomp],
@@ -242,12 +259,14 @@ AC_ARG_WITH([global-conf],
 		[global lxc configuration file]
 	)], [], [with_global_conf=['${sysconfdir}/lxc/lxc.conf']])
 
+# The path of the userns network configuration file
 AC_ARG_WITH([usernic-conf],
 	[AC_HELP_STRING(
 		[--with-usernic-conf],
 		[user network interface configuration file]
 	)], [], [with_usernic_conf=['${sysconfdir}/lxc/lxc-usernet']])
 
+# The path of the runtime usernic database
 AC_ARG_WITH([usernic-db],
 	[AC_HELP_STRING(
 		[--with-usernic-db],
@@ -260,6 +279,13 @@ AC_ARG_WITH([rootfs-path],
 		[--with-rootfs-path=dir],
 		[lxc rootfs mount point]
 	)], [], [with_rootfs_path=['${libdir}/lxc/rootfs']])
+
+# cgroup pattern specification
+AC_ARG_WITH([cgroup-pattern],
+	[AC_HELP_STRING(
+		[--with-cgroup-pattern=pattern],
+		[pattern for container cgroups]
+	)], [], [with_cgroup_pattern=['/lxc/%n']])
 
 # Container log path.  By default, use $lxcpath.
 AC_MSG_CHECKING([Whether to place logfiles in container config path])
@@ -303,6 +329,7 @@ AS_AC_EXPAND(LXCTEMPLATEDIR, "$datadir/lxc/templates")
 AS_AC_EXPAND(LXCHOOKDIR, "$datadir/lxc/hooks")
 AS_AC_EXPAND(LXCINITDIR, "$libexecdir")
 AS_AC_EXPAND(LOGPATH, "$with_log_path")
+AC_SUBST(DEFAULT_CGROUP_PATTERN, ["$with_cgroup_pattern"])
 
 # Check for some standard kernel headers
 AC_CHECK_HEADERS([linux/unistd.h linux/netlink.h linux/genetlink.h],
@@ -407,6 +434,7 @@ AC_CONFIG_FILES([
 	doc/lxc-netstat.sgml
 	doc/lxc-ps.sgml
 	doc/lxc-restart.sgml
+	doc/lxc-snapshot.sgml
 	doc/lxc-start-ephemeral.sgml
 	doc/lxc-start.sgml
 	doc/lxc-stop.sgml
@@ -432,6 +460,41 @@ AC_CONFIG_FILES([
 	doc/examples/lxc-veth.conf
 	doc/examples/lxc-complex.conf
 
+	doc/ja/Makefile
+	doc/ja/legacy/lxc-ls.sgml
+	doc/ja/lxc-attach.sgml
+	doc/ja/lxc-cgroup.sgml
+	doc/ja/lxc-checkconfig.sgml
+	doc/ja/lxc-checkpoint.sgml
+	doc/ja/lxc-clone.sgml
+	doc/ja/lxc-console.sgml
+	doc/ja/lxc-create.sgml
+	doc/ja/lxc-destroy.sgml
+	doc/ja/lxc-device.sgml
+	doc/ja/lxc-execute.sgml
+	doc/ja/lxc-freeze.sgml
+	doc/ja/lxc-info.sgml
+	doc/ja/lxc-kill.sgml
+	doc/ja/lxc-ls.sgml
+	doc/ja/lxc-monitor.sgml
+	doc/ja/lxc-netstat.sgml
+	doc/ja/lxc-ps.sgml
+	doc/ja/lxc-restart.sgml
+	doc/ja/lxc-snapshot.sgml
+	doc/ja/lxc-start-ephemeral.sgml
+	doc/ja/lxc-start.sgml
+	doc/ja/lxc-stop.sgml
+	doc/ja/lxc-top.sgml
+	doc/ja/lxc-unfreeze.sgml
+	doc/ja/lxc-unshare.sgml
+	doc/ja/lxc-version.sgml
+	doc/ja/lxc-wait.sgml
+
+	doc/ja/lxc.conf.sgml
+	doc/ja/lxc.sgml
+	doc/ja/common_options.sgml
+	doc/ja/see_also.sgml
+
 	hooks/Makefile
 
 	templates/Makefile
@@ -442,11 +505,13 @@ AC_CONFIG_FILES([
 	templates/lxc-opensuse
 	templates/lxc-busybox
 	templates/lxc-fedora
+	templates/lxc-openmandriva
 	templates/lxc-oracle
 	templates/lxc-altlinux
 	templates/lxc-sshd
 	templates/lxc-archlinux
 	templates/lxc-alpine
+	templates/lxc-plamo
 
 	src/Makefile
 	src/lxc/Makefile

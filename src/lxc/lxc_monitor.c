@@ -42,13 +42,14 @@ static const struct option my_longopts[] = {
 static struct lxc_arguments my_args = {
 	.progname = "lxc-monitor",
 	.help     = "\
---name=NAME\n\
+[--name=NAME]\n\
 \n\
 lxc-monitor monitors the state of the NAME container\n\
 \n\
 Options :\n\
   -n, --name=NAME   NAME for name of the container\n\
                     NAME may be a regular expression",
+	.name     = ".*",
 	.options  = my_longopts,
 	.parser   = NULL,
 	.checker  = NULL,
@@ -65,6 +66,9 @@ int main(int argc, char *argv[])
 
 	if (lxc_arguments_parse(&my_args, argc, argv))
 		return -1;
+
+	if (!my_args.log_file)
+		my_args.log_file = "none";
 
 	if (lxc_log_init(my_args.name, my_args.log_file, my_args.log_priority,
 			 my_args.progname, my_args.quiet, my_args.lxcpath[0]))

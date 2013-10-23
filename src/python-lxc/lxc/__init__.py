@@ -333,6 +333,14 @@ class Container(_lxc.Container):
         else:
             return value
 
+    def get_interfaces(self):
+        """
+            Get a tuple of interfaces for the container.
+        """
+
+        return _lxc.Container.get_interfaces(self)
+
+
     def get_ips(self, interface=None, family=None, scope=None, timeout=0):
         """
             Get a tuple of IPs for the container.
@@ -464,7 +472,8 @@ LXC_ATTACH_CLEAR_ENV = _lxc.LXC_ATTACH_CLEAR_ENV
 LXC_ATTACH_MOVE_TO_CGROUP = _lxc.LXC_ATTACH_MOVE_TO_CGROUP
 LXC_ATTACH_DROP_CAPABILITIES = _lxc.LXC_ATTACH_DROP_CAPABILITIES
 LXC_ATTACH_SET_PERSONALITY = _lxc.LXC_ATTACH_SET_PERSONALITY
-LXC_ATTACH_APPARMOR = _lxc.LXC_ATTACH_APPARMOR
+LXC_ATTACH_LSM_NOW = _lxc.LXC_ATTACH_LSM_NOW
+LXC_ATTACH_LSM_EXEC = _lxc.LXC_ATTACH_LSM_EXEC
 LXC_ATTACH_REMOUNT_PROC_SYS = _lxc.LXC_ATTACH_REMOUNT_PROC_SYS
 LXC_ATTACH_DEFAULT = _lxc.LXC_ATTACH_DEFAULT
 CLONE_NEWUTS = _lxc.CLONE_NEWUTS
