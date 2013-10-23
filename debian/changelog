@@ -1,3 +1,14 @@
+lxc (1.0.0~alpha2-1) experimental; urgency=low
+
+  * Merging upstream version 1.0.0~alpha2.
+  * Dropping ptsmode.patch, included upstream.
+  * Updating homepage field.
+  * Updating copyright file.
+  * Removing currently broken ubuntu template (Closes: #727244).
+  * Removing set -e from rules for shell commands, not needed anymore.
+
+ -- Daniel Baumann <mail@daniel-baumann.ch>  Wed, 23 Oct 2013 20:26:32 +0200
+
 lxc (1.0.0~alpha1-2) experimental; urgency=low
 
   * Adding now required --rootfs handling to lxc-debconfig template.
