@@ -1,3 +1,9 @@
+lxc (1.0.0~alpha2-2) experimental; urgency=low
+
+  * Moving local additions to separate binary package lxc-stuff.
+
+ -- Daniel Baumann <mail@daniel-baumann.ch>  Wed, 23 Oct 2013 20:39:37 +0200
+
 lxc (1.0.0~alpha2-1) experimental; urgency=low
 
   * Merging upstream version 1.0.0~alpha2.
