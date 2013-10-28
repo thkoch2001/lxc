@@ -21,7 +21,9 @@ elif ls /etc/lxc/debconfig/* > /dev/null 2>&1
 then
 	# user has not specified preseed files through commandline option,
 	# showing debconf selection dialog for global preseed file.
-	_PRESEED_FILES="$(for _FILE in $(ls /etc/lxc/debconfig/*); do echo -n "$(basename ${_FILE}), "; done | sed -e 's|, $||')"
+
+	_FILES="$(cd /etc/lxc/debconfig && find * -not -type d -and -not -name '*.cfg' -and -not -name '*.in')"
+	_PRESEED_FILES="$(for _FILE in ${_FILES}; do echo -n "${_FILE}, "; done | sed -e 's|, $||')"
 
 	if [ -n "${_PRESEED_FILES}" ]
 	then
