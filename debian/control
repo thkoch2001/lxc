@@ -12,7 +12,7 @@ Build-Depends:
  libcap-dev,
  linux-libc-dev,
  pkg-config,
-Standards-Version: 3.9.4
+Standards-Version: 3.9.5
 Homepage: http://linuxcontainers.org/
 Vcs-Browser: http://daniel-baumann.ch/gitweb/?p=debian/packages/lxc.git
 Vcs-Git: git://daniel-baumann.ch/git/debian/packages/lxc.git
