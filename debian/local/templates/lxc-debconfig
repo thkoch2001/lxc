@@ -411,7 +411,7 @@ EOF
 	# Run live-debconfig (second pass)
 	if [ -x "${_ROOTFS}/bin/live-debconfig" ]
 	then
-		Chroot "${_ROOTFS}" "DEBIAN_FRONTEND=${_DEBCONF_FRONTEND:-dialog} DEBIAN_PRIORITY=${_DEBCONF_PRIORITY:-high} live-debconfig"
+		Chroot "${_ROOTFS}" "DEBIAN_FRONTEND=noninteractive DEBIAN_PRIORITY=criticial live-debconfig"
 	fi
 
 	if [ -n "${_LATE_COMMAND}" ]
