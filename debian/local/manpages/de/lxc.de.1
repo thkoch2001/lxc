@@ -11,13 +11,13 @@
 .\" This file was generated with po4a. Translate the source file.
 .\"
 .\"*******************************************************************
-.TH LXC 1 03.04.2013 0.9.0~rc1\-3 "Linux Containers"
+.TH LXC 1 03.04.2013 1.0.0~alpha2\-2 "Linux Containers"
 
 .SH NAME
 \fBlxc\fP \- Convenience Wrapper für LXC Programme
 
 .SH SYNTAX
-\fBlxc\fP \fIPROGRAMM\fP \fICONTAINER\fP
+\fBlxc\fP \fIPROGRAM\fP \fICONTAINER\fP|all [\fIOPTIONEN\fP]
 
 .SH BESCHREIBUNG
 \fBlxc\fP ist ein Convenience Wrapper für LXC Programme. Siehe \fIlxc\fP(7) für
@@ -33,9 +33,16 @@ bezeichnet ein Programm der Linux Container Tools (LXC), siehe \fIlxc\fP(7).
 .IP \fICONTAINER\fP 4
 bezeichnet einen Linux Container im LXC Pfad (Standardeinstellung
 /var/lib/lxc).
+.br
+Anstatt den Namen eines einzelnen Containers anzugeben kann 'all' verwendet
+werden um ein Programm auf allen verfügbaren Container auszuführen
+(z.B. 'lxc start all \-d' startet alle Container in Hintergrund).
+.IP \fIOPTIONEN\fP 4
+bezeichnet die Optionen für ein Programm der Linux Container Tools (LXC),
+siehe \fIlxc\fP(7).
 
 .SH "SIEHE AUCH"
-\fIlxc\fP(7), \fIlxc\-debconfig\fP(1), \fIlxc\-halt\fP(1), \fIlxc\-list\fP(1).
+\fIlxc\fP(7), \fIlxc\-debconfig\fP(1), \fIlxc\-list\fP(1).
 
 .SH FEHLER
 Fehler können durch Einreichen eines Fehlerberichtes für das lxc Paket im

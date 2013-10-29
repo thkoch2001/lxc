@@ -6,13 +6,13 @@
 .\" under certain conditions; see COPYING for details.
 .\"
 .\"
-.TH LXC 1 2013\-04\-03 0.9.0~rc1-3 "Linux Containers"
+.TH LXC 1 2013\-10\-29 1.0.0~alpha2-2 "Linux Containers"
 
 .SH NAME
 \fBlxc\fR \- convenience Wrapper for LXC programs
 
 .SH SYNOPSIS
-\fBlxc\fR \fIPROGRAM\fR \fICONTAINER\fR
+\fBlxc\fR \fIPROGRAM\fR \fICONTAINER\fR|all [\fIOPTIONS\fR]
 
 .SH DESCRIPTION
 \fBlxc\fR is a convenience Wrapper for LXC programs. See \fIlxc\fR(7) for more information about the Linux Container tools (LXC).
@@ -26,11 +26,14 @@ Example (wrapper): lxc start example.org
 specifies a program of the Linux Container tools (LXC), see \fIlxc\fR(7).
 .IP "\fICONTAINER\fR" 4
 specifies a Linux Container in the LXC path (default /var/lib/lxc).
+.br
+Instead of an individual container name 'all' can be used to execute a programm on all available containers (e.g. 'lxc start all -d' to start all containers in the background).
+.IP "\fIOPTIONS\fR" 4
+specifies options to a program of the Linux Container tools (LXC), see \fIlxc\fR(7).
 
 .SH SEE ALSO
 \fIlxc\fR(7),
 \fIlxc\-debconfig\fR(1),
-\fIlxc\-halt\fR(1),
 \fIlxc\-list\fR(1).
 
 .SH BUGS

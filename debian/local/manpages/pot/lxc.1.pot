@@ -7,7 +7,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: lxc VERSION\n"
-"POT-Creation-Date: 2013-04-03 12:53+0300\n"
+"POT-Creation-Date: 2013-10-29 14:19+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,67 +17,67 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 
 #. type: TH
-#: en/lxc-debconfig.1:9 en/lxc-halt.1:9 en/lxc-list.1:9 en/lxc.1:9
+#: en/lxc-debconfig.1:9 en/lxc-list.1:9 en/lxc.1:9
 #, no-wrap
 msgid "LXC"
 msgstr ""
 
 #. type: TH
-#: en/lxc-debconfig.1:9 en/lxc-halt.1:9 en/lxc-list.1:9 en/lxc.1:9
+#: en/lxc-debconfig.1:9 en/lxc-list.1:9 en/lxc.1:9
 #, no-wrap
-msgid "2013-04-03"
+msgid "2013-10-29"
 msgstr ""
 
 #. type: TH
-#: en/lxc-debconfig.1:9 en/lxc-halt.1:9 en/lxc-list.1:9 en/lxc.1:9
+#: en/lxc-debconfig.1:9 en/lxc-list.1:9 en/lxc.1:9
 #, no-wrap
-msgid "0.9.0~rc1-3"
+msgid "1.0.0~alpha2-2"
 msgstr ""
 
 #. type: TH
-#: en/lxc-debconfig.1:9 en/lxc-halt.1:9 en/lxc-list.1:9 en/lxc.1:9
+#: en/lxc-debconfig.1:9 en/lxc-list.1:9 en/lxc.1:9
 #, no-wrap
 msgid "Linux Containers"
 msgstr ""
 
 #. type: SH
-#: en/lxc-debconfig.1:11 en/lxc-halt.1:11 en/lxc-list.1:11 en/lxc.1:11
+#: en/lxc-debconfig.1:11 en/lxc-list.1:11 en/lxc.1:11
 #, no-wrap
 msgid "NAME"
 msgstr ""
 
 #. type: SH
-#: en/lxc-debconfig.1:14 en/lxc-halt.1:14 en/lxc-list.1:14 en/lxc.1:14
+#: en/lxc-debconfig.1:14 en/lxc-list.1:14 en/lxc.1:14
 #, no-wrap
 msgid "SYNOPSIS"
 msgstr ""
 
 #. type: SH
-#: en/lxc-debconfig.1:19 en/lxc-halt.1:17 en/lxc-list.1:17 en/lxc.1:17
+#: en/lxc-debconfig.1:19 en/lxc-list.1:17 en/lxc.1:17
 #, no-wrap
 msgid "DESCRIPTION"
 msgstr ""
 
 #. type: SH
-#: en/lxc-debconfig.1:25 en/lxc-halt.1:20 en/lxc-list.1:20 en/lxc.1:24
+#: en/lxc-debconfig.1:25 en/lxc-list.1:20 en/lxc.1:24
 #, no-wrap
 msgid "OPTIONS"
 msgstr ""
 
 #. type: SH
-#: en/lxc-debconfig.1:34 en/lxc-halt.1:24 en/lxc-list.1:23 en/lxc.1:30
+#: en/lxc-debconfig.1:34 en/lxc-list.1:23 en/lxc.1:34
 #, no-wrap
 msgid "SEE ALSO"
 msgstr ""
 
 #. type: SH
-#: en/lxc-debconfig.1:40 en/lxc-halt.1:30 en/lxc-list.1:29 en/lxc.1:36
+#: en/lxc-debconfig.1:39 en/lxc-list.1:28 en/lxc.1:39
 #, no-wrap
 msgid "BUGS"
 msgstr ""
 
 #. type: Plain text
-#: en/lxc-debconfig.1:42 en/lxc-halt.1:32 en/lxc-list.1:31 en/lxc.1:38
+#: en/lxc-debconfig.1:41 en/lxc-list.1:30 en/lxc.1:41
 msgid ""
 "Bugs can be reported by submitting a bugreport for the lxc package in the "
 "Debian Bug Tracking System at E<lt>I<http://bugs.debian.org/>E<gt> or by "
@@ -85,20 +85,9 @@ msgid ""
 msgstr ""
 
 #. type: SH
-#: en/lxc-debconfig.1:43 en/lxc-halt.1:33 en/lxc-list.1:32 en/lxc.1:39
+#: en/lxc-debconfig.1:42 en/lxc-list.1:31 en/lxc.1:42
 #, no-wrap
 msgid "AUTHOR"
-msgstr ""
-
-#. type: IP
-#: en/lxc-halt.1:21 en/lxc.1:27
-#, no-wrap
-msgid "I<CONTAINER>"
-msgstr ""
-
-#. type: Plain text
-#: en/lxc-halt.1:23 en/lxc.1:29
-msgid "specifies a Linux Container in the LXC path (default /var/lib/lxc)."
 msgstr ""
 
 #. type: Plain text
@@ -108,7 +97,7 @@ msgstr ""
 
 #. type: Plain text
 #: en/lxc.1:16
-msgid "B<lxc> I<PROGRAM> I<CONTAINER>"
+msgid "B<lxc> I<PROGRAM> I<CONTAINER>|all [I<OPTIONS>]"
 msgstr ""
 
 #. type: Plain text
@@ -139,12 +128,44 @@ msgstr ""
 msgid "specifies a program of the Linux Container tools (LXC), see I<lxc>(7)."
 msgstr ""
 
-#. type: Plain text
-#: en/lxc.1:35
-msgid "I<lxc>(7), I<lxc-debconfig>(1), I<lxc-halt>(1), I<lxc-list>(1)."
+#. type: IP
+#: en/lxc.1:27
+#, no-wrap
+msgid "I<CONTAINER>"
 msgstr ""
 
 #. type: Plain text
-#: en/lxc.1:40
+#: en/lxc.1:29
+msgid "specifies a Linux Container in the LXC path (default /var/lib/lxc)."
+msgstr ""
+
+#. type: Plain text
+#: en/lxc.1:31
+msgid ""
+"Instead of an individual container name 'all' can be used to execute a "
+"programm on all available containers (e.g. 'lxc start all -d' to start all "
+"containers in the background)."
+msgstr ""
+
+#. type: IP
+#: en/lxc.1:31
+#, no-wrap
+msgid "I<OPTIONS>"
+msgstr ""
+
+#. type: Plain text
+#: en/lxc.1:33
+msgid ""
+"specifies options to a program of the Linux Container tools (LXC), see I<lxc>"
+"(7)."
+msgstr ""
+
+#. type: Plain text
+#: en/lxc.1:38
+msgid "I<lxc>(7), I<lxc-debconfig>(1), I<lxc-list>(1)."
+msgstr ""
+
+#. type: Plain text
+#: en/lxc.1:43
 msgid "lxc was written by Daniel Baumann E<lt>I<mail@daniel-baumann.ch>E<gt>."
 msgstr ""
