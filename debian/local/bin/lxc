@@ -15,7 +15,7 @@ if [ -n "${_PROGRAM}" ]
 then
 	shift
 else
-	echo "Usage: ${0} PROGRAM CONTAINER"
+	echo "Usage: ${0} PROGRAM CONTAINER|all [OPTIONS]"
 	exit 1
 fi
 
@@ -25,23 +25,40 @@ then
 	exit 1
 fi
 
-_CONTAINER="${1}"
+_CONTAINERS="${1}"
+
+if [ -n "${_CONTAINERS}" ]
+then
+	shift
+
+	case "${_CONTAINERS}" in
+		all)
+			_CONTAINERS="$(lxc-ls)"
+			;;
+	esac
+fi
+
+_OPTIONS="${@}"
 
 case "${_PROGRAM}" in
 	checkconfig|list|ls|setcap|setuid|version)
 		# programs do not require any container as argument
-
+		lxc-${_PROGRAM} ${_OPTIONS}
 		;;
 
 	*)
-		if [ -n "${_CONTAINER}" ]
+		if [ -z "${_CONTAINERS}" ]
 		then
-			shift
+			echo "Usage: ${0} PROGRAM CONTAINER|all [OPTIONS]"
+			exit 1
+		fi
 
+		for _CONTAINER in ${_CONTAINERS}
+		do
 			case "${_PROGRAM}" in
 				clone|create|monitor|wait)
 					# programms do not require an existing container as argument
-
+					_NAME=""
 					;;
 
 				*)
@@ -50,15 +67,12 @@ case "${_PROGRAM}" in
 						echo "E: ${_CONTAINER} - no such container" >&2
 						exit 1
 					fi
+
+					_NAME="--name ${_CONTAINER}"
 					;;
 			esac
 
-			_OPTIONS="--name ${_CONTAINER}"
-		else
-			echo "Usage: ${0} PROGRAM CONTAINER"
-			exit 1
-		fi
+			lxc-${_PROGRAM} ${_NAME} ${_OPTIONS}
+		done
 		;;
 esac
-
-lxc-${_PROGRAM} ${_OPTIONS} ${@}
