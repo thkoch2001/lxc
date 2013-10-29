@@ -1073,6 +1073,12 @@ Clean ()
 			exit 1
 		fi
 
+		echo -n "Unmounting bind mounts..."
+		umount -f "${cache}/var/cache/apt/archives" > /dev/null 1>&1 || true
+		umount -f "${cache}/dev/pts" > /dev/null 1>&1 || true
+		umount -f "${cache}/proc" > /dev/null 1>&1 || true
+		umount -f "${cache}/sys" > /dev/null 2>&1 || true
+
 		echo -n "Purging the download cache..."
 		rm --preserve-root --one-file-system -rf $cache && echo "done." || exit 1
 
