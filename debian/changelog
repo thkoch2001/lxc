@@ -1,3 +1,28 @@
+lxc (1.0.0~alpha2-3) experimental; urgency=low
+
+  * Running second pass of live-debconfig with debconf frontend
+    noninteractive and priority critical (Closes: #727705).
+  * Updating to standards version 3.9.5.
+  * Disabling /dev/kmsg in default container config.
+  * Dropping left-over progress-linux apt preconfiguration.
+  * Dropping lxc-halt since all 'new' containers can be shutdown by sigpwr
+    by default for quite a while already.
+  * Renaming lxc-all to lxc-initscript.
+  * Making lxc support 'all' as argument in order to run commands on all
+    available containers.
+  * Updating manpages.
+  * Updating wrapping of default config files.
+  * Allowing to have architecture set to auto in order to have
+    architecture-neutral preseed files.
+  * Unmounting any stray bind mounts on failed container creation.
+  * Excluding directories and includes in /etc/lxc/debconfig from
+    automatic selection dialog.
+  * Moving lxc-stuff docs to local directory within sources tree.
+  * Moving lxc-stuff initscript to local directory within sources tree.
+  * Updating todo file.
+
+ -- Daniel Baumann <mail@daniel-baumann.ch>  Tue, 29 Oct 2013 15:41:44 +0100
+
 lxc (1.0.0~alpha2-2) experimental; urgency=low
 
   * Moving local additions to separate binary package lxc-stuff.
