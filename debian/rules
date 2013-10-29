@@ -29,7 +29,7 @@ override_dh_install:
 	dh_install --fail-missing
 
 override_dh_installinit:
-	dh_installinit --no-restart-on-upgrade --name lxc
+	dh_installinit -plxc-stuff --onlyscripts --no-restart-on-upgrade --name lxc
 
 override_dh_strip:
 	dh_strip --dbg-package=lxc-dbg
