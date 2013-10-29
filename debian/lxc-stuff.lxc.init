@@ -15,7 +15,7 @@
 # X-Interactive:	true
 ### END INIT INFO
 
-if [ ! -x /usr/bin/lxc-start ] || [ ! -x /usr/bin/lxc-all ]
+if [ ! -x /usr/bin/lxc-start ] || [ ! -x /usr/bin/lxc-initscript ]
 then
 	exit 0
 fi
@@ -26,23 +26,23 @@ PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin
 
 case "${1}" in
 	start)
-		lxc-all start
+		lxc-initscript start
 		;;
 
 	stop)
-		lxc-all stop
+		lxc-initscript stop
 		;;
 
 	restart|force-reload)
-		lxc-all restart
+		lxc-initscript restart
 		;;
 
 	freeze)
-		lxc-all freeze
+		lxc-initscript freeze
 		;;
 
 	unfreeze)
-		lxc-all unfreeze
+		lxc-initscript unfreeze
 		;;
 
 	status)
