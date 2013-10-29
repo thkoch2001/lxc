@@ -1,15 +1,18 @@
 lxc:
   * check for newly added --with-*/--enable-* configure flags if they're useful for us.
   * add native systemd job to complement sysvinit initscript.
-  * add debconf question about ipv4 forward enabling (already in live-debconfig).
-  * add a lxc-config script similar to git-config.
-  * clear tty and enable them dynamically
-  * enable console log by default and rotate them if necessary
-  * add debconf multi-select for autostarts in /etc/lxc/auto
   * update package description
+
+lxc-stuff:
+  * get rid of lxc-initscript by re-adding the same logic to lxc wrapper itself,
+    adding --respect-auto option or something which then is called from the initscript
+    (the only difference between lxc and lxc-initscript is the fancy output and
+    that /etc/lxc/auto is checked).
+  * add debconf question about ipv4 forward enabling (already in live-debconfig).
+  * clear tty and enable them dynamically
+  * add debconf multi-select for autostarts in /etc/lxc/auto
   * integrate example debian packages that contain /usr/share/lxc/cache/*
   * add debconf question to ask for level of mac conflict check
-  * support 'all' in lxc convenience wrapper
   * add a lxc-reboot command
   * since the required kernel patches will not make it to wheezy,
     add a watchdog so that containers are started again after a reboot/halt
@@ -46,3 +49,9 @@ lxc-debconfig:
   * support /etc/lxc/debconf/$FQDN.d/*.cfg as valid preseeds
   * if exit with error, do unmount pseudo-fs (use a trap, rather than rely on flock/set +x)
   * use /etc/lxc/default.conf as an include from $container/config
+  * add something like --no-delete to not delete cache/containers when
+    creation failed (in order to be able to debug later on)
+  * include niks example systemd preseeding configs
+  * check that preseed hiearchy is correct:
+    - main preseed voerwrites includes
+    - first include is overwritting by second include
