@@ -791,24 +791,24 @@ cat >> "${_PATH}/config" << EOF
 # ${_PATH}/config
 
 ## Container
-lxc.utsname                             = ${_NAME}
-lxc.rootfs                              = ${_PATH}/rootfs
+lxc.utsname = ${_NAME}
+lxc.rootfs = ${_PATH}/rootfs
 EOF
 
 	case "${_ARCHITECTURE}" in
 		amd64)
-			echo "lxc.arch                                = x86_64" >> "${_PATH}/config"
+			echo "lxc.arch = x86_64" >> "${_PATH}/config"
 			;;
 
 		i386)
-			echo "lxc.arch                                = x86" >> "${_PATH}/config"
+			echo "lxc.arch = x86" >> "${_PATH}/config"
 			;;
 	esac
 
 cat >> "${_PATH}/config" << EOF
-#lxc.console                            = /var/log/lxc/${_NAME}.console
-lxc.tty                                 = 6
-lxc.pts                                 = 1024
+#lxc.console = /var/log/lxc/${_NAME}.console
+lxc.tty = 6
+lxc.pts = 1024
 
 ## Capabilities
 EOF
@@ -827,67 +827,67 @@ EOF
 
 	for _CAPABILITY in ${_CAPABILITIES}
 	do
-		echo "${_COMMENTED}lxc.cap.drop                            = ${_CAPABILITY}" >> "${_PATH}/config"
+		echo "${_COMMENTED}lxc.cap.drop = ${_CAPABILITY}" >> "${_PATH}/config"
 	done
 
 cat >> "${_PATH}/config" << EOF
 ## Devices
-lxc.kmsg                                = 0
+lxc.kmsg = 0
 EOF
 
 	case "${_INITSYSTEM}" in
 		systemd)
-			echo "lxc.autodev                             = 1" >> "${_PATH}/config"
+			echo "lxc.autodev = 1" >> "${_PATH}/config"
 			;;
 		*)
-			echo "lxc.autodev                             = 0" >> "${_PATH}/config"
+			echo "lxc.autodev = 0" >> "${_PATH}/config"
 			;;
 	esac
 
 cat >> "${_PATH}/config" << EOF
 # Allow all devices
-#lxc.cgroup.devices.allow               = a
+#lxc.cgroup.devices.allow = a
 # Deny all devices
-lxc.cgroup.devices.deny                 = a
+lxc.cgroup.devices.deny = a
 # Allow to mknod all devices (but not using them)
-lxc.cgroup.devices.allow                = c *:* m
-lxc.cgroup.devices.allow                = b *:* m
+lxc.cgroup.devices.allow = c *:* m
+lxc.cgroup.devices.allow = b *:* m
 
 # /dev/console
-lxc.cgroup.devices.allow                = c 5:1 rwm
+lxc.cgroup.devices.allow = c 5:1 rwm
 # /dev/full
-lxc.cgroup.devices.allow                = c 1:7 rwm
+lxc.cgroup.devices.allow = c 1:7 rwm
 # /dev/fuse
-#lxc.cgroup.devices.allow               = c 10:229 rwm
+#lxc.cgroup.devices.allow = c 10:229 rwm
 # /dev/hpet
-#lxc.cgroup.devices.allow               = c 10:228 rwm
+#lxc.cgroup.devices.allow = c 10:228 rwm
 # /dev/kvm
-#lxc.cgroup.devices.allow               = c 10:232 rwm
+#lxc.cgroup.devices.allow = c 10:232 rwm
 # /dev/loop*
-#lxc.cgroup.devices.allow               = b 7:* rwm
+#lxc.cgroup.devices.allow = b 7:* rwm
 # /dev/loop-control
-#lxc.cgroup.devices.allow               = c 10:237 rwm
+#lxc.cgroup.devices.allow = c 10:237 rwm
 # /dev/null
-lxc.cgroup.devices.allow                = c 1:3 rwm
+lxc.cgroup.devices.allow = c 1:3 rwm
 # /dev/ptmx
-lxc.cgroup.devices.allow                = c 5:2 rwm
+lxc.cgroup.devices.allow = c 5:2 rwm
 # /dev/pts/*
-lxc.cgroup.devices.allow                = c 136:* rwm
+lxc.cgroup.devices.allow = c 136:* rwm
 # /dev/random
-lxc.cgroup.devices.allow                = c 1:8 rwm
+lxc.cgroup.devices.allow = c 1:8 rwm
 # /dev/rtc
-lxc.cgroup.devices.allow                = c 254:0 rm
+lxc.cgroup.devices.allow = c 254:0 rm
 # /dev/tty
-lxc.cgroup.devices.allow                = c 5:0 rwm
+lxc.cgroup.devices.allow = c 5:0 rwm
 # /dev/urandom
-lxc.cgroup.devices.allow                = c 1:9 rwm
+lxc.cgroup.devices.allow = c 1:9 rwm
 # /dev/zero
-lxc.cgroup.devices.allow                = c 1:5 rwm
+lxc.cgroup.devices.allow = c 1:5 rwm
 
 ## Limits
-#lxc.cgroup.cpu.shares                  = 1024
-#lxc.cgroup.cpuset.cpus                 = 0
-#lxc.cgroup.memory.limit_in_bytes       = 256M
+#lxc.cgroup.cpu.shares = 1024
+#lxc.cgroup.cpuset.cpus = 0
+#lxc.cgroup.memory.limit_in_bytes = 256M
 #lxc.cgroup.memory.memsw.limit_in_bytes = 1G
 
 ## Filesystem
@@ -898,7 +898,7 @@ EOF
 			;;
 
 		*)
-			echo "lxc.mount.entry                         = ${LXC_DEBCONFIG_MOUNT_PROC_ENTRY}" >> "${_PATH}/config"
+			echo "lxc.mount.entry = ${LXC_DEBCONFIG_MOUNT_PROC_ENTRY}" >> "${_PATH}/config"
 			;;
 	esac
 
@@ -915,7 +915,7 @@ EOF
 			;;
 
 		*)
-			echo "lxc.mount.entry                         = ${LXC_DEBCONFIG_MOUNT_SYSFS_ENTRY}" >> "${_PATH}/config"
+			echo "lxc.mount.entry = ${LXC_DEBCONFIG_MOUNT_SYSFS_ENTRY}" >> "${_PATH}/config"
 			;;
 	esac
 
@@ -932,7 +932,7 @@ EOF
 
 		if [ -n "${_ENTRY}" ]
 		then
-			echo "lxc.mount.entry                         = ${_ENTRY}" >> "${_PATH}/config"
+			echo "lxc.mount.entry = ${_ENTRY}" >> "${_PATH}/config"
 
 			# Create directories
 			_SOURCE="$(echo ${_ENTRY} | awk '{ print $1 }')"
@@ -952,24 +952,24 @@ EOF
 		# Adding shared data directory if existing
 		if [ -d "/srv/share/${_NAME}" ]
 		then
-			echo "lxc.mount.entry                         = /srv/share/${_NAME} ${_PATH}/rootfs/srv/${_NAME} none defaults,bind 0 0" >> "${_PATH}/config"
+			echo "lxc.mount.entry = /srv/share/${_NAME} ${_PATH}/rootfs/srv/${_NAME} none defaults,bind 0 0" >> "${_PATH}/config"
 			mkdir -p "${_PATH}/rootfs/srv/${_NAME}"
 		elif [ -d "/srv/${_NAME}" ]
 		then
-			echo "lxc.mount.entry                         = /srv/${_NAME} ${_PATH}/rootfs/srv/${_NAME} none defaults,bind 0 0" >> "${_PATH}/config"
+			echo "lxc.mount.entry = /srv/${_NAME} ${_PATH}/rootfs/srv/${_NAME} none defaults,bind 0 0" >> "${_PATH}/config"
 			mkdir -p "${_PATH}/rootfs/srv/${_NAME}"
 		elif [ -d "/srv/share" ]
 		then
-			echo "#lxc.mount.entry                        = /srv/share/${_NAME} ${_PATH}/rootfs/srv/${_NAME} none defaults,bind 0 0" >> "${_PATH}/config"
+			echo "#lxc.mount.entry = /srv/share/${_NAME} ${_PATH}/rootfs/srv/${_NAME} none defaults,bind 0 0" >> "${_PATH}/config"
 		else
-			echo "#lxc.mount.entry                        = /srv/${_NAME} ${_PATH}/rootfs/srv/${_NAME} none defaults,bind 0 0" >> "${_PATH}/config"
+			echo "#lxc.mount.entry = /srv/${_NAME} ${_PATH}/rootfs/srv/${_NAME} none defaults,bind 0 0" >> "${_PATH}/config"
 		fi
 	fi
 
 	case "${_INITSYSTEM}" in
 		systemd)
-			echo "lxc.hook.pre-start                      = /usr/share/lxc/hooks/systemd-host" >> "${_PATH}/config"
-			echo "lxc.hook.mount                          = /usr/share/lxc/hooks/systemd-container" >> "${_PATH}/config"
+			echo "lxc.hook.pre-start = /usr/share/lxc/hooks/systemd-host" >> "${_PATH}/config"
+			echo "lxc.hook.mount = /usr/share/lxc/hooks/systemd-container" >> "${_PATH}/config"
 			;;
 		*)
 			;;
@@ -1003,20 +1003,20 @@ EOF
 
 		if [ "${_METHOD}" = "none" ]
 		then
-			echo "lxc.network.type                        = empty" >> "${_PATH}/config"
+			echo "lxc.network.type = empty" >> "${_PATH}/config"
 
 			_NUMBER="$((${_NUMBER} + 1))"
 			continue
 		fi
 
 cat >> "${_PATH}/config" << EOF
-lxc.network.type                        = veth
-lxc.network.flags                       = up
-lxc.network.hwaddr                      = ${_MAC}
-lxc.network.link                        = ${_BRIDGE}
+lxc.network.type = veth
+lxc.network.flags = up
+lxc.network.hwaddr = ${_MAC}
+lxc.network.link = ${_BRIDGE}
 EOF
 
-		echo "lxc.network.name                        = eth${_NUMBER}" >> "${_PATH}/config"
+		echo "lxc.network.name = eth${_NUMBER}" >> "${_PATH}/config"
 
 		if [ -n "${_VETH}" ]
 		then
@@ -1029,7 +1029,7 @@ EOF
 				echo "I: Automatically shortening ${_VETH_OLD} to ${_VETH}."
 			fi
 
-			echo "lxc.network.veth.pair                   = ${_VETH}" >> "${_PATH}/config"
+			echo "lxc.network.veth.pair = ${_VETH}" >> "${_PATH}/config"
 		fi
 
 		_NUMBER="$((${_NUMBER} + 1))"
