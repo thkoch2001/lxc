@@ -87,14 +87,14 @@ Parent_distribution ()
 
 Architecture ()
 {
-	_CHOICES="${1}"
-	_CHOICES_C="${2}"
-	_DEFAULT="${3}"
+	_DEFAULT="${1}"
+	_CHOICES="${2}"
+	_CHOICES_C="${3}"
 
 	db_get lxc-debconfig/architecture
 	_ARCHITECTURE="${RET}" # select
 
-	if [ -z "${_ARCHITECTURE}" ]
+	if [ -z "${_ARCHITECTURE}" ] && [ -n "${_CHOICES}" ]
 	then
 		db_subst lxc-debconfig/architecture CHOICES ${_CHOICES}
 		db_subst lxc-debconfig/architecture CHOICES_C ${_CHOICES_C}
@@ -109,6 +109,12 @@ Architecture ()
 		db_get lxc-debconfig/architecture
 		_ARCHITECTURE="${RET}" # select
 	fi
+
+	case "${_ARCHITECTURE}" in
+		auto)
+			_ARCHITECTURE="${_DEFAULT}"
+			;;
+	esac
 
 	echo "_ARCHITECTURE=\"${_ARCHITECTURE}\"" >> "${_TMPDIR}/debconf.default"
 	export _ARCHITECTURE
@@ -990,8 +996,13 @@ Parent_distribution
 
 case "$(dpkg --print-architecture)" in
 	amd64)
-		# Usage: Architecture CHOICES CHOICES_C Default
-		Architecture "32-bit PC (i386), 64-bit PC (amd64)" "i386, amd64" "amd64"
+		# Usage: Architecture Default CHOICES CHOICES_C
+		Architecture "amd64" "Automatic, 32-bit PC (i386), 64-bit PC (amd64)" "auto, i386, amd64"
+		;;
+
+	i386)
+		# Usage: Architecture Default CHOICES CHOICES_C
+		Architecture "i386"
 		;;
 esac
 
