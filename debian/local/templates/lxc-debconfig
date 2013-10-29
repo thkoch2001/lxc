@@ -842,6 +842,7 @@ EOF
 
 cat >> "${_PATH}/config" << EOF
 ## Devices
+lxc.kmsg                                = 0
 EOF
 
 	case "${_INITSYSTEM}" in
