@@ -1,3 +1,10 @@
+lxc (1.0.0~alpha2-4) experimental; urgency=low
+
+  * Updatin lxc-stuff dehelper install file with proper paths (Closes:
+    #728435).
+
+ -- Daniel Baumann <mail@daniel-baumann.ch>  Sun, 03 Nov 2013 14:16:28 +0100
+
 lxc (1.0.0~alpha2-3) experimental; urgency=low
 
   * Running second pass of live-debconfig with debconf frontend
