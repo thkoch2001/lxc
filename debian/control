@@ -41,7 +41,7 @@ Architecture: all
 Depends:
  ${misc:Depends},
  lxc (>= ${source:Version}),
-Breaks: lxc (<< 1.0.0~alpha2-2~)
+Breaks: lxc (<< 1.0.0~alpha)
 Replaces: lxc
 Recommends: debootstrap
 Suggests:
