@@ -1,3 +1,10 @@
+lxc (1.0.0~alpha2-6) experimental; urgency=low
+
+  * Also dropping permissions on /var/cache/lxc for consistency
+    (eventhough there's only the minimal bootstrap in there).
+
+ -- Daniel Baumann <mail@daniel-baumann.ch>  Wed, 06 Nov 2013 13:42:45 +0100
+
 lxc (1.0.0~alpha2-5) experimental; urgency=low
 
   * Shortening versioned breaks of lxc-stuff against lxc.
