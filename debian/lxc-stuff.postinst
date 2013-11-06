@@ -74,6 +74,7 @@ EOF
 			fi
 		done
 
+		chmod 0700 "${LXC_DIRECTORY}"
 		chmod 0700 /var/log/lxc
 
 		if [ "${LXC_DIRECTORY}" != "/var/lib/lxc" ]
