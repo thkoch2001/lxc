@@ -90,7 +90,7 @@ EOF
 		fi
 
 		# Restricting directory access to some directories for security reasons (private information and setuid programs)
-		for _DIRECTORY in "${LXC_DIRECTORY}" /etc/lxc /var/log/lxc
+		for _DIRECTORY in "${LXC_DIRECTORY}" /etc/lxc /var/cache/lxc /var/log/lxc
 		do
 			if ! dpkg-statoverride --list "${_DIRECTORY}" > /dev/null 2>&1
 			then

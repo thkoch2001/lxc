@@ -17,7 +17,7 @@ case "${1}" in
 
 		rmdir --ignore-fail-on-non-empty "${LXC_DIRECTORY}" > /dev/null 2>&1 || true
 
-		for _DIRECTORY in "${LXC_DIRECTORY}" /etc/lxc /var/log/lxc
+		for _DIRECTORY in "${LXC_DIRECTORY}" /etc/lxc /var/cache/lxc /var/log/lxc
 		do
 			dpkg-statoverride --force --remove "${_DIRECTORY}" > /dev/null 2>&1 || true
 		done
