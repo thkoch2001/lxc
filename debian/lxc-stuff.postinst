@@ -74,9 +74,6 @@ EOF
 			fi
 		done
 
-		chmod 0700 "${LXC_DIRECTORY}"
-		chmod 0700 /var/log/lxc
-
 		if [ "${LXC_DIRECTORY}" != "/var/lib/lxc" ]
 		then
 			if [ -h /var/lib/lxc ]
@@ -91,6 +88,15 @@ EOF
 
 			ln -s "${LXC_DIRECTORY}" /var/lib/lxc
 		fi
+
+		# Restricting directory access to some directories for security reasons (private information and setuid programs)
+		for _DIRECTORY in "${LXC_DIRECTORY}" /etc/lxc /var/log/lxc
+		do
+			if ! dpkg-statoverride --list "${_DIRECTORY}" > /dev/null 2>&1
+			then
+				chmod 0700 "${_DIRECTORY}"
+			fi
+		done
 		;;
 
 	abort-upgrade|abort-remove|abort-deconfigure)
