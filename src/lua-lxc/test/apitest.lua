@@ -206,6 +206,23 @@ function test_container_in_cfglist(should_find)
     end
 end
 
+function test_container_cgroup()
+    log(0, "Test get/set cgroup items...")
+
+    max_mem = container:get_cgroup_item("memory.max_usage_in_bytes")
+    saved_limit = container:get_cgroup_item("memory.limit_in_bytes")
+    assert(saved_limit ~= max_mem)
+    assert(container:set_cgroup_item("memory.limit_in_bytes", max_mem))
+    assert(container:get_cgroup_item("memory.limit_in_bytes") ~= saved_limit)
+    assert(container:set_cgroup_item("memory.limit_in_bytes", "-1"))
+end
+
+function test_container_cmd()
+    log(0, "Test get config from running container...")
+    veth_pair = lxc.cmd_get_config_item(optarg["n"], "lxc.network.0.veth.pair")
+    log(0, "  veth.pair:%s", veth_pair)
+end
+
 function test_config_items()
     log(0, "Test set/clear configuration items...")
 
@@ -312,6 +329,9 @@ test_config_network(0)
 
 test_container_start()
 test_container_started()
+
+test_container_cgroup()
+test_container_cmd()
 
 test_container_freeze()
 test_container_frozen()

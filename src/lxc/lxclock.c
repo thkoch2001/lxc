@@ -18,18 +18,22 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include <pthread.h>
+#define _GNU_SOURCE
 #include "lxclock.h"
 #include <malloc.h>
 #include <stdio.h>
 #include <errno.h>
 #include <unistd.h>
 #include <fcntl.h>
-#define _GNU_SOURCE
 #include <stdlib.h>
+#include <pthread.h>
 #include <lxc/utils.h>
 #include <lxc/log.h>
 #include <lxc/lxccontainer.h>
+
+#ifdef MUTEX_DEBUGGING
+#include <execinfo.h>
+#endif
 
 #define OFLAG (O_CREAT | O_RDWR)
 #define SEMMODE 0660
@@ -38,7 +42,56 @@
 
 lxc_log_define(lxc_lock, lxc);
 
+#ifdef MUTEX_DEBUGGING
+pthread_mutex_t thread_mutex = PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP;
+pthread_mutex_t static_mutex = PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP;
+
+inline void dump_stacktrace(void)
+{
+	void *array[MAX_STACKDEPTH];
+	size_t size;
+	char **strings;
+	size_t i;
+
+	size = backtrace(array, MAX_STACKDEPTH);
+	strings = backtrace_symbols(array, size);
+
+	// Using fprintf here as our logging module is not thread safe
+	fprintf(stderr, "\tObtained %zd stack frames.\n", size);
+
+	for (i = 0; i < size; i++)
+		fprintf(stderr, "\t\t%s\n", strings[i]);
+
+	free (strings);
+}
+#else
 pthread_mutex_t thread_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t static_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+inline void dump_stacktrace(void) {;}
+#endif
+
+void lock_mutex(pthread_mutex_t *l)
+{
+	int ret;
+
+	if ((ret = pthread_mutex_lock(l)) != 0) {
+		fprintf(stderr, "pthread_mutex_lock returned:%d %s", ret, strerror(ret));
+		dump_stacktrace();
+		exit(1);
+	}
+}
+
+void unlock_mutex(pthread_mutex_t *l)
+{
+	int ret;
+
+	if ((ret = pthread_mutex_unlock(l)) != 0) {
+		fprintf(stderr, "pthread_mutex_lock returned:%d %s", ret, strerror(ret));
+		dump_stacktrace();
+		exit(1);
+	}
+}
 
 static char *lxclock_name(const char *p, const char *n)
 {
@@ -240,7 +293,7 @@ void lxc_putlock(struct lxc_lock *l)
 	switch(l->type) {
 	case LXC_LOCK_ANON_SEM:
 		if (l->u.sem) {
-			sem_close(l->u.sem);
+			sem_destroy(l->u.sem);
 			free(l->u.sem);
 			l->u.sem = NULL;
 		}
@@ -263,17 +316,23 @@ void lxc_putlock(struct lxc_lock *l)
 
 void process_lock(void)
 {
-	int ret;
-
-	if ((ret = pthread_mutex_lock(&thread_mutex)) != 0) {
-		ERROR("pthread_mutex_lock returned:%d %s", ret, strerror(ret));
-		exit(1);
-	}
+	lock_mutex(&thread_mutex);
 }
 
 void process_unlock(void)
 {
-	pthread_mutex_unlock(&thread_mutex);
+	unlock_mutex(&thread_mutex);
+}
+
+/* Protects static const values inside the lxc_global_config_value funtion */
+void static_lock(void)
+{
+	lock_mutex(&static_mutex);
+}
+
+void static_unlock(void)
+{
+	unlock_mutex(&static_mutex);
 }
 
 int container_mem_lock(struct lxc_container *c)

@@ -1268,7 +1268,6 @@ int detect_shared_rootfs(void)
 	if (!f)
 		return 0;
 	while ((p = fgets(buf, LINELEN, f))) {
-		INFO("looking at .%s.", p);
 		for (p = buf, i=0; p && i < 4; i++)
 			p = index(p+1, ' ');
 		if (!p)
@@ -1277,7 +1276,6 @@ int detect_shared_rootfs(void)
 		if (!p2)
 			continue;
 		*p2 = '\0';
-		INFO("now p is .%s.", p);
 		if (strcmp(p+1, "/") == 0) {
 			// this is '/'.  is it shared?
 			p = index(p2+1, ' ');
@@ -1946,9 +1944,9 @@ static int setup_caps(struct lxc_list *caps)
 			/* try to see if it's numeric, so the user may specify
 			* capabilities  that the running kernel knows about but
 			* we don't */
+			errno = 0;
 			capid = strtol(drop_entry, &ptr, 10);
-			if (!ptr || *ptr != '\0' ||
-			capid == LONG_MIN || capid == LONG_MAX)
+			if (!ptr || *ptr != '\0' || errno != 0)
 				/* not a valid number */
 				capid = -1;
 			else if (capid > lxc_caps_last_cap())
@@ -2013,7 +2011,7 @@ static int dropcaps_except(struct lxc_list *caps)
 			* we don't */
 			capid = strtol(keep_entry, &ptr, 10);
 			if (!ptr || *ptr != '\0' ||
-			capid == LONG_MIN || capid == LONG_MAX)
+			capid == INT_MIN || capid == INT_MAX)
 				/* not a valid number */
 				capid = -1;
 			else if (capid > lxc_caps_last_cap())
@@ -2059,6 +2057,7 @@ static int setup_hw_addr(char *hwaddr, const char *ifname)
 	}
 
 	memcpy(ifr.ifr_name, ifname, IFNAMSIZ);
+	ifr.ifr_name[IFNAMSIZ-1] = '\0';
 	memcpy((char *) &ifr.ifr_hwaddr, (char *) &sockaddr, sizeof(sockaddr));
 
 	process_lock();
@@ -2076,7 +2075,7 @@ static int setup_hw_addr(char *hwaddr, const char *ifname)
 	if (ret)
 		ERROR("ioctl failure : %s", strerror(errno));
 
-	DEBUG("mac address '%s' on '%s' has been setup", hwaddr, ifname);
+	DEBUG("mac address '%s' on '%s' has been setup", hwaddr, ifr.ifr_name);
 
 	return ret;
 }
@@ -2144,6 +2143,14 @@ static int setup_netdev(struct lxc_netdev *netdev)
 		}
 		return 0;
 	}
+
+	/* get the new ifindex in case of physical netdev */
+	if (netdev->type == LXC_NET_PHYS)
+		if (!(netdev->ifindex = if_nametoindex(netdev->link))) {
+			ERROR("failed to get ifindex for %s",
+				netdev->link);
+			return -1;
+		}
 
 	/* retrieve the name of the interface */
 	if (!if_indextoname(netdev->ifindex, current_ifname)) {
@@ -2687,6 +2694,10 @@ int lxc_create_network(struct lxc_handler *handler)
 	struct lxc_list *network = &handler->conf->network;
 	struct lxc_list *iterator;
 	struct lxc_netdev *netdev;
+	int am_root = (getuid() == 0);
+
+	if (!am_root)
+		return 0;
 
 	lxc_list_for_each(iterator, network) {
 
@@ -2738,16 +2749,51 @@ void lxc_delete_network(struct lxc_handler *handler)
 	}
 }
 
+int unpriv_assign_nic(struct lxc_netdev *netdev, pid_t pid)
+{
+	pid_t child;
+
+	if (netdev->type != LXC_NET_VETH) {
+		ERROR("nic type %d not support for unprivileged use",
+			netdev->type);
+		return -1;
+	}
+
+	if ((child = fork()) < 0) {
+		SYSERROR("fork");
+		return -1;
+	}
+
+	if (child > 0)
+		return wait_for_pid(child);
+
+	// Call lxc-user-nic pid type bridge
+	char pidstr[20];
+	char *args[] = { "lxc-user-nic", pidstr, "veth", netdev->link, netdev->name, NULL };
+	snprintf(pidstr, 19, "%lu", (unsigned long) pid);
+	pidstr[19] = '\0';
+	execvp("lxc-user-nic", args);
+	SYSERROR("execvp lxc-user-nic");
+	exit(1);
+}
+
 int lxc_assign_network(struct lxc_list *network, pid_t pid)
 {
 	struct lxc_list *iterator;
 	struct lxc_netdev *netdev;
+	int am_root = (getuid() == 0);
 	int err;
 
 	lxc_list_for_each(iterator, network) {
 
 		netdev = iterator->elem;
 
+		if (!am_root) {
+			if (unpriv_assign_nic(netdev, pid))
+				return -1;
+			// TODO fill in netdev->ifindex and name
+			continue;
+		}
 		/* empty network namespace, nothing to move */
 		if (!netdev->ifindex)
 			continue;
@@ -2802,31 +2848,49 @@ int lxc_map_ids(struct lxc_list *idmap, pid_t pid)
 	int ret = 0;
 	enum idtype type;
 	char *buf = NULL, *pos;
+	int am_root = (getuid() == 0);
 
 	for(type = ID_TYPE_UID; type <= ID_TYPE_GID; type++) {
 		int left, fill;
-
-		pos = buf;
-		lxc_list_for_each(iterator, idmap) {
-			/* The kernel only takes <= 4k for writes to /proc/<nr>/[ug]id_map */
-			if (!buf)
-				buf = pos = malloc(4096);
+		int had_entry = 0;
+		if (!buf) {
+			buf = pos = malloc(4096);
 			if (!buf)
 				return -ENOMEM;
-
-			map = iterator->elem;
-			if (map->idtype == type) {
-				left = 4096 - (pos - buf);
-				fill = snprintf(pos, left, "%lu %lu %lu\n",
-					map->nsid, map->hostid, map->range);
-				if (fill <= 0 || fill >= left)
-					SYSERROR("snprintf failed, too many mappings");
-				pos += fill;
-			}
 		}
-		if (pos == buf) // no mappings were found
+		pos = buf;
+		if (!am_root)
+			pos += sprintf(buf, "new%cidmap %d ",
+				type == ID_TYPE_UID ? 'u' : 'g',
+				pid);
+
+		lxc_list_for_each(iterator, idmap) {
+			/* The kernel only takes <= 4k for writes to /proc/<nr>/[ug]id_map */
+			map = iterator->elem;
+			if (map->idtype != type)
+				continue;
+
+			had_entry = 1;
+			left = 4096 - (pos - buf);
+			fill = snprintf(pos, left, " %lu %lu %lu", map->nsid,
+					map->hostid, map->range);
+			if (fill <= 0 || fill >= left)
+				SYSERROR("snprintf failed, too many mappings");
+			pos += fill;
+		}
+		if (!had_entry)
 			continue;
-		ret = write_id_mapping(type, pid, buf, pos-buf);
+		left = 4096 - (pos - buf);
+		fill = snprintf(pos, left, "\n");
+		if (fill <= 0 || fill >= left)
+			SYSERROR("snprintf failed, too many mappings");
+		pos += fill;
+
+		if (am_root)
+			ret = write_id_mapping(type, pid, buf, pos-buf);
+		else
+			ret = system(buf);
+
 		if (ret)
 			break;
 	}
@@ -2834,6 +2898,58 @@ int lxc_map_ids(struct lxc_list *idmap, pid_t pid)
 	if (buf)
 		free(buf);
 	return ret;
+}
+
+/*
+ * return the host uid to which the container root is mapped, or -1 on
+ * error
+ */
+uid_t get_mapped_rootid(struct lxc_conf *conf)
+{
+	struct lxc_list *it;
+	struct id_map *map;
+
+	lxc_list_for_each(it, &conf->id_map) {
+		map = it->elem;
+		if (map->idtype != ID_TYPE_UID)
+			continue;
+		if (map->nsid != 0)
+			continue;
+		return (uid_t) map->hostid;
+	}
+	return (uid_t)-1;
+}
+
+int mapped_hostid(int id, struct lxc_conf *conf)
+{
+	struct lxc_list *it;
+	struct id_map *map;
+	lxc_list_for_each(it, &conf->id_map) {
+		map = it->elem;
+		if (map->idtype != ID_TYPE_UID)
+			continue;
+		if (id >= map->hostid && id < map->hostid + map->range)
+			return (id - map->hostid) + map->nsid;
+	}
+	return -1;
+}
+
+int find_unmapped_nsuid(struct lxc_conf *conf)
+{
+	struct lxc_list *it;
+	struct id_map *map;
+	uid_t freeid = 0;
+again:
+	lxc_list_for_each(it, &conf->id_map) {
+		map = it->elem;
+		if (map->idtype != ID_TYPE_UID)
+			continue;
+		if (freeid >= map->nsid && freeid < map->nsid + map->range) {
+			freeid = map->nsid + map->range;
+			goto again;
+		}
+	}
+	return freeid;
 }
 
 int lxc_find_gateway_addresses(struct lxc_handler *handler)
@@ -2950,87 +3066,79 @@ void lxc_delete_tty(struct lxc_tty_info *tty_info)
 }
 
 /*
- * given a host uid, return the ns uid if it is mapped.
- * if it is not mapped, return the original host id.
+ * chown_mapped_root: for an unprivileged user with uid X to chown a dir
+ * to subuid Y, he needs to run chown as root in a userns where
+ * nsid 0 is mapped to hostuid Y, and nsid Y is mapped to hostuid
+ * X.  That way, the container root is privileged with respect to
+ * hostuid X, allowing him to do the chown.
  */
-static int shiftid(struct lxc_conf *c, int uid, enum idtype w)
+int chown_mapped_root(char *path, struct lxc_conf *conf)
 {
-	struct lxc_list *iterator;
-	struct id_map *map;
-	int low, high;
+	uid_t rootid;
+	pid_t pid;
 
-	lxc_list_for_each(iterator, &c->id_map) {
-		map = iterator->elem;
-		if (map->idtype != w)
-			continue;
-
-		low = map->nsid;
-		high = map->nsid + map->range;
-		if (uid < low || uid >= high)
-			continue;
-
-		return uid - low + map->hostid;
-	}
-
-	return uid;
-}
-
-/*
- * Take a pathname for a file created on the host, and map the uid and gid
- * into the container if needed.  (Used for ttys)
- */
-static int uid_shift_file(char *path, struct lxc_conf *c)
-{
-	struct stat statbuf;
-	int newuid, newgid;
-
-	if (stat(path, &statbuf)) {
-		SYSERROR("stat(%s)", path);
+	if ((rootid = get_mapped_rootid(conf)) <= 0) {
+		ERROR("No mapping for container root");
 		return -1;
 	}
-
-	newuid = shiftid(c, statbuf.st_uid, ID_TYPE_UID);
-	newgid = shiftid(c, statbuf.st_gid, ID_TYPE_GID);
-	if (newuid != statbuf.st_uid || newgid != statbuf.st_gid) {
-		DEBUG("chowning %s from %d:%d to %d:%d\n", path, (int)statbuf.st_uid, (int)statbuf.st_gid, newuid, newgid);
-		if (chown(path, newuid, newgid)) {
-			SYSERROR("chown(%s)", path);
+	if (geteuid() == 0) {
+		if (chown(path, rootid, -1) < 0) {
+			ERROR("Error chowning %s", path);
 			return -1;
 		}
-	}
-	return 0;
-}
-
-int uid_shift_ttys(int pid, struct lxc_conf *conf)
-{
-	int i, ret;
-	struct lxc_tty_info *tty_info = &conf->tty_info;
-	char path[MAXPATHLEN];
-	char *ttydir = conf->ttydir;
-
-	if (!conf->rootfs.path)
 		return 0;
-	/* first the console */
-	ret = snprintf(path, sizeof(path), "/proc/%d/root/dev/%s/console", pid, ttydir ? ttydir : "");
-	if (ret < 0 || ret >= sizeof(path)) {
-		ERROR("console path too long\n");
+	}
+	pid = fork();
+	if (pid < 0) {
+		SYSERROR("Failed forking");
 		return -1;
 	}
-	if (uid_shift_file(path, conf)) {
-		DEBUG("Failed to chown the console %s.\n", path);
-		return -1;
+	if (!pid) {
+		int hostuid = geteuid(), ret;
+		char map1[100], map2[100];
+		char *args[] = {"lxc-usernsexec", "-m", map1, "-m", map2, "--", "chown",
+				 "0", path, NULL};
+
+		// "b:0:rootid:1"
+		ret = snprintf(map1, 100, "b:0:%d:1", rootid);
+		if (ret < 0 || ret >= 100) {
+			ERROR("Error uid printing map string");
+			return -1;
+		}
+
+		// "b:hostuid:hostuid:1"
+		ret = snprintf(map2, 100, "b:%d:%d:1", hostuid, hostuid);
+		if (ret < 0 || ret >= 100) {
+			ERROR("Error uid printing map string");
+			return -1;
+		}
+
+		ret = execvp("lxc-usernsexec", args);
+		SYSERROR("Failed executing usernsexec");
+		exit(1);
 	}
-	for (i=0; i< tty_info->nbtty; i++) {
-		ret = snprintf(path, sizeof(path), "/proc/%d/root/dev/%s/tty%d",
-			pid, ttydir ? ttydir : "", i + 1);
-		if (ret < 0 || ret >= sizeof(path)) {
-			ERROR("pathname too long for ttys");
+	return wait_for_pid(pid);
+}
+
+int ttys_shift_ids(struct lxc_conf *c)
+{
+	int i;
+
+	if (lxc_list_empty(&c->id_map))
+		return 0;
+
+	for (i = 0; i < c->tty_info.nbtty; i++) {
+		struct lxc_pty_info *pty_info = &c->tty_info.pty_info[i];
+
+		if (chown_mapped_root(pty_info->name, c) < 0) {
+			ERROR("Failed to chown %s", pty_info->name);
 			return -1;
 		}
-		if (uid_shift_file(path, conf)) {
-			DEBUG("Failed to chown pty %s.\n", path);
-			return -1;
-		}
+	}
+
+	if (chown_mapped_root(c->console.name, c) < 0) {
+		ERROR("Failed to chown %s", c->console.name);
+		return -1;
 	}
 
 	return 0;
@@ -3208,6 +3316,8 @@ static void lxc_remove_nic(struct lxc_list *it)
 		free(netdev->link);
 	if (netdev->name)
 		free(netdev->name);
+	if (netdev->type == LXC_NET_VETH && netdev->priv.veth_attr.pair)
+		free(netdev->priv.veth_attr.pair);
 	if (netdev->upscript)
 		free(netdev->upscript);
 	if (netdev->hwaddr)

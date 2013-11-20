@@ -453,19 +453,7 @@ static struct lxc_netdev *network_netdev(const char *key, const char *value,
 
 static int network_ifname(char **valuep, const char *value)
 {
-	if (strlen(value) >= IFNAMSIZ) {
-		ERROR("interface name '%s' too long (>%d)\n",
-		value, IFNAMSIZ - 1);
-		return -1;
-	}
-
-	*valuep = strdup(value);
-	if (!*valuep) {
-		ERROR("failed to dup string '%s'", value);
-		return -1;
-	}
-
-	return 0;
+	return config_string_item_max(valuep, value, IFNAMSIZ);
 }
 
 #ifndef MACVLAN_MODE_PRIVATE
@@ -901,7 +889,7 @@ static int config_hook(const char *key, const char *value,
 	return -1;
 }
 
-static int config_personality(const char *key, const const char *value,
+static int config_personality(const char *key, const char *value,
 			      struct lxc_conf *lxc_conf)
 {
 	signed long personality = lxc_config_parse_arch(value);

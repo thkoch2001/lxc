@@ -21,7 +21,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#define _GNU_SOURCE
+#include "config.h"
+
 #include <errno.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -48,6 +49,8 @@
 #include "utils.h"
 #include "log.h"
 #include "lxclock.h"
+
+#define MAX_STACKDEPTH 25
 
 lxc_log_define(lxc_utils, lxc);
 
@@ -179,8 +182,9 @@ extern int get_u16(unsigned short *val, const char *arg, int base)
 	if (!arg || !*arg)
 		return -1;
 
+	errno = 0;
 	res = strtoul(arg, &ptr, base);
-	if (!ptr || ptr == arg || *ptr || res > 0xFFFF)
+	if (!ptr || ptr == arg || *ptr || res > 0xFFFF || errno != 0)
 		return -1;
 
 	*val = res;
@@ -237,21 +241,24 @@ static char *copy_global_config_value(char *p)
 }
 
 #define DEFAULT_VG "lxc"
+#define DEFAULT_THIN_POOL "lxc"
 #define DEFAULT_ZFSROOT "lxc"
 
 const char *lxc_global_config_value(const char *option_name)
 {
 	static const char *options[][2] = {
 		{ "lvm_vg",          DEFAULT_VG      },
-		{ "lvm_thin_pool",   NULL            },
+		{ "lvm_thin_pool",   DEFAULT_THIN_POOL },
 		{ "zfsroot",         DEFAULT_ZFSROOT },
 		{ "lxcpath",         LXCPATH         },
 		{ "cgroup.pattern",  DEFAULT_CGROUP_PATTERN },
 		{ "cgroup.use",      NULL            },
 		{ NULL, NULL },
 	};
+	/* Protected by a mutex to eliminate conflicting load and store operations */ 
 	static const char *values[sizeof(options) / sizeof(options[0])] = { 0 };
 	const char *(*ptr)[2];
+	const char *value;
 	size_t i;
 	char buf[1024], *p, *p2;
 	FILE *fin = NULL;
@@ -264,8 +271,14 @@ const char *lxc_global_config_value(const char *option_name)
 		errno = EINVAL;
 		return NULL;
 	}
-	if (values[i])
-		return values[i];
+
+	static_lock();
+	if (values[i]) {
+		value = values[i];
+		static_unlock();
+		return value;
+	}
+	static_unlock();
 
 	process_lock();
 	fin = fopen_cloexec(LXC_GLOBAL_CONF, "r");
@@ -302,24 +315,32 @@ const char *lxc_global_config_value(const char *option_name)
 			while (*p && (*p == ' ' || *p == '\t')) p++;
 			if (!*p)
 				continue;
+			static_lock();
 			values[i] = copy_global_config_value(p);
+			static_unlock();
 			goto out;
 		}
 	}
 	/* could not find value, use default */
+	static_lock();
 	values[i] = (*ptr)[1];
 	/* special case: if default value is NULL,
 	 * and there is no config, don't view that
 	 * as an error... */
 	if (!values[i])
 		errno = 0;
+	static_unlock();
 
 out:
 	process_lock();
 	if (fin)
 		fclose(fin);
 	process_unlock();
-	return values[i];
+
+	static_lock();
+	value = values[i];
+	static_unlock();
+	return value;
 }
 
 const char *default_lvm_vg(void)
@@ -336,9 +357,20 @@ const char *default_zfs_root(void)
 {
 	return lxc_global_config_value("zfsroot");
 }
+
 const char *default_lxc_path(void)
 {
 	return lxc_global_config_value("lxcpath");
+}
+
+const char *default_cgroup_use(void)
+{
+	return lxc_global_config_value("cgroup.use");
+}
+
+const char *default_cgroup_pattern(void)
+{
+	return lxc_global_config_value("cgroup.pattern");
 }
 
 const char *get_rundir()
