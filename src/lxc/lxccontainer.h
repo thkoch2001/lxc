@@ -85,6 +85,8 @@ struct lxc_container {
 	bool (*reboot)(struct lxc_container *c);
 	/* send SIGPWR.  if timeout is not 0 or -1, do a hard stop after timeout seconds */
 	bool (*shutdown)(struct lxc_container *c, int timeout);
+	/* completely clear a configuration */
+	void (*clear_config)(struct lxc_container *c);
 	/* clear all network or capability items in the in-memory configuration */
 	bool (*clear_config_item)(struct lxc_container *c, const char *key);
 	/* print a config item to a in-memory string allocated by the caller.  Return
@@ -225,10 +227,36 @@ struct lxc_container {
 	bool (*snapshot_restore)(struct lxc_container *c, char *snapname, char *newname);
 
 	/*
+	 * snapshot_destroy() will destroy the given snapshot of c
+	 *
+	 * Returns true on success, false on failure.
+	 */
+	bool (*snapshot_destroy)(struct lxc_container *c, char *snapname);
+
+	/*
 	 * Return false if there is a control socket for the container monitor,
 	 * and the caller may not access it.  Return true otherwise.
 	 */
 	bool (*may_control)(struct lxc_container *c);
+
+	/*
+	 * add_device_node:
+	 * @c        : the running container
+	 * @src_path : the path of the device
+	 * @dest_path: the alternate path in the container. If NULL, the src_path is used
+	 *
+	 * Returns true if given device succesfully added to container
+	 */
+	bool (*add_device_node)(struct lxc_container *c, char *src_path, char *dest_path);
+	/*
+	 * remove_device_node:
+	 * @c        : the running container
+	 * @src_path : the path of the device
+	 * @dest_path: the alternate path in the container. If NULL, the src_path is used
+	 *
+	 * Returns true if given device succesfully removed from container
+	 */
+	bool (*remove_device_node)(struct lxc_container *c, char *src_path, char *dest_path);
 };
 
 struct lxc_snapshot {
@@ -269,6 +297,16 @@ int list_defined_containers(const char *lxcpath, char ***names, struct lxc_conta
  * Returns the number of containers found, or -1 on error.
  */
 int list_active_containers(const char *lxcpath, char ***names, struct lxc_container ***cret);
+
+/*
+ * Get an array sorted by name of defined and active containers in a lxcpath.
+ * @lxcpath: lxcpath under which to look
+ * @names: if not null, then an array of container names will be returned here.
+ * @cret: if not null, then an array of lxc_containers will be returned here.
+ *
+ * Returns the number of containers found, or -1 on error.
+ */
+int list_all_containers(const char *lxcpath, char ***names, struct lxc_container ***cret);
 
 #if 0
 char ** lxc_get_valid_keys();

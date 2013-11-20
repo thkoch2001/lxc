@@ -81,7 +81,7 @@ static bool cgroup_devices_has_allow_or_deny(struct lxc_handler *h, char *v, boo
 static int do_setup_cgroup(struct lxc_handler *h, struct lxc_list *cgroup_settings, bool do_devices);
 static int cgroup_recursive_task_count(const char *cgroup_path);
 static int count_lines(const char *fn);
-static int handle_clone_children(struct cgroup_mount_point *mp, char *cgroup_path);
+static int handle_cgroup_settings(struct cgroup_mount_point *mp, char *cgroup_path);
 
 struct cgroup_meta_data *lxc_cgroup_load_meta()
 {
@@ -91,7 +91,7 @@ struct cgroup_meta_data *lxc_cgroup_load_meta()
 	int saved_errno;
 
 	errno = 0;
-	cgroup_use = lxc_global_config_value("cgroup.use");
+	cgroup_use = default_cgroup_use();
 	if (!cgroup_use && errno != 0)
 		return NULL;
 	if (cgroup_use) {
@@ -718,7 +718,7 @@ extern struct cgroup_process_info *lxc_cgroup_create(const char *name, const cha
 
 		if (lxc_string_in_array("ns", (const char **)h->subsystems))
 			continue;
-		if (handle_clone_children(mp, info_ptr->cgroup_path) < 0) {
+		if (handle_cgroup_settings(mp, info_ptr->cgroup_path) < 0) {
 			ERROR("Could not set clone_children to 1 for cpuset hierarchy in parent cgroup.");
 			goto out_initial_error;
 		}
@@ -838,7 +838,7 @@ extern struct cgroup_process_info *lxc_cgroup_create(const char *name, const cha
 				/* if we didn't create the cgroup, then we have to make sure that
 				 * further cgroups will be created properly
 				 */
-				if (handle_clone_children(mp, info_ptr->cgroup_path) < 0) {
+				if (handle_cgroup_settings(mp, info_ptr->cgroup_path) < 0) {
 					ERROR("Could not set clone_children to 1 for cpuset hierarchy in pre-existing cgroup.");
 					goto cleanup_from_error;
 				}
@@ -1242,7 +1242,7 @@ char *lxc_cgroup_path_get(const char *filename, const char *name,
 	if (!group)
 		return NULL;
 
-	path = lxc_cgroup_find_abs_path(subsystem, group, true, *p ? longer_file : NULL);
+	path = lxc_cgroup_find_abs_path(subsystem, group, true, p ? longer_file : NULL);
 	free(group);
 	return path;
 }
@@ -1688,6 +1688,8 @@ char *cgroup_to_absolute_path(struct cgroup_mount_point *mp, const char *path, c
 
 	len = strlen(mp->mount_point) + strlen(path) + (suffix ? strlen(suffix) : 0);
 	buf = calloc(len + 1, 1);
+	if (!buf)
+		return NULL;
 	rv = snprintf(buf, len + 1, "%s%s%s", mp->mount_point, path, suffix ? suffix : "");
 	if (rv > len) {
 		free(buf);
@@ -1939,9 +1941,23 @@ int count_lines(const char *fn)
 	return n;
 }
 
-int handle_clone_children(struct cgroup_mount_point *mp, char *cgroup_path)
+int handle_cgroup_settings(struct cgroup_mount_point *mp, char *cgroup_path)
 {
 	int r, saved_errno = 0;
+
+	/* If this is the memory cgroup, we want to enforce hierarchy.
+	 * But don't fail if for some reason we can't.
+	 */
+	if (lxc_string_in_array("memory", (const char **)mp->hierarchy->subsystems)) {
+		char *cc_path = cgroup_to_absolute_path(mp, cgroup_path, "/memory.use_hierarchy");
+		if (cc_path) {
+			r = lxc_write_to_file(cc_path, "1", 1, false);
+			if (r < 0)
+				SYSERROR("failed to set memory.use_hiararchy to 1; continuing");
+			free(cc_path);
+		}
+	}
+
 	/* if this is a cpuset hierarchy, we have to set cgroup.clone_children in
 	 * the base cgroup, otherwise containers will start with an empty cpuset.mems
 	 * and cpuset.cpus and then

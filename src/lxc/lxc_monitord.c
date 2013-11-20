@@ -47,8 +47,6 @@
 
 lxc_log_define(lxc_monitord, lxc);
 
-static struct lxc_monitor mon;
-
 static void lxc_monitord_cleanup(void);
 
 /*
@@ -70,6 +68,8 @@ struct lxc_monitor {
 	int clientfds_cnt;
 	struct lxc_epoll_descr descr;
 };
+
+static struct lxc_monitor mon;
 
 static int lxc_monitord_fifo_create(struct lxc_monitor *mon)
 {
@@ -210,7 +210,7 @@ static int lxc_monitord_sock_create(struct lxc_monitor *mon)
 	if (lxc_monitor_sock_name(mon->lxcpath, &addr) < 0)
 		return -1;
 
-	fd = lxc_af_unix_open(addr.sun_path, SOCK_STREAM, O_TRUNC);
+	fd = lxc_abstract_unix_open(addr.sun_path, SOCK_STREAM, O_TRUNC);
 	if (fd < 0) {
 		ERROR("failed to open unix socket : %s", strerror(errno));
 		return -1;
@@ -379,7 +379,8 @@ int main(int argc, char *argv[])
 	 * if-empty-statement construct is to quiet the
 	 * warn-unused-result warning.
 	 */
-	if (write(pipefd, "S", 1)) ;
+	if (write(pipefd, "S", 1))
+		;
 	close(pipefd);
 
 	if (lxc_monitord_mainloop_add(&mon)) {

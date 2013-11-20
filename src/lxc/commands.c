@@ -109,7 +109,7 @@ static const char *lxc_cmd_str(lxc_cmd_t cmd)
 		[LXC_CMD_GET_CONFIG_ITEM] = "get_config_item",
 	};
 
-	if (cmd < 0 || cmd >= LXC_CMD_MAX)
+	if (cmd >= LXC_CMD_MAX)
 		return "Unknown cmd";
 	return cmdname[cmd];
 }
@@ -136,7 +136,7 @@ static int lxc_cmd_rsp_recv(int sock, struct lxc_cmd_rr *cmd)
 	int ret,rspfd;
 	struct lxc_cmd_rsp *rsp = &cmd->rsp;
 
-	ret = lxc_af_unix_recv_fd(sock, &rspfd, rsp, sizeof(*rsp));
+	ret = lxc_abstract_unix_recv_fd(sock, &rspfd, rsp, sizeof(*rsp));
 	if (ret < 0) {
 		ERROR("command %s failed to receive response",
 		      lxc_cmd_str(cmd->req.cmd));
@@ -251,7 +251,7 @@ static int lxc_cmd(const char *name, struct lxc_cmd_rr *cmd, int *stopped,
 	if (fill_sock_name(offset, len, name, lxcpath))
 		return -1;
 
-	sock = lxc_af_unix_connect(path);
+	sock = lxc_abstract_unix_connect(path);
 	if (sock < 0) {
 		if (errno == ECONNREFUSED)
 			*stopped = 1;
@@ -261,7 +261,7 @@ static int lxc_cmd(const char *name, struct lxc_cmd_rr *cmd, int *stopped,
 		return -1;
 	}
 
-	ret = lxc_af_unix_send_credential(sock, &cmd->req, sizeof(cmd->req));
+	ret = lxc_abstract_unix_send_credential(sock, &cmd->req, sizeof(cmd->req));
 	if (ret != sizeof(cmd->req)) {
 		SYSERROR("command %s failed to send req to '@%s' %d",
 			 lxc_cmd_str(cmd->req.cmd), offset, ret);
@@ -702,7 +702,7 @@ static int lxc_cmd_console_callback(int fd, struct lxc_cmd_req *req,
 
 	memset(&rsp, 0, sizeof(rsp));
 	rsp.data = INT_TO_PTR(ttynum);
-	if (lxc_af_unix_send_fd(fd, masterfd, &rsp, sizeof(rsp)) < 0) {
+	if (lxc_abstract_unix_send_fd(fd, masterfd, &rsp, sizeof(rsp)) < 0) {
 		ERROR("failed to send tty to client");
 		lxc_console_free(handler->conf, fd);
 		goto out_close;
@@ -735,8 +735,8 @@ static int lxc_cmd_process(int fd, struct lxc_cmd_req *req,
 		[LXC_CMD_GET_CONFIG_ITEM] = lxc_cmd_get_config_item_callback,
 	};
 
-	if (req->cmd < 0 || req->cmd >= LXC_CMD_MAX) {
-		ERROR("bad cmd %d recieved", req->cmd);
+	if (req->cmd >= LXC_CMD_MAX) {
+		ERROR("bad cmd %d received", req->cmd);
 		return -1;
 	}
 	return cb[req->cmd](fd, req, handler);
@@ -758,7 +758,7 @@ static int lxc_cmd_handler(int fd, void *data, struct lxc_epoll_descr *descr)
 	struct lxc_cmd_req req;
 	struct lxc_handler *handler = data;
 
-	ret = lxc_af_unix_rcv_credential(fd, &req, sizeof(req));
+	ret = lxc_abstract_unix_rcv_credential(fd, &req, sizeof(req));
 	if (ret == -EACCES) {
 		/* we don't care for the peer, just send and close */
 		struct lxc_cmd_rsp rsp = { .ret = ret };
@@ -867,7 +867,7 @@ int lxc_cmd_init(const char *name, struct lxc_handler *handler,
 	if (fill_sock_name(offset, len, name, lxcpath))
 		return -1;
 
-	fd = lxc_af_unix_open(path, SOCK_STREAM, 0);
+	fd = lxc_abstract_unix_open(path, SOCK_STREAM, 0);
 	if (fd < 0) {
 		ERROR("failed (%d) to create the command service point %s", errno, offset);
 		if (errno == EADDRINUSE) {

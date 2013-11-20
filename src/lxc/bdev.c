@@ -707,10 +707,10 @@ static int zfs_create(struct bdev *bdev, const char *dest, const char *n,
 	int ret;
 	pid_t pid;
 
-	if (!specs || !specs->u.zfs.zfsroot)
+	if (!specs || !specs->zfs.zfsroot)
 		zfsroot = default_zfs_root();
 	else
-		zfsroot = specs->u.zfs.zfsroot;
+		zfsroot = specs->zfs.zfsroot;
 
 	if (!(bdev->dest = strdup(dest))) {
 		ERROR("No mount target specified or out of memory");
@@ -811,56 +811,9 @@ static int lvm_umount(struct bdev *bdev)
 	return umount(bdev->dest);
 }
 
-/*
- * path must be '/dev/$vg/$lv', $vg must be an existing VG, and $lv must
- * not yet exist.  This function will attempt to create /dev/$vg/$lv of
- * size $size.
- */
-static int do_lvm_create(const char *path, unsigned long size, const char *thinpool)
-{
-	int ret, pid;
-	char sz[24], *pathdup, *vg, *lv;
-
-	if ((pid = fork()) < 0) {
-		SYSERROR("failed fork");
-		return -1;
-	}
-	if (pid > 0)
-		return wait_for_pid(pid);
-
-	process_unlock(); // we're no longer sharing
-	// lvcreate default size is in M, not bytes.
-	ret = snprintf(sz, 24, "%lu", size/1000000);
-	if (ret < 0 || ret >= 24)
-		exit(1);
-
-	pathdup = strdup(path);
-	if (!pathdup)
-		exit(1);
-	lv = strrchr(pathdup, '/');
-	if (!lv) {
-		free(pathdup);
-		exit(1);
-	}
-	*lv = '\0';
-	lv++;
-	vg = strrchr(pathdup, '/');
-	if (!vg)
-		exit(1);
-	vg++;
-	if (!thinpool) {
-	    execlp("lvcreate", "lvcreate", "-L", sz, vg, "-n", lv, (char *)NULL);
-	} else {
-	    execlp("lvcreate", "lvcreate", "--thinpool", thinpool, "-V", sz, vg, "-n", lv, (char *)NULL);
-	}
-	free(pathdup);
-	exit(1);
-}
-
-static int lvm_is_thin_volume(const char *path)
-{
+static int lvm_compare_lv_attr(const char *path, int pos, const char expected) {
 	FILE *f;
-	int ret, len, start=0;
+	int ret, len, status, start=0;
 	char *cmd, output[12];
 	const char *lvscmd = "lvs --unbuffered --noheadings -o lv_attr %s 2>/dev/null";
 
@@ -880,29 +833,101 @@ static int lvm_is_thin_volume(const char *path)
 		return -1;
 	}
 
-	if (fgets(output, 12, f) == NULL) {
-		process_lock();
-		(void) pclose(f);
-		process_unlock();
-		return -1;
-	}
+	ret = fgets(output, 12, f) == NULL;
 
 	process_lock();
-	ret = pclose(f);
+	status = pclose(f);
 	process_unlock();
 
-	if (!WIFEXITED(ret)) {
-		SYSERROR("error executing lvs");
-		return -1;
-	}
+	if (ret || WEXITSTATUS(status))
+		// Assume either vg or lvs do not exist, default
+		// comparison to false.
+		return 0;
 
 	len = strlen(output);
 	while(start < len && output[start] == ' ') start++;
 
-	if (start + 6 < len && output[start + 6] == 't')
+	if (start + pos < len && output[start + pos] == expected)
 		return 1;
 
 	return 0;
+}
+
+static int lvm_is_thin_volume(const char *path)
+{
+	return lvm_compare_lv_attr(path, 6, 't');
+}
+
+static int lvm_is_thin_pool(const char *path)
+{
+	return lvm_compare_lv_attr(path, 0, 't');
+}
+
+/*
+ * path must be '/dev/$vg/$lv', $vg must be an existing VG, and $lv must not
+ * yet exist.  This function will attempt to create /dev/$vg/$lv of size
+ * $size. If thinpool is specified, we'll check for it's existence and if it's
+ * a valid thin pool, and if so, we'll create the requested lv from that thin
+ * pool.
+ */
+static int do_lvm_create(const char *path, unsigned long size, const char *thinpool)
+{
+	int ret, pid, len;
+	char sz[24], *pathdup, *vg, *lv, *tp = NULL;
+
+	if ((pid = fork()) < 0) {
+		SYSERROR("failed fork");
+		return -1;
+	}
+	if (pid > 0)
+		return wait_for_pid(pid);
+
+	process_unlock(); // we're no longer sharing
+	// lvcreate default size is in M, not bytes.
+	ret = snprintf(sz, 24, "%lu", size/1000000);
+	if (ret < 0 || ret >= 24)
+		exit(1);
+
+	pathdup = strdup(path);
+	if (!pathdup)
+		exit(1);
+
+	lv = strrchr(pathdup, '/');
+	if (!lv)
+		exit(1);
+
+	*lv = '\0';
+	lv++;
+
+	vg = strrchr(pathdup, '/');
+	if (!vg)
+		exit(1);
+	vg++;
+
+	if (thinpool) {
+		len = strlen(pathdup) + strlen(thinpool) + 2;
+		tp = alloca(len);
+
+		ret = snprintf(tp, len, "%s/%s", pathdup, thinpool);
+		if (ret < 0 || ret >= len)
+			exit(1);
+
+		ret = lvm_is_thin_pool(tp);
+		INFO("got %d for thin pool at path: %s", ret, tp);
+		if (ret < 0)
+			exit(1);
+
+		if (!ret)
+			tp = NULL;
+	}
+
+	if (!tp)
+	    execlp("lvcreate", "lvcreate", "-L", sz, vg, "-n", lv, (char *)NULL);
+	else
+	    execlp("lvcreate", "lvcreate", "--thinpool", tp, "-V", sz, vg, "-n", lv, (char *)NULL);
+
+	SYSERROR("execlp");
+	exit(1);
 }
 
 static int lvm_snapshot(const char *orig, const char *path, unsigned long size)
@@ -1028,7 +1053,7 @@ static int lvm_clonepaths(struct bdev *orig, struct bdev *new, const char *oldna
 			return -1;
 		}
 	} else {
-		if (do_lvm_create(new->src, size, NULL) < 0) {
+		if (do_lvm_create(new->src, size, default_lvm_thin_pool()) < 0) {
 			ERROR("Error creating new lvm blockdev");
 			return -1;
 		}
@@ -1068,15 +1093,18 @@ static int lvm_create(struct bdev *bdev, const char *dest, const char *n,
 	if (!specs)
 		return -1;
 
-	vg = specs->u.lvm.vg;
+	vg = specs->lvm.vg;
 	if (!vg)
 		vg = default_lvm_vg();
 
-	thinpool = specs->u.lvm.thinpool;
+	thinpool = specs->lvm.thinpool;
+	if (!thinpool)
+		thinpool = default_lvm_thin_pool();
 
 	/* /dev/$vg/$lv */
-	if (specs->u.lvm.lv)
-		lv = specs->u.lvm.lv;
+	if (specs->lvm.lv)
+		lv = specs->lvm.lv;
+
 	len = strlen(vg) + strlen(lv) + 7;
 	bdev->src = malloc(len);
 	if (!bdev->src)
@@ -1086,18 +1114,17 @@ static int lvm_create(struct bdev *bdev, const char *dest, const char *n,
 	if (ret < 0 || ret >= len)
 		return -1;
 
-	// lvm.fssize is in bytes.
-	sz = specs->u.lvm.fssize;
+	// fssize is in bytes.
+	sz = specs->fssize;
 	if (!sz)
 		sz = DEFAULT_FS_SIZE;
 
-	INFO("Error creating new lvm blockdev %s size %lu", bdev->src, sz);
 	if (do_lvm_create(bdev->src, sz, thinpool) < 0) {
 		ERROR("Error creating new lvm blockdev %s size %lu", bdev->src, sz);
 		return -1;
 	}
 
-	fstype = specs->u.lvm.fstype;
+	fstype = specs->fstype;
 	if (!fstype)
 		fstype = DEFAULT_FSTYPE;
 	if (do_mkfs(bdev->src, fstype) < 0) {
@@ -1691,11 +1718,11 @@ static int loop_create(struct bdev *bdev, const char *dest, const char *n,
 	if (ret < 0 || ret >= len + 5)
 		return -1;
 
-	sz = specs->u.loop.fssize;
+	sz = specs->fssize;
 	if (!sz)
 		sz = DEFAULT_FS_SIZE;
 
-	fstype = specs->u.loop.fstype;
+	fstype = specs->fstype;
 	if (!fstype)
 		fstype = DEFAULT_FSTYPE;
 

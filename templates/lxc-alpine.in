@@ -103,6 +103,9 @@ configure_alpine() {
 ::sysinit:/sbin/rc sysinit
 ::wait:/sbin/rc default
 tty1:12345:respawn:/sbin/getty 38400 tty1
+tty2:12345:respawn:/sbin/getty 38400 tty2
+tty3:12345:respawn:/sbin/getty 38400 tty3
+tty4:12345:respawn:/sbin/getty 38400 tty4
 ::ctrlaltdel:/sbin/reboot
 ::shutdown:/sbin/rc shutdown
 EOF
@@ -140,7 +143,8 @@ EOF
     mknod -m 666 "$rootfs/dev/ptmx" c 5 2
 
     # start services
-    ln -s /etc/init.d/syslog "$rootfs"/etc/runlevels/default/syslog
+    ln -s /etc/init.d/bootmisc "$rootfs"/etc/runlevels/boot/bootmisc
+    ln -s /etc/init.d/syslog "$rootfs"/etc/runlevels/boot/syslog
 
     return 0
 }
@@ -197,9 +201,10 @@ lxc.cap.drop = sys_module mac_admin mac_override sys_time
 
 # devices
 lxc.cgroup.devices.deny = a
-# /dev/null and zero
+# /dev/null, zero and full
 lxc.cgroup.devices.allow = c 1:3 rwm
 lxc.cgroup.devices.allow = c 1:5 rwm
+lxc.cgroup.devices.allow = c 1:7 rwm
 # consoles
 lxc.cgroup.devices.allow = c 5:1 rwm
 lxc.cgroup.devices.allow = c 5:0 rwm
