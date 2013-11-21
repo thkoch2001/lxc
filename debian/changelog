@@ -1,3 +1,12 @@
+lxc (1.0.0~alpha3-1) experimental; urgency=low
+
+  * Merging upstream version 1.0.0~alpha3.
+  * Dropping ftbfs-sparc.patch, merged upstream.
+  * Updating preseed-file for live-debconfig 4.0~alpha30-1.
+  * Updating todo file.
+
+ -- Daniel Baumann <mail@daniel-baumann.ch>  Thu, 21 Nov 2013 08:39:56 +0100
+
 lxc (1.0.0~alpha2-6) experimental; urgency=low
 
   * Also dropping permissions on /var/cache/lxc for consistency
