@@ -6,7 +6,7 @@ DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
 	dh ${@} --with autoreconf,autotools_dev
 
 override_dh_auto_configure:
-	dh_auto_configure -- --libdir=\$${prefix}/lib/$(DEB_HOST_MULTIARCH) --libexecdir=\$${prefix}/lib/$(DEB_HOST_MULTIARCH) --with-distro=debian --with-rootfs-path=\$${prefix}/lib/$(DEB_HOST_MULTIARCH)/lxc --disable-rpath --enable-doc --enable-configpath-log
+	dh_auto_configure -- --libdir=\$${prefix}/lib/$(DEB_HOST_MULTIARCH) --libexecdir=\$${prefix}/lib/$(DEB_HOST_MULTIARCH) --with-distro=debian --with-rootfs-path=\$${prefix}/lib/$(DEB_HOST_MULTIARCH)/lxc --disable-rpath --enable-apparmor --enable-doc --enable-configpath-log
 
 override_dh_auto_install:
 	dh_auto_install
