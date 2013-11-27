@@ -10,6 +10,7 @@ Build-Depends:
  docbook2x,
  libapparmor-dev,
  libcap-dev,
+ libseccomp-dev,
  libselinux-dev,
  linux-libc-dev,
  pkg-config,
