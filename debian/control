@@ -30,7 +30,6 @@ Depends:
  python3,
 Recommends:
  lxc-stuff,
- libcap2-bin,
  rsync,
 Description: Linux Containers userspace tools
  Containers are insulated areas inside a system, which have their own namespace
