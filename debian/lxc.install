@@ -1,10 +1,12 @@
 etc
 usr/bin
 usr/lib/*/*.so.*
+usr/lib/*/lua
 usr/lib/*/lxc/lxc-*
 usr/lib/*/lxc/rootfs
 usr/lib/python*
 usr/share/doc
+usr/share/lua
 usr/share/lxc
 usr/share/man
 var
