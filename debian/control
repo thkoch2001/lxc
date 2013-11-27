@@ -12,6 +12,7 @@ Build-Depends:
  libcap-dev,
  linux-libc-dev,
  pkg-config,
+ python3-dev,
 Standards-Version: 3.9.5
 Homepage: http://linuxcontainers.org/
 Vcs-Browser: http://daniel-baumann.ch/gitweb/?p=debian/packages/lxc.git
@@ -23,6 +24,7 @@ Pre-Depends: multiarch-support
 Depends:
  ${misc:Depends},
  ${shlibs:Depends},
+ python3,
 Recommends:
  lxc-stuff,
  libcap2-bin,
