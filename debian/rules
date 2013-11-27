@@ -19,9 +19,6 @@ override_dh_auto_install:
 	mkdir -p debian/lxc-dev/usr/bin
 	mv debian/tmp/usr/bin/lxc-test-* debian/lxc-dev/usr/bin
 
-	# removing useless files
-	rm -f debian/tmp/usr/share/lxc/templates/lxc-ubuntu # currently broken
-
 override_dh_builddeb:
 	dh_builddeb -- -Zxz
 
