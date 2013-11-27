@@ -1,6 +1,6 @@
 etc
 usr/bin
-usr/lib/*/lxc/*.so.*
+usr/lib/*/*.so.*
 usr/lib/*/lxc/lxc-*
 usr/lib/*/lxc/README
 usr/share/doc
