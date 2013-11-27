@@ -6,7 +6,7 @@ DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
 	dh ${@} --with autoreconf,autotools_dev
 
 override_dh_auto_configure:
-	dh_auto_configure -- --libdir=\$${prefix}/lib/$(DEB_HOST_MULTIARCH) --libexecdir=\$${prefix}/lib/$(DEB_HOST_MULTIARCH) --with-distro=debian --disable-rpath --enable-apparmor --enable-doc --enable-configpath-log --enable-python --enable-selinux --enable-tests
+	dh_auto_configure -- --with-distro=debian --disable-rpath --enable-apparmor --enable-doc --enable-configpath-log --enable-python --enable-selinux --enable-tests
 
 override_dh_auto_install:
 	dh_auto_install
