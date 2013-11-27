@@ -1,3 +1,24 @@
+lxc (1.0.0~alpha3-2) experimental; urgency=low
+
+  * Building with disabled rpath.
+  * Building with explicitly enabled apparmor.
+  * Building with enabled python.
+  * Building with enabled selinux.
+  * Building with enabled tests.
+  * Including lxc-ubuntu again, it apparently was un-broken again as of
+    1.0.0~alpha3.
+  * Using dedicated directory for temporary rootfs mounts.
+  * Dropping superfluous libdir and libexecdir switches in configure call.
+  * Adding patch to correct wrong default directory for lxc-init.
+  * Sorting configure switches.
+  * Building with enabled seccomp.
+  * Building with enabled lua.
+  * Dropping libcap2-bin from suggests, not usefull anymore.
+  * Adding shlibs:Depends to lxc-dev.
+  * Updating todo file.
+
+ -- Daniel Baumann <mail@daniel-baumann.ch>  Wed, 27 Nov 2013 10:01:19 +0100
+
 lxc (1.0.0~alpha3-1) experimental; urgency=low
 
   * Merging upstream version 1.0.0~alpha3.
