@@ -2,7 +2,7 @@ etc
 usr/bin
 usr/lib/*/*.so.*
 usr/lib/*/lxc/lxc-*
-usr/lib/*/lxc/README
+usr/lib/*/lxc/rootfs
 usr/lib/python*
 usr/share/doc
 usr/share/lxc
