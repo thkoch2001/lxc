@@ -83,6 +83,7 @@ Section: libdevel
 Architecture: linux-any
 Depends:
  ${misc:Depends},
+ ${shlibs:Depends},
  lxc (= ${binary:Version}),
 Description: Linux Containers userspace tools (development)
  Containers are insulated areas inside a system, which have their own namespace
