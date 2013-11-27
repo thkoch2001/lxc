@@ -1,5 +1,4 @@
 lxc:
-  * check for newly added --with-*/--enable-* configure flags if they're useful for us.
   * add native systemd job to complement sysvinit initscript.
   * update package description
   * add a oem-config hook function.
