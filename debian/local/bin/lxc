@@ -41,7 +41,7 @@ fi
 _OPTIONS="${@}"
 
 case "${_PROGRAM}" in
-	checkconfig|list|ls|setcap|setuid|version)
+	list|ls|version)
 		# programs do not require any container as argument
 		lxc-${_PROGRAM} ${_OPTIONS}
 		;;
