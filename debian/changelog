@@ -1,3 +1,13 @@
+lxc (1.0.0~alpha3-3) experimental; urgency=low
+
+  * Updating list of special cases in lxc convenience wrapper.
+  * Updating generic preseed examples for live-debconfig 4.0~alpha31.
+  * Updating distribution specific preseed examples for live-debconfig
+    4.0~alpha31.
+  * Updating cairon codename for progress-linux.
+
+ -- Daniel Baumann <mail@daniel-baumann.ch>  Thu, 05 Dec 2013 14:05:53 +0100
+
 lxc (1.0.0~alpha3-2) experimental; urgency=low
 
   * Building with disabled rpath.
