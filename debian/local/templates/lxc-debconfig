@@ -596,12 +596,12 @@ EOF
 					_KEYS="2-baureo 2+-baureo-backports"
 					;;
 
-				chairon)
-					_KEYS="3-chairon"
+				cairon)
+					_KEYS="3-cairon"
 					;;
 
-				chairon-backports)
-					_KEYS="3-chairon 3+-chairon-backports"
+				cairon-backports)
+					_KEYS="3-cairon 3+-cairon-backports"
 					;;
 			esac
 
