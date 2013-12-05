@@ -1,3 +1,10 @@
+lxc (1.0.0~alpha3-4) experimental; urgency=low
+
+  * Excluding shell scripts in /etc/lxc/debconfig from debconf prompt with
+    list of presed files as well.
+
+ -- Daniel Baumann <mail@daniel-baumann.ch>  Thu, 05 Dec 2013 19:25:49 +0100
+
 lxc (1.0.0~alpha3-3) experimental; urgency=low
 
   * Updating list of special cases in lxc convenience wrapper.
