@@ -29,6 +29,7 @@ Depends:
  ${shlibs:Depends},
 Recommends:
  lxc-stuff,
+ lua5.2,
  python3,
  rsync,
 Description: Linux Containers userspace tools
