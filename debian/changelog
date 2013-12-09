@@ -1,3 +1,11 @@
+lxc (1.0.0~alpha3-5) experimental; urgency=low
+
+  * Moving python3 depends to recommends.
+  * Adding lua5.2 to recommends (Closes: #731774).
+  * Updating stop command in lxc-initscript (Closes: #731667).
+
+ -- Daniel Baumann <mail@daniel-baumann.ch>  Mon, 09 Dec 2013 19:05:06 +0100
+
 lxc (1.0.0~alpha3-4) experimental; urgency=low
 
   * Excluding shell scripts in /etc/lxc/debconfig from debconf prompt with
