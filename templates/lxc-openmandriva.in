@@ -181,7 +181,7 @@ install_openmandriva()
 
         echo "Checking cache download in $cache/rootfs ... "
         if [ ! -e "$cache/rootfs" ]; then
-	    echo $cache/rootfs
+            echo $cache/rootfs
             create_chroot_openmandriva
             if [ $? -ne 0 ]; then
                 echo "Failed to download 'openmandriva basesystem-minimal'"
@@ -343,15 +343,15 @@ if [ $? -ne 0 ]; then
 fi
 eval set -- "$options"
 
-release=${release:-"cooker"} 
+release=${release:-"cooker"}
 if [ -f /etc/lsb-release ]; then
     . /etc/lsb-release
     if [ "$DISTRIB_ID" = "OpenMandrivaLinux" ]; then
         release=openmandriva2013.0
     elif [ "$DISTRIB_ID" = "RosaDesktop.Fresh" ]; then
-	release=rosa2012.1
+        release=rosa2012.1
     else
-	echo "This is not an OpenMandriva or ROSA release"
+        echo "This is not an OpenMandriva or ROSA release"
         exit 1
     fi
 fi
@@ -366,7 +366,7 @@ do
         -P|--profile)   profile=$2; shift 2;;
         -c|--clean)     clean=$2; shift 2;;
         -R|--release)   release=$2; shift 2;;
-	-a|--arch)      arch=$2; shift 2;;
+        -a|--arch)      arch=$2; shift 2;;
         -4|--ipv4)      ipv4=$2; shift 2;;
         -6|--ipv6)      ipv6=$2; shift 2;;
         -g|--gw)        gw=$2; shift 2;;
@@ -420,7 +420,7 @@ fi
 # check for 'lxc.rootfs' passed in through default config by lxc-create
 if [ -z "$rootfs_path" ]; then
     if grep -q '^lxc.rootfs' $path/config 2>/dev/null ; then
-        rootfs_path=`grep 'lxc.rootfs =' $path/config | awk -F= '{ print $2 }'`
+        rootfs_path=$(awk -F= '/^lxc.rootfs =/{ print $2 }' $path/config)
     else
         rootfs_path=$path/$name/rootfs
     fi

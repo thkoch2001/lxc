@@ -34,7 +34,7 @@
 
 /* returns 1 on success, 0 if there were any failures */
 extern int lxc_rmdir_onedev(char *path);
-extern int lxc_setup_fs(void);
+extern void lxc_setup_fs(void);
 extern int get_u16(unsigned short *val, const char *arg, int base);
 extern int mkdir_p(const char *dir, mode_t mode);
 extern void remove_trailing_slashes(char *p);
@@ -157,6 +157,34 @@ static inline int signalfd(int fd, const sigset_t *mask, int flags)
 /* open a file with O_CLOEXEC */
 FILE *fopen_cloexec(const char *path, const char *mode);
 
+
+/* Struct to carry child pid from lxc_popen() to lxc_pclose().
+ * Not an opaque struct to allow direct access to the underlying FILE *
+ * (i.e., struct lxc_popen_FILE *file; fgets(buf, sizeof(buf), file->f))
+ * without additional wrappers.
+ */
+struct lxc_popen_FILE {
+	FILE *f;
+	pid_t child_pid;
+};
+
+/* popen(command, "re") replacement that restores default signal mask
+ * via sigprocmask(2) (unblocks all signals) after fork(2) but prior to calling exec(3).
+ * In short, popen(command, "re") does pipe() + fork()                 + exec()
+ * while lxc_popen(command)       does pipe() + fork() + sigprocmask() + exec().
+ * Must be called with process_lock() held.
+ * Returns pointer to struct lxc_popen_FILE, that should be freed with lxc_pclose().
+ * On error returns NULL.
+ */
+extern struct lxc_popen_FILE *lxc_popen(const char *command);
+
+/* pclose() replacement to be used on struct lxc_popen_FILE *,
+ * returned by lxc_popen().
+ * Waits for associated process to terminate, returns its exit status and
+ * frees resources, pointed to by struct lxc_popen_FILE *.
+ * Must be called with process_lock() held.
+ */
+extern int lxc_pclose(struct lxc_popen_FILE *fp);
 
 /**
  * BUILD_BUG_ON - break compile if a condition is true.

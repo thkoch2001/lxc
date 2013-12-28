@@ -220,7 +220,7 @@ send host-name "<hostname>";
 EOF
         ifconfig eth0 up
         dhclient eth0 -cf /dhclient.conf
-	echo "Container IP address:"
+        echo "Container IP address:"
         ifconfig eth0 |grep inet
     fi
 
@@ -237,7 +237,7 @@ fi
 config="$path/config"
 if [ -z "$rootfs" ]; then
     if grep -q '^lxc.rootfs' $config 2>/dev/null ; then
-        rootfs=`grep 'lxc.rootfs =' $config | awk -F= '{ print $2 }'`
+        rootfs=$(awk -F= '/^lxc.rootfs =/{ print $2 }' $config)
     else
         rootfs=$path/rootfs
     fi

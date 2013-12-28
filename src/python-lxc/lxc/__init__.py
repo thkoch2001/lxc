@@ -18,11 +18,11 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
+# USA
 #
 
 import _lxc
-import glob
 import os
 import subprocess
 import stat
@@ -150,58 +150,12 @@ class Container(_lxc.Container):
             Creates a new Container instance.
         """
 
-        if os.geteuid() != 0:
-            raise Exception("Running as non-root.")
-
         if config_path:
             _lxc.Container.__init__(self, name, config_path)
         else:
             _lxc.Container.__init__(self, name)
 
         self.network = ContainerNetworkList(self)
-
-    def add_device_node(self, path, destpath=None):
-        """
-            Add block/char device to running container.
-        """
-
-        if not self.running:
-            return False
-
-        if not destpath:
-            destpath = path
-
-        if not os.path.exists(path):
-            return False
-
-        # Lookup the source
-        path_stat = os.stat(path)
-        mode = stat.S_IMODE(path_stat.st_mode)
-
-        # Allow the target
-        if stat.S_ISBLK(path_stat.st_mode):
-            self.set_cgroup_item("devices.allow",
-                                 "b %s:%s rwm" %
-                                 (int(path_stat.st_rdev / 256),
-                                  int(path_stat.st_rdev % 256)))
-        elif stat.S_ISCHR(path_stat.st_mode):
-            self.set_cgroup_item("devices.allow",
-                                 "c %s:%s rwm" %
-                                 (int(path_stat.st_rdev / 256),
-                                  int(path_stat.st_rdev % 256)))
-
-        # Create the target
-        rootfs = "/proc/%s/root/" % self.init_pid
-        container_path = "%s/%s" % (rootfs, destpath)
-
-        if os.path.exists(container_path):
-            os.remove(container_path)
-
-        os.mknod(container_path, path_stat.st_mode, path_stat.st_rdev)
-        os.chmod(container_path, mode)
-        os.chown(container_path, 0, 0)
-
-        return True
 
     def add_device_net(self, name, destname=None):
         """
@@ -230,45 +184,52 @@ class Container(_lxc.Container):
 
         return _lxc.Container.set_config_item(self, key, value)
 
-    def create(self, template, args={}):
+    def create(self, template, flags=0, args=()):
         """
             Create a new rootfs for the container.
 
             "template" must be a valid template name.
 
-            "args" (optional) is a dictionary of parameters and values to pass
-            to the template.
+            "flags" (optional) is an integer representing the optional
+            create flags to be passed.
+
+            "args" (optional) is a tuple of arguments to pass to the
+            template. It can also be provided as a dict.
         """
 
-        template_args = []
-        for item in args.items():
-            template_args.append("--%s" % item[0])
-            template_args.append("%s" % item[1])
-
-        return _lxc.Container.create(self, template, tuple(template_args))
-
-    def clone(self, container):
-        """
-            Clone an existing container into a new one.
-        """
-
-        if self.defined:
-            return False
-
-        if isinstance(container, Container):
-            source = container
+        if isinstance(args, dict):
+            template_args = []
+            for item in args.items():
+                template_args.append("--%s" % item[0])
+                template_args.append("%s" % item[1])
         else:
-            source = Container(container)
+            template_args = args
 
-        if not source.defined:
+        return _lxc.Container.create(self, template=template,
+                                     flags=flags, args=tuple(template_args))
+
+    def clone(self, newname, config_path=None, flags=0, bdevtype=None,
+              bdevdata=None, newsize=0, hookargs=()):
+        """
+            Clone the current container.
+        """
+
+        args = {}
+        args['newname'] = newname
+        args['flags'] = 0
+        args['newsize'] = 0
+        args['hookargs'] = hookargs
+        if config_path:
+            args['config_path'] = config_path
+        if bdevtype:
+            args['bdevtype'] = bdevtype
+        if bdevdata:
+            args['bdevdata'] = bdevdata
+
+        if _lxc.Container.clone(self, **args):
+            return Container(newname, config_path=config_path)
+        else:
             return False
-
-        if subprocess.call(["lxc-clone", "-o", source.name, "-n", self.name],
-                           universal_newlines=True) != 0:
-            return False
-
-        self.load_config()
-        return True
 
     def console(self, ttynum=-1, stdinfd=0, stdoutfd=1, stderrfd=2, escape=1):
         """
@@ -339,7 +300,6 @@ class Container(_lxc.Container):
         """
 
         return _lxc.Container.get_interfaces(self)
-
 
     def get_ips(self, interface=None, family=None, scope=None, timeout=0):
         """
@@ -417,21 +377,25 @@ class Container(_lxc.Container):
         return _lxc.Container.wait(self, state, timeout)
 
 
-def list_containers(as_object=False, config_path=None):
+def list_containers(active=True, defined=True,
+                    as_object=False, config_path=None):
     """
         List the containers on the system.
     """
 
-    if not config_path:
-        config_path = default_config_path
+    if config_path:
+        if not os.path.exists(config_path):
+            return tuple()
+        entries = _lxc.list_containers(active=active, defined=defined,
+                                       config_path=config_path)
+    else:
+        entries = _lxc.list_containers(active=active, defined=defined)
 
-    containers = []
-    for entry in glob.glob("%s/*/config" % config_path):
-        if as_object:
-            containers.append(Container(entry.split("/")[-2], config_path))
-        else:
-            containers.append(entry.split("/")[-2])
-    return containers
+    if as_object:
+        return tuple([Container(name, config_path) for name in entries])
+    else:
+        return entries
+
 
 def attach_run_command(cmd):
     """
@@ -448,6 +412,7 @@ def attach_run_command(cmd):
     else:
         return _lxc.attach_run_command((cmd, [cmd]))
 
+
 def attach_run_shell():
     """
         Run a shell when attaching
@@ -458,6 +423,7 @@ def attach_run_shell():
     """
     return _lxc.attach_run_shell(None)
 
+
 def arch_to_personality(arch):
     """
         Determine the process personality corresponding to the architecture
@@ -466,19 +432,32 @@ def arch_to_personality(arch):
         arch = str(arch, 'utf-8')
     return _lxc.arch_to_personality(arch)
 
-# Some constants for attach
-LXC_ATTACH_KEEP_ENV = _lxc.LXC_ATTACH_KEEP_ENV
-LXC_ATTACH_CLEAR_ENV = _lxc.LXC_ATTACH_CLEAR_ENV
-LXC_ATTACH_MOVE_TO_CGROUP = _lxc.LXC_ATTACH_MOVE_TO_CGROUP
-LXC_ATTACH_DROP_CAPABILITIES = _lxc.LXC_ATTACH_DROP_CAPABILITIES
-LXC_ATTACH_SET_PERSONALITY = _lxc.LXC_ATTACH_SET_PERSONALITY
-LXC_ATTACH_LSM_NOW = _lxc.LXC_ATTACH_LSM_NOW
-LXC_ATTACH_LSM_EXEC = _lxc.LXC_ATTACH_LSM_EXEC
-LXC_ATTACH_REMOUNT_PROC_SYS = _lxc.LXC_ATTACH_REMOUNT_PROC_SYS
-LXC_ATTACH_DEFAULT = _lxc.LXC_ATTACH_DEFAULT
-CLONE_NEWUTS = _lxc.CLONE_NEWUTS
+# namespace flags (no other python lib exports this)
 CLONE_NEWIPC = _lxc.CLONE_NEWIPC
-CLONE_NEWUSER = _lxc.CLONE_NEWUSER
-CLONE_NEWPID = _lxc.CLONE_NEWPID
 CLONE_NEWNET = _lxc.CLONE_NEWNET
 CLONE_NEWNS = _lxc.CLONE_NEWNS
+CLONE_NEWPID = _lxc.CLONE_NEWPID
+CLONE_NEWUSER = _lxc.CLONE_NEWUSER
+CLONE_NEWUTS = _lxc.CLONE_NEWUTS
+
+# attach: environment variable handling
+LXC_ATTACH_CLEAR_ENV = _lxc.LXC_ATTACH_CLEAR_ENV
+LXC_ATTACH_KEEP_ENV = _lxc.LXC_ATTACH_KEEP_ENV
+
+# attach: attach options
+LXC_ATTACH_DEFAULT = _lxc.LXC_ATTACH_DEFAULT
+LXC_ATTACH_DROP_CAPABILITIES = _lxc.LXC_ATTACH_DROP_CAPABILITIES
+LXC_ATTACH_LSM_EXEC = _lxc.LXC_ATTACH_LSM_EXEC
+LXC_ATTACH_LSM_NOW = _lxc.LXC_ATTACH_LSM_NOW
+LXC_ATTACH_MOVE_TO_CGROUP = _lxc.LXC_ATTACH_MOVE_TO_CGROUP
+LXC_ATTACH_REMOUNT_PROC_SYS = _lxc.LXC_ATTACH_REMOUNT_PROC_SYS
+LXC_ATTACH_SET_PERSONALITY = _lxc.LXC_ATTACH_SET_PERSONALITY
+
+# clone: clone flags
+LXC_CLONE_COPYHOOKS = _lxc.LXC_CLONE_COPYHOOKS
+LXC_CLONE_KEEPMACADDR = _lxc.LXC_CLONE_KEEPMACADDR
+LXC_CLONE_KEEPNAME = _lxc.LXC_CLONE_KEEPNAME
+LXC_CLONE_SNAPSHOT = _lxc.LXC_CLONE_SNAPSHOT
+
+# create: create flags
+LXC_CREATE_QUIET = _lxc.LXC_CREATE_QUIET

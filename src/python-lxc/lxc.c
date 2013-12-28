@@ -18,7 +18,8 @@
  *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
+ * USA
  */
 
 #include <Python.h>
@@ -30,10 +31,7 @@
 #include <stdio.h>
 #include <sys/wait.h>
 
-typedef struct {
-    PyObject_HEAD
-    struct lxc_container *container;
-} Container;
+/* Helper functions */
 
 char**
 convert_tuple_to_char_pointer_array(PyObject *argv) {
@@ -112,21 +110,302 @@ error:
     return NULL;
 }
 
+struct lxc_attach_python_payload {
+    PyObject *fn;
+    PyObject *arg;
+};
+
+static int lxc_attach_python_exec(void* _payload)
+{
+    struct lxc_attach_python_payload *payload =
+        (struct lxc_attach_python_payload *)_payload;
+    PyObject *result = PyObject_CallFunctionObjArgs(payload->fn,
+                                                    payload->arg, NULL);
+
+    if (!result) {
+        PyErr_Print();
+        return -1;
+    }
+    if (PyLong_Check(result))
+        return (int)PyLong_AsLong(result);
+    else
+        return -1;
+}
+
+static void lxc_attach_free_options(lxc_attach_options_t *options);
+
+static lxc_attach_options_t *lxc_attach_parse_options(PyObject *kwds)
+{
+    static char *kwlist[] = {"attach_flags", "namespaces", "personality",
+                             "initial_cwd", "uid", "gid", "env_policy",
+                             "extra_env_vars", "extra_keep_env", "stdin",
+                             "stdout", "stderr", NULL};
+    long temp_uid, temp_gid;
+    int temp_env_policy;
+    PyObject *extra_env_vars_obj = NULL;
+    PyObject *extra_keep_env_obj = NULL;
+    PyObject *stdin_obj = NULL;
+    PyObject *stdout_obj = NULL;
+    PyObject *stderr_obj = NULL;
+    PyObject *initial_cwd_obj = NULL;
+    PyObject *dummy;
+    bool parse_result;
+
+    lxc_attach_options_t default_options = LXC_ATTACH_OPTIONS_DEFAULT;
+    lxc_attach_options_t *options = malloc(sizeof(*options));
+
+    if (!options) {
+        PyErr_SetNone(PyExc_MemoryError);
+        return NULL;
+    }
+    memcpy(options, &default_options, sizeof(*options));
+
+    /* we need some dummy variables because we can't be sure
+     * the data types match completely */
+    temp_uid = -1;
+    temp_gid = -1;
+    temp_env_policy = options->env_policy;
+
+    /* we need a dummy tuple */
+    dummy = PyTuple_New(0);
+
+    parse_result = PyArg_ParseTupleAndKeywords(dummy, kwds, "|iilO&lliOOOOO",
+                                               kwlist, &options->attach_flags,
+                                               &options->namespaces,
+                                               &options->personality,
+                                               PyUnicode_FSConverter,
+                                               &initial_cwd_obj, &temp_uid,
+                                               &temp_gid, &temp_env_policy,
+                                               &extra_env_vars_obj,
+                                               &extra_keep_env_obj,
+                                               &stdin_obj, &stdout_obj,
+                                               &stderr_obj);
+
+    /* immediately get rid of the dummy tuple */
+    Py_DECREF(dummy);
+
+    if (!parse_result) {
+        lxc_attach_free_options(options);
+        return NULL;
+    }
+
+    /* duplicate the string, so we don't depend on some random Python object */
+    if (initial_cwd_obj != NULL) {
+        options->initial_cwd = strndup(PyBytes_AsString(initial_cwd_obj),
+                                       PyBytes_Size(initial_cwd_obj));
+        Py_DECREF(initial_cwd_obj);
+    }
+
+    /* do the type conversion from the types that match the parse string */
+    if (temp_uid != -1) options->uid = (uid_t)temp_uid;
+    if (temp_gid != -1) options->gid = (gid_t)temp_gid;
+    options->env_policy = (lxc_attach_env_policy_t)temp_env_policy;
+
+    if (extra_env_vars_obj)
+        options->extra_env_vars =
+            convert_tuple_to_char_pointer_array(extra_env_vars_obj);
+    if (extra_keep_env_obj)
+        options->extra_keep_env =
+            convert_tuple_to_char_pointer_array(extra_keep_env_obj);
+    if (stdin_obj) {
+        options->stdin_fd = PyObject_AsFileDescriptor(stdin_obj);
+        if (options->stdin_fd < 0) {
+            lxc_attach_free_options(options);
+            return NULL;
+        }
+    }
+    if (stdout_obj) {
+        options->stdout_fd = PyObject_AsFileDescriptor(stdout_obj);
+        if (options->stdout_fd < 0) {
+            lxc_attach_free_options(options);
+            return NULL;
+        }
+    }
+    if (stderr_obj) {
+        options->stderr_fd = PyObject_AsFileDescriptor(stderr_obj);
+        if (options->stderr_fd < 0) {
+            lxc_attach_free_options(options);
+            return NULL;
+        }
+    }
+
+    return options;
+}
+
+void lxc_attach_free_options(lxc_attach_options_t *options)
+{
+    int i;
+    if (!options)
+        return;
+    if (options->initial_cwd)
+        free(options->initial_cwd);
+    if (options->extra_env_vars) {
+        for (i = 0; options->extra_env_vars[i]; i++)
+            free(options->extra_env_vars[i]);
+        free(options->extra_env_vars);
+    }
+    if (options->extra_keep_env) {
+        for (i = 0; options->extra_keep_env[i]; i++)
+            free(options->extra_keep_env[i]);
+        free(options->extra_keep_env);
+    }
+    free(options);
+}
+
+/* Module functions */
+static PyObject *
+LXC_arch_to_personality(PyObject *self, PyObject *arg)
+{
+    long rv = -1;
+    PyObject *pystr;
+    char *str;
+
+    if (!PyUnicode_Check(arg)) {
+        PyErr_SetString(PyExc_ValueError, "Expected a string");
+        return NULL;
+    }
+
+    pystr = PyUnicode_AsUTF8String(arg);
+    if (!pystr)
+        return NULL;
+
+    str = PyBytes_AsString(pystr);
+    if (!str)
+        goto out;
+
+    rv = lxc_config_parse_arch(str);
+    if (rv == -1)
+        PyErr_SetString(PyExc_KeyError, "Failed to lookup architecture.");
+
+out:
+    Py_DECREF(pystr);
+    return rv == -1 ? NULL : PyLong_FromLong(rv);
+}
+
+static PyObject *
+LXC_attach_run_command(PyObject *self, PyObject *arg)
+{
+    PyObject *args_obj = NULL;
+    int i, rv;
+    lxc_attach_command_t cmd = {
+        NULL,         /* program */
+        NULL          /* argv[] */
+    };
+
+    if (!PyArg_ParseTuple(arg, "sO", (const char**)&cmd.program, &args_obj))
+        return NULL;
+    if (args_obj && PyList_Check(args_obj)) {
+        cmd.argv = convert_tuple_to_char_pointer_array(args_obj);
+    } else {
+        PyErr_Format(PyExc_TypeError, "Second part of tuple passed to "
+                                      "attach_run_command must be a list.");
+        return NULL;
+    }
+
+    if (!cmd.argv)
+        return NULL;
+
+    rv = lxc_attach_run_command(&cmd);
+
+    for (i = 0; cmd.argv[i]; i++)
+        free(cmd.argv[i]);
+    free(cmd.argv);
+
+    return PyLong_FromLong(rv);
+}
+
+static PyObject *
+LXC_attach_run_shell(PyObject *self, PyObject *arg)
+{
+    int rv;
+
+    rv = lxc_attach_run_shell(NULL);
+
+    return PyLong_FromLong(rv);
+}
+
+static PyObject *
+LXC_get_default_config_path(PyObject *self, PyObject *args)
+{
+    return PyUnicode_FromString(lxc_get_default_config_path());
+}
+
+static PyObject *
+LXC_get_version(PyObject *self, PyObject *args)
+{
+    return PyUnicode_FromString(lxc_get_version());
+}
+
+static PyObject *
+LXC_list_containers(PyObject *self, PyObject *args, PyObject *kwds)
+{
+    char **names = NULL;
+    PyObject *list = NULL;
+    int list_count = 0;
+
+    int list_active = 1;
+    int list_defined = 1;
+
+    PyObject *py_list_active = NULL;
+    PyObject *py_list_defined = NULL;
+
+    char* config_path = NULL;
+
+    int i = 0;
+    PyObject *vargs = NULL;
+    static char *kwlist[] = {"active", "defined", "config_path", NULL};
+
+    if (! PyArg_ParseTupleAndKeywords(args, kwds, "|OOs", kwlist,
+                                      &py_list_active,
+                                      &py_list_defined,
+                                      &config_path, &vargs))
+        return NULL;
+
+    /* We default to listing everything */
+    if (py_list_active && py_list_active != Py_True) {
+        list_active = 0;
+    }
+
+    if (py_list_defined && py_list_defined != Py_True) {
+        list_defined = 0;
+    }
+
+    /* Call the right API function based on filters */
+    if (list_active == 1 && list_defined == 1)
+        list_count = list_all_containers(config_path, &names, NULL);
+    else if (list_active == 1)
+        list_count = list_active_containers(config_path, &names, NULL);
+    else if (list_defined == 1)
+        list_count = list_defined_containers(config_path, &names, NULL);
+
+    /* Handle failure */
+    if (list_count < 0) {
+        PyErr_SetString(PyExc_ValueError, "failure to list containers");
+        return NULL;
+    }
+
+    /* Generate the tuple */
+    list = PyTuple_New(list_count);
+    for (i = 0; i < list_count; i++) {
+        PyTuple_SET_ITEM(list, i, PyUnicode_FromString(names[i]));
+        free(names[i]);
+    }
+    free(names);
+
+    return list;
+}
+
+/* Base type and functions for Container */
+typedef struct {
+    PyObject_HEAD
+    struct lxc_container *container;
+} Container;
+
 static void
 Container_dealloc(Container* self)
 {
     lxc_container_put(self->container);
     Py_TYPE(self)->tp_free((PyObject*)self);
-}
-
-static PyObject *
-Container_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
-{
-    Container *self;
-
-    self = (Container *)type->tp_alloc(type, 0);
-
-    return (PyObject *)self;
 }
 
 static int
@@ -159,23 +438,31 @@ Container_init(Container *self, PyObject *args, PyObject *kwds)
 }
 
 static PyObject *
-LXC_get_default_config_path(PyObject *self, PyObject *args)
+Container_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
-    return PyUnicode_FromString(lxc_get_default_config_path());
+    Container *self;
+
+    self = (Container *)type->tp_alloc(type, 0);
+
+    return (PyObject *)self;
 }
 
-static PyObject *
-LXC_get_version(PyObject *self, PyObject *args)
-{
-    return PyUnicode_FromString(lxc_get_version());
-}
-
-// Container properties
+/* Container properties */
 static PyObject *
 Container_config_file_name(Container *self, void *closure)
 {
     return PyUnicode_FromString(
                 self->container->config_file_name(self->container));
+}
+
+static PyObject *
+Container_controllable(Container *self, void *closure)
+{
+    if (self->container->may_control(self->container)) {
+        Py_RETURN_TRUE;
+    }
+
+    Py_RETURN_FALSE;
 }
 
 static PyObject *
@@ -216,7 +503,102 @@ Container_state(Container *self, void *closure)
     return PyUnicode_FromString(self->container->state(self->container));
 }
 
-// Container Functions
+/* Container Functions */
+static PyObject *
+Container_add_device_node(Container *self, PyObject *args, PyObject *kwds)
+{
+    static char *kwlist[] = {"src_path", "dest_path", NULL};
+    char *src_path = NULL;
+    char *dst_path = NULL;
+    PyObject *py_src_path = NULL;
+    PyObject *py_dst_path = NULL;
+
+    if (! PyArg_ParseTupleAndKeywords(args, kwds, "O&|O&", kwlist,
+                                      PyUnicode_FSConverter, &py_src_path,
+                                      PyUnicode_FSConverter, &py_dst_path))
+        return NULL;
+
+    if (py_src_path != NULL) {
+        src_path = PyBytes_AS_STRING(py_src_path);
+        assert(src_path != NULL);
+    }
+
+    if (py_dst_path != NULL) {
+        dst_path = PyBytes_AS_STRING(py_dst_path);
+        assert(dst_path != NULL);
+    }
+
+    if (self->container->add_device_node(self->container, src_path,
+                                         dst_path)) {
+        Py_XDECREF(py_src_path);
+        Py_XDECREF(py_dst_path);
+        Py_RETURN_TRUE;
+    }
+
+    Py_XDECREF(py_src_path);
+    Py_XDECREF(py_dst_path);
+    Py_RETURN_FALSE;
+}
+
+static PyObject *
+Container_attach_and_possibly_wait(Container *self, PyObject *args,
+                                   PyObject *kwds, int wait)
+{
+    struct lxc_attach_python_payload payload = { NULL, NULL };
+    lxc_attach_options_t *options = NULL;
+    long ret;
+    pid_t pid;
+
+    if (!PyArg_ParseTuple(args, "O|O", &payload.fn, &payload.arg))
+        return NULL;
+    if (!PyCallable_Check(payload.fn)) {
+        PyErr_Format(PyExc_TypeError, "attach: object not callable");
+        return NULL;
+    }
+
+    options = lxc_attach_parse_options(kwds);
+    if (!options)
+        return NULL;
+
+    ret = self->container->attach(self->container, lxc_attach_python_exec,
+                                  &payload, options, &pid);
+    if (ret < 0)
+        goto out;
+
+    if (wait) {
+        ret = lxc_wait_for_pid_status(pid);
+        /* handle case where attach fails */
+        if (WIFEXITED(ret) && WEXITSTATUS(ret) == 255)
+            ret = -1;
+    } else {
+        ret = (long)pid;
+    }
+
+out:
+    lxc_attach_free_options(options);
+    return PyLong_FromLong(ret);
+}
+
+static PyObject *
+Container_attach(Container *self, PyObject *args, PyObject *kwds)
+{
+    return Container_attach_and_possibly_wait(self, args, kwds, 0);
+}
+
+static PyObject *
+Container_attach_wait(Container *self, PyObject *args, PyObject *kwds)
+{
+    return Container_attach_and_possibly_wait(self, args, kwds, 1);
+}
+
+static PyObject *
+Container_clear_config(Container *self, PyObject *args, PyObject *kwds)
+{
+    self->container->clear_config(self->container);
+
+    Py_RETURN_NONE;
+}
+
 static PyObject *
 Container_clear_config_item(Container *self, PyObject *args, PyObject *kwds)
 {
@@ -235,16 +617,117 @@ Container_clear_config_item(Container *self, PyObject *args, PyObject *kwds)
 }
 
 static PyObject *
+Container_clone(Container *self, PyObject *args, PyObject *kwds)
+{
+    char *newname = NULL;
+    char *config_path = NULL;
+    int flags = 0;
+    char *bdevtype = NULL;
+    char *bdevdata = NULL;
+    unsigned long newsize = 0;
+    char **hookargs = NULL;
+
+    PyObject *py_hookargs = NULL;
+    PyObject *py_config_path = NULL;
+    struct lxc_container *new_container = NULL;
+    int i = 0;
+
+    static char *kwlist[] = {"newname", "config_path", "flags", "bdevtype",
+                             "bdevdata", "newsize", "hookargs", NULL};
+    if (! PyArg_ParseTupleAndKeywords(args, kwds, "s|O&isskO", kwlist,
+                                      &newname,
+                                      PyUnicode_FSConverter, &py_config_path,
+                                      &flags, &bdevtype, &bdevdata, &newsize,
+                                      &py_hookargs))
+        return NULL;
+
+    if (py_hookargs) {
+        if (PyTuple_Check(py_hookargs)) {
+            hookargs = convert_tuple_to_char_pointer_array(py_hookargs);
+            if (!hookargs) {
+                return NULL;
+            }
+        }
+        else {
+            PyErr_SetString(PyExc_ValueError, "hookargs needs to be a tuple");
+            return NULL;
+        }
+    }
+
+    if (py_config_path != NULL) {
+        config_path = PyBytes_AS_STRING(py_config_path);
+        assert(config_path != NULL);
+    }
+
+    new_container = self->container->clone(self->container, newname,
+                                           config_path, flags, bdevtype,
+                                           bdevdata, newsize, hookargs);
+
+    Py_XDECREF(py_config_path);
+
+    if (hookargs) {
+        for (i = 0; i < PyTuple_GET_SIZE(py_hookargs); i++)
+            free(hookargs[i]);
+        free(hookargs);
+    }
+
+    if (new_container == NULL) {
+        Py_RETURN_FALSE;
+    }
+
+    lxc_container_put(new_container);
+
+    Py_RETURN_TRUE;
+}
+
+static PyObject *
+Container_console(Container *self, PyObject *args, PyObject *kwds)
+{
+    static char *kwlist[] = {"ttynum", "stdinfd", "stdoutfd", "stderrfd",
+                             "escape", NULL};
+    int ttynum = -1, stdinfd = 0, stdoutfd = 1, stderrfd = 2, escape = 1;
+
+    if (! PyArg_ParseTupleAndKeywords(args, kwds, "|iiiii", kwlist,
+                                      &ttynum, &stdinfd, &stdoutfd, &stderrfd,
+                                      &escape))
+        return NULL;
+
+    if (self->container->console(self->container, ttynum,
+            stdinfd, stdoutfd, stderrfd, escape) == 0) {
+        Py_RETURN_TRUE;
+    }
+    Py_RETURN_FALSE;
+}
+
+static PyObject *
+Container_console_getfd(Container *self, PyObject *args, PyObject *kwds)
+{
+    static char *kwlist[] = {"ttynum", NULL};
+    int ttynum = -1, masterfd;
+
+    if (! PyArg_ParseTupleAndKeywords(args, kwds, "|i", kwlist, &ttynum))
+        return NULL;
+
+    if (self->container->console_getfd(self->container, &ttynum,
+                                       &masterfd) < 0) {
+        PyErr_SetString(PyExc_ValueError, "Unable to allocate tty");
+        return NULL;
+    }
+    return PyLong_FromLong(masterfd);
+}
+
+static PyObject *
 Container_create(Container *self, PyObject *args, PyObject *kwds)
 {
     char* template_name = NULL;
+    int flags = 0;
     char** create_args = {NULL};
     PyObject *retval = NULL, *vargs = NULL;
     int i = 0;
-    static char *kwlist[] = {"template", "args", NULL};
+    static char *kwlist[] = {"template", "flags", "args", NULL};
 
-    if (! PyArg_ParseTupleAndKeywords(args, kwds, "s|O", kwlist,
-                                      &template_name, &vargs))
+    if (! PyArg_ParseTupleAndKeywords(args, kwds, "s|iO", kwlist,
+                                      &template_name, &flags, &vargs))
         return NULL;
 
     if (vargs) {
@@ -260,7 +743,8 @@ Container_create(Container *self, PyObject *args, PyObject *kwds)
         }
     }
 
-    if (self->container->create(self->container, template_name, NULL, NULL, 0, create_args))
+    if (self->container->create(self->container, template_name, NULL, NULL,
+                                flags, create_args))
         retval = Py_True;
     else
         retval = Py_False;
@@ -537,6 +1021,52 @@ Container_load_config(Container *self, PyObject *args, PyObject *kwds)
 }
 
 static PyObject *
+Container_reboot(Container *self, PyObject *args, PyObject *kwds)
+{
+    if (self->container->reboot(self->container)) {
+        Py_RETURN_TRUE;
+    }
+
+    Py_RETURN_FALSE;
+}
+
+static PyObject *
+Container_remove_device_node(Container *self, PyObject *args, PyObject *kwds)
+{
+    static char *kwlist[] = {"src_path", "dest_path", NULL};
+    char *src_path = NULL;
+    char *dst_path = NULL;
+    PyObject *py_src_path = NULL;
+    PyObject *py_dst_path = NULL;
+
+    if (! PyArg_ParseTupleAndKeywords(args, kwds, "O&|O&", kwlist,
+                                      PyUnicode_FSConverter, &py_src_path,
+                                      PyUnicode_FSConverter, &py_dst_path))
+        return NULL;
+
+    if (py_src_path != NULL) {
+        src_path = PyBytes_AS_STRING(py_src_path);
+        assert(src_path != NULL);
+    }
+
+    if (py_dst_path != NULL) {
+        dst_path = PyBytes_AS_STRING(py_dst_path);
+        assert(dst_path != NULL);
+    }
+
+    if (self->container->remove_device_node(self->container, src_path,
+                                            dst_path)) {
+        Py_XDECREF(py_src_path);
+        Py_XDECREF(py_dst_path);
+        Py_RETURN_TRUE;
+    }
+
+    Py_XDECREF(py_src_path);
+    Py_XDECREF(py_dst_path);
+    Py_RETURN_FALSE;
+}
+
+static PyObject *
 Container_save_config(Container *self, PyObject *args, PyObject *kwds)
 {
     static char *kwlist[] = {"path", NULL};
@@ -632,15 +1162,131 @@ Container_shutdown(Container *self, PyObject *args, PyObject *kwds)
 }
 
 static PyObject *
+Container_snapshot(Container *self, PyObject *args, PyObject *kwds)
+{
+    char *comment_path = NULL;
+    static char *kwlist[] = {"comment_path", NULL};
+    int retval = 0;
+    int ret = 0;
+    char newname[20];
+    PyObject *py_comment_path;
+
+    if (! PyArg_ParseTupleAndKeywords(args, kwds, "|O&", kwlist,
+                                      PyUnicode_FSConverter, &py_comment_path))
+        return NULL;
+
+    if (py_comment_path != NULL) {
+        comment_path = PyBytes_AS_STRING(py_comment_path);
+        assert(comment_path != NULL);
+    }
+
+    retval = self->container->snapshot(self->container, comment_path);
+
+    Py_XDECREF(py_comment_path);
+
+    if (retval < 0) {
+        Py_RETURN_FALSE;
+    }
+
+    ret = snprintf(newname, 20, "snap%d", retval);
+    if (ret < 0 || ret >= 20)
+        return NULL;
+
+
+    return PyUnicode_FromString(newname);
+}
+
+static PyObject *
+Container_snapshot_destroy(Container *self, PyObject *args, PyObject *kwds)
+{
+    char *name = NULL;
+    static char *kwlist[] = {"name", NULL};
+
+    if (! PyArg_ParseTupleAndKeywords(args, kwds, "s|", kwlist,
+                                      &name))
+        return NULL;
+
+    if (self->container->snapshot_destroy(self->container, name)) {
+        Py_RETURN_TRUE;
+    }
+
+    Py_RETURN_FALSE;
+}
+
+static PyObject *
+Container_snapshot_list(Container *self, PyObject *args, PyObject *kwds)
+{
+    struct lxc_snapshot *snap;
+    int snap_count = 0;
+    PyObject *list = NULL;
+    int i = 0;
+
+    snap_count = self->container->snapshot_list(self->container, &snap);
+
+    if (snap_count < 0) {
+        PyErr_SetString(PyExc_KeyError, "Unable to list snapshots");
+        return NULL;
+    }
+
+    list = PyTuple_New(snap_count);
+    for (i = 0; i < snap_count; i++) {
+        PyObject *list_entry = NULL;
+
+        list_entry = PyTuple_New(4);
+        PyTuple_SET_ITEM(list_entry, 0,
+                         PyUnicode_FromString(snap[i].name));
+        PyTuple_SET_ITEM(list_entry, 1,
+                         PyUnicode_FromString(snap[i].comment_pathname));
+        PyTuple_SET_ITEM(list_entry, 2,
+                         PyUnicode_FromString(snap[i].timestamp));
+        PyTuple_SET_ITEM(list_entry, 3,
+                         PyUnicode_FromString(snap[i].lxcpath));
+
+        snap[i].free(&snap[i]);
+
+        PyTuple_SET_ITEM(list, i, list_entry);
+    }
+
+    return list;
+}
+
+
+static PyObject *
+Container_snapshot_restore(Container *self, PyObject *args, PyObject *kwds)
+{
+    char *name = NULL;
+    char *newname = NULL;
+    static char *kwlist[] = {"name", "newname", NULL};
+
+    if (! PyArg_ParseTupleAndKeywords(args, kwds, "s|s", kwlist,
+                                      &name, &newname))
+        return NULL;
+
+    if (self->container->snapshot_restore(self->container, name, newname)) {
+        Py_RETURN_TRUE;
+    }
+
+    Py_RETURN_FALSE;
+}
+
+static PyObject *
 Container_start(Container *self, PyObject *args, PyObject *kwds)
 {
-    char** init_args = {NULL};
-    PyObject *useinit = NULL, *retval = NULL, *vargs = NULL;
-    int init_useinit = 0, i = 0;
-    static char *kwlist[] = {"useinit", "cmd", NULL};
+    PyObject *useinit = NULL;
+    PyObject *daemonize = NULL;
+    PyObject *close_fds = NULL;
 
-    if (! PyArg_ParseTupleAndKeywords(args, kwds, "|OO", kwlist,
-                                      &useinit, &vargs))
+    PyObject *vargs = NULL;
+    char** init_args = {NULL};
+
+    PyObject *retval = NULL;
+    int init_useinit = 0, i = 0;
+    static char *kwlist[] = {"useinit", "daemonize", "close_fds",
+                             "cmd", NULL};
+
+    if (! PyArg_ParseTupleAndKeywords(args, kwds, "|OOOO", kwlist,
+                                      &useinit, &daemonize, &close_fds,
+                                      &vargs))
         return NULL;
 
     if (useinit && useinit == Py_True) {
@@ -654,7 +1300,19 @@ Container_start(Container *self, PyObject *args, PyObject *kwds)
         }
     }
 
-    self->container->want_daemonize(self->container);
+    if (close_fds && close_fds == Py_True) {
+        self->container->want_close_all_fds(self->container, true);
+    }
+    else {
+        self->container->want_close_all_fds(self->container, false);
+    }
+
+    if (!daemonize || daemonize == Py_True) {
+        self->container->want_daemonize(self->container, true);
+    }
+    else {
+        self->container->want_daemonize(self->container, false);
+    }
 
     if (self->container->start(self->container, init_useinit, init_args))
         retval = Py_True;
@@ -695,40 +1353,6 @@ Container_unfreeze(Container *self, PyObject *args, PyObject *kwds)
 }
 
 static PyObject *
-Container_console(Container *self, PyObject *args, PyObject *kwds)
-{
-    static char *kwlist[] = {"ttynum", "stdinfd", "stdoutfd", "stderrfd", "escape", NULL};
-    int ttynum = -1, stdinfd = 0, stdoutfd = 1, stderrfd = 2, escape = 1;
-
-    if (! PyArg_ParseTupleAndKeywords(args, kwds, "|iiiii", kwlist,
-                                      &ttynum, &stdinfd, &stdoutfd, &stderrfd,
-                                      &escape))
-        return NULL;
-
-    if (self->container->console(self->container, ttynum,
-				 stdinfd, stdoutfd, stderrfd, escape) == 0) {
-        Py_RETURN_TRUE;
-    }
-    Py_RETURN_FALSE;
-}
-
-static PyObject *
-Container_console_getfd(Container *self, PyObject *args, PyObject *kwds)
-{
-    static char *kwlist[] = {"ttynum", NULL};
-    int ttynum = -1, masterfd;
-
-    if (! PyArg_ParseTupleAndKeywords(args, kwds, "|i", kwlist, &ttynum))
-        return NULL;
-
-    if (self->container->console_getfd(self->container, &ttynum, &masterfd) < 0) {
-        PyErr_SetString(PyExc_ValueError, "Unable to allocate tty");
-        return NULL;
-    }
-    return PyLong_FromLong(masterfd);
-}
-
-static PyObject *
 Container_wait(Container *self, PyObject *args, PyObject *kwds)
 {
     static char *kwlist[] = {"state", "timeout", NULL};
@@ -746,257 +1370,15 @@ Container_wait(Container *self, PyObject *args, PyObject *kwds)
     Py_RETURN_FALSE;
 }
 
-struct lxc_attach_python_payload {
-    PyObject *fn;
-    PyObject *arg;
-};
-
-static int lxc_attach_python_exec(void* _payload)
-{
-    struct lxc_attach_python_payload *payload = (struct lxc_attach_python_payload *)_payload;
-    PyObject *result = PyObject_CallFunctionObjArgs(payload->fn, payload->arg, NULL);
-
-    if (!result) {
-        PyErr_Print();
-        return -1;
-    }
-    if (PyLong_Check(result))
-        return (int)PyLong_AsLong(result);
-    else
-        return -1;
-}
-
-static void lxc_attach_free_options(lxc_attach_options_t *options);
-
-static lxc_attach_options_t *lxc_attach_parse_options(PyObject *kwds)
-{
-    static char *kwlist[] = {"attach_flags", "namespaces", "personality", "initial_cwd", "uid", "gid", "env_policy", "extra_env_vars", "extra_keep_env", "stdin", "stdout", "stderr", NULL};
-    long temp_uid, temp_gid;
-    int temp_env_policy;
-    PyObject *extra_env_vars_obj = NULL;
-    PyObject *extra_keep_env_obj = NULL;
-    PyObject *stdin_obj = NULL;
-    PyObject *stdout_obj = NULL;
-    PyObject *stderr_obj = NULL;
-    PyObject *initial_cwd_obj = NULL;
-    PyObject *dummy;
-    bool parse_result;
-
-    lxc_attach_options_t default_options = LXC_ATTACH_OPTIONS_DEFAULT;
-    lxc_attach_options_t *options = malloc(sizeof(*options));
-
-    if (!options) {
-        PyErr_SetNone(PyExc_MemoryError);
-        return NULL;
-    }
-    memcpy(options, &default_options, sizeof(*options));
-
-    /* we need some dummy variables because we can't be sure
-     * the data types match completely */
-    temp_uid = -1;
-    temp_gid = -1;
-    temp_env_policy = options->env_policy;
-
-    /* we need a dummy tuple */
-    dummy = PyTuple_New(0);
-
-    parse_result = PyArg_ParseTupleAndKeywords(dummy, kwds, "|iilO&lliOOOOO", kwlist,
-                                               &options->attach_flags, &options->namespaces, &options->personality,
-                                               PyUnicode_FSConverter, &initial_cwd_obj, &temp_uid, &temp_gid,
-                                               &temp_env_policy, &extra_env_vars_obj, &extra_keep_env_obj,
-                                               &stdin_obj, &stdout_obj, &stderr_obj);
-
-    /* immediately get rid of the dummy tuple */
-    Py_DECREF(dummy);
-
-    if (!parse_result) {
-        lxc_attach_free_options(options);
-        return NULL;
-    }
-
-    /* duplicate the string, so we don't depend on some random Python object */
-    if (initial_cwd_obj != NULL) {
-        options->initial_cwd = strndup(PyBytes_AsString(initial_cwd_obj), PyBytes_Size(initial_cwd_obj));
-        Py_DECREF(initial_cwd_obj);
-    }
-
-    /* do the type conversion from the types that match the parse string */
-    if (temp_uid != -1) options->uid = (uid_t)temp_uid;
-    if (temp_gid != -1) options->gid = (gid_t)temp_gid;
-    options->env_policy = (lxc_attach_env_policy_t)temp_env_policy;
-
-    if (extra_env_vars_obj)
-        options->extra_env_vars = convert_tuple_to_char_pointer_array(extra_env_vars_obj);
-    if (extra_keep_env_obj)
-        options->extra_keep_env = convert_tuple_to_char_pointer_array(extra_keep_env_obj);
-    if (stdin_obj) {
-        options->stdin_fd = PyObject_AsFileDescriptor(stdin_obj);
-        if (options->stdin_fd < 0) {
-            lxc_attach_free_options(options);
-            return NULL;
-        }
-    }
-    if (stdout_obj) {
-        options->stdout_fd = PyObject_AsFileDescriptor(stdout_obj);
-        if (options->stdout_fd < 0) {
-            lxc_attach_free_options(options);
-            return NULL;
-        }
-    }
-    if (stderr_obj) {
-        options->stderr_fd = PyObject_AsFileDescriptor(stderr_obj);
-        if (options->stderr_fd < 0) {
-            lxc_attach_free_options(options);
-            return NULL;
-        }
-    }
-
-    return options;
-}
-
-void lxc_attach_free_options(lxc_attach_options_t *options)
-{
-    int i;
-    if (!options)
-        return;
-    if (options->initial_cwd)
-        free(options->initial_cwd);
-    if (options->extra_env_vars) {
-        for (i = 0; options->extra_env_vars[i]; i++)
-            free(options->extra_env_vars[i]);
-        free(options->extra_env_vars);
-    }
-    if (options->extra_keep_env) {
-        for (i = 0; options->extra_keep_env[i]; i++)
-            free(options->extra_keep_env[i]);
-        free(options->extra_keep_env);
-    }
-    free(options);
-}
-
-static PyObject *
-Container_attach_and_possibly_wait(Container *self, PyObject *args, PyObject *kwds, int wait)
-{
-    struct lxc_attach_python_payload payload = { NULL, NULL };
-    lxc_attach_options_t *options = NULL;
-    long ret;
-    pid_t pid;
-
-    if (!PyArg_ParseTuple(args, "O|O", &payload.fn, &payload.arg))
-        return NULL;
-    if (!PyCallable_Check(payload.fn)) {
-        PyErr_Format(PyExc_TypeError, "attach: object not callable");
-        return NULL;
-    }
-
-    options = lxc_attach_parse_options(kwds);
-    if (!options)
-        return NULL;
-
-    ret = self->container->attach(self->container, lxc_attach_python_exec, &payload, options, &pid);
-    if (ret < 0)
-        goto out;
-
-    if (wait) {
-        ret = lxc_wait_for_pid_status(pid);
-        /* handle case where attach fails */
-        if (WIFEXITED(ret) && WEXITSTATUS(ret) == 255)
-            ret = -1;
-    } else {
-        ret = (long)pid;
-    }
-
-out:
-    lxc_attach_free_options(options);
-    return PyLong_FromLong(ret);
-}
-
-static PyObject *
-Container_attach(Container *self, PyObject *args, PyObject *kwds)
-{
-    return Container_attach_and_possibly_wait(self, args, kwds, 0);
-}
-
-static PyObject *
-Container_attach_wait(Container *self, PyObject *args, PyObject *kwds)
-{
-    return Container_attach_and_possibly_wait(self, args, kwds, 1);
-}
-
-static PyObject *
-LXC_attach_run_shell(PyObject *self, PyObject *arg)
-{
-    int rv;
-
-    rv = lxc_attach_run_shell(NULL);
-
-    return PyLong_FromLong(rv);
-}
-
-static PyObject *
-LXC_arch_to_personality(PyObject *self, PyObject *arg)
-{
-    long rv = -1;
-    PyObject *pystr;
-    char *str;
-
-    if (!PyUnicode_Check(arg)) {
-        PyErr_SetString(PyExc_ValueError, "Expected a string");
-        return NULL;
-    }
-
-    pystr = PyUnicode_AsUTF8String(arg);
-    if (!pystr)
-        return NULL;
-
-    str = PyBytes_AsString(pystr);
-    if (!str)
-        goto out;
-
-    rv = lxc_config_parse_arch(str);
-    if (rv == -1)
-        PyErr_SetString(PyExc_KeyError, "Failed to lookup architecture.");
-
-out:
-    Py_DECREF(pystr);
-    return rv == -1 ? NULL : PyLong_FromLong(rv);
-}
-
-static PyObject *
-LXC_attach_run_command(PyObject *self, PyObject *arg)
-{
-    PyObject *args_obj = NULL;
-    int i, rv;
-    lxc_attach_command_t cmd = {
-        NULL,         /* program */
-        NULL          /* argv[] */
-    };
-
-    if (!PyArg_ParseTuple(arg, "sO", (const char**)&cmd.program, &args_obj))
-        return NULL;
-    if (args_obj && PyList_Check(args_obj)) {
-        cmd.argv = convert_tuple_to_char_pointer_array(args_obj);
-    } else {
-        PyErr_Format(PyExc_TypeError, "Second part of tuple passed to attach_run_command must be a list.");
-        return NULL;
-    }
-
-    if (!cmd.argv)
-        return NULL;
-
-    rv = lxc_attach_run_command(&cmd);
-
-    for (i = 0; cmd.argv[i]; i++)
-        free(cmd.argv[i]);
-    free(cmd.argv);
-
-    return PyLong_FromLong(rv);
-}
-
+/* Function/Properties list */
 static PyGetSetDef Container_getseters[] = {
     {"config_file_name",
      (getter)Container_config_file_name, NULL,
      "Path to the container configuration",
+     NULL},
+    {"controllable",
+     (getter)Container_controllable, NULL,
+     "Boolean indicating whether the container may be controlled",
      NULL},
     {"defined",
      (getter)Container_defined, NULL,
@@ -1022,11 +1404,55 @@ static PyGetSetDef Container_getseters[] = {
 };
 
 static PyMethodDef Container_methods[] = {
+    {"add_device_node", (PyCFunction)Container_add_device_node,
+     METH_VARARGS|METH_KEYWORDS,
+     "add_device_node(src_path, dest_path) -> boolean\n"
+     "\n"
+     "Pass a new device to the container."
+    },
+    {"attach", (PyCFunction)Container_attach,
+     METH_VARARGS|METH_KEYWORDS,
+     "attach(run, payload) -> int\n"
+     "\n"
+     "Attach to the container. Returns the pid of the attached process."
+    },
+    {"attach_wait", (PyCFunction)Container_attach_wait,
+     METH_VARARGS|METH_KEYWORDS,
+     "attach(run, payload) -> int\n"
+     "\n"
+     "Attach to the container. Returns the exit code of the process."
+    },
+    {"clear_config", (PyCFunction)Container_clear_config,
+     METH_NOARGS,
+     "clear_config()\n"
+     "\n"
+     "Clear any container configuration."
+    },
     {"clear_config_item", (PyCFunction)Container_clear_config_item,
      METH_VARARGS|METH_KEYWORDS,
      "clear_config_item(key) -> boolean\n"
      "\n"
      "Clear the current value of a config key."
+    },
+    {"console", (PyCFunction)Container_console,
+     METH_VARARGS|METH_KEYWORDS,
+     "console(ttynum = -1, stdinfd = 0, stdoutfd = 1, stderrfd = 2, "
+     "escape = 0) -> boolean\n"
+     "\n"
+     "Attach to container's console."
+    },
+    {"console_getfd", (PyCFunction)Container_console_getfd,
+     METH_VARARGS|METH_KEYWORDS,
+     "console(ttynum = -1) -> boolean\n"
+     "\n"
+     "Attach to container's console."
+    },
+    {"clone", (PyCFunction)Container_clone,
+     METH_VARARGS|METH_KEYWORDS,
+     "clone(newname, config_path, flags, bdevtype, bdevdata, newsize, "
+     "hookargs) -> boolean\n"
+     "\n"
+     "Create a new container based on the current one."
     },
     {"create", (PyCFunction)Container_create,
      METH_VARARGS|METH_KEYWORDS,
@@ -1090,6 +1516,18 @@ static PyMethodDef Container_methods[] = {
      "Read the container configuration from its default "
      "location or from an alternative location if provided."
     },
+    {"reboot", (PyCFunction)Container_reboot,
+     METH_NOARGS,
+     "reboot() -> boolean\n"
+     "\n"
+     "Ask the container to reboot."
+    },
+    {"remove_device_node", (PyCFunction)Container_remove_device_node,
+     METH_VARARGS|METH_KEYWORDS,
+     "remove_device_node(src_path, dest_path) -> boolean\n"
+     "\n"
+     "Remove a device from the container."
+    },
     {"save_config", (PyCFunction)Container_save_config,
      METH_VARARGS|METH_KEYWORDS,
      "save_config(path = DEFAULT) -> boolean\n"
@@ -1123,12 +1561,42 @@ static PyMethodDef Container_methods[] = {
      "unless timeout is set to a positive value, in which case "
      "the container will be killed when the timeout is reached."
     },
+    {"snapshot", (PyCFunction)Container_snapshot,
+     METH_VARARGS|METH_KEYWORDS,
+     "snapshot(comment_path = None) -> string\n"
+     "\n"
+     "Snapshot the container and return the snapshot name "
+     "(or False on error)."
+    },
+    {"snapshot_destroy", (PyCFunction)Container_snapshot_destroy,
+     METH_VARARGS|METH_KEYWORDS,
+     "snapshot_destroy(name) -> boolean\n"
+     "\n"
+     "Destroy a snapshot."
+    },
+    {"snapshot_list", (PyCFunction)Container_snapshot_list,
+     METH_NOARGS,
+     "snapshot_list() -> tuple of snapshot tuples\n"
+     "\n"
+     "List all snapshots for a container."
+    },
+    {"snapshot_restore", (PyCFunction)Container_snapshot_restore,
+     METH_VARARGS|METH_KEYWORDS,
+     "snapshot_restore(name, newname = None) -> boolean\n"
+     "\n"
+     "Restore a container snapshot. If newname is provided a new "
+     "container will be created from the snapshot, otherwise an in-place "
+     "restore will be attempted."
+    },
     {"start", (PyCFunction)Container_start,
      METH_VARARGS|METH_KEYWORDS,
-     "start(useinit = False, cmd = (,)) -> boolean\n"
+     "start(useinit = False, daemonize=True, close_fds=False, "
+     "cmd = (,)) -> boolean\n"
      "\n"
-     "Start the container, optionally using lxc-init and "
-     "an alternate init command, then returns its return code."
+     "Start the container, return True on success.\n"
+     "When set useinit will make LXC use lxc-init to start the container.\n"
+     "The container can be started in the foreground with daemonize=False.\n"
+     "All fds may also be closed by passing close_fds=True."
     },
     {"stop", (PyCFunction)Container_stop,
      METH_NOARGS,
@@ -1147,30 +1615,6 @@ static PyMethodDef Container_methods[] = {
      "wait(state, timeout = -1) -> boolean\n"
      "\n"
      "Wait for the container to reach a given state or timeout."
-    },
-    {"console", (PyCFunction)Container_console,
-     METH_VARARGS|METH_KEYWORDS,
-     "console(ttynum = -1, stdinfd = 0, stdoutfd = 1, stderrfd = 2, escape = 0) -> boolean\n"
-     "\n"
-     "Attach to container's console."
-    },
-    {"console_getfd", (PyCFunction)Container_console_getfd,
-     METH_VARARGS|METH_KEYWORDS,
-     "console(ttynum = -1) -> boolean\n"
-     "\n"
-     "Attach to container's console."
-    },
-    {"attach", (PyCFunction)Container_attach,
-     METH_VARARGS|METH_KEYWORDS,
-     "attach(run, payload) -> int\n"
-     "\n"
-     "Attach to the container. Returns the pid of the attached process."
-    },
-    {"attach_wait", (PyCFunction)Container_attach_wait,
-     METH_VARARGS|METH_KEYWORDS,
-     "attach(run, payload) -> int\n"
-     "\n"
-     "Attach to the container. Returns the exit code of the process."
     },
     {NULL, NULL, 0, NULL}
 };
@@ -1218,16 +1662,22 @@ PyVarObject_HEAD_INIT(NULL, 0)
 };
 
 static PyMethodDef LXC_methods[] = {
-    {"attach_run_shell", (PyCFunction)LXC_attach_run_shell, METH_O,
-     "Starts up a shell when attaching, to use as the run parameter for attach or attach_wait"},
-    {"attach_run_command", (PyCFunction)LXC_attach_run_command, METH_O,
-     "Runs a command when attaching, to use as the run parameter for attach or attach_wait"},
     {"arch_to_personality", (PyCFunction)LXC_arch_to_personality, METH_O,
      "Returns the process personality of the corresponding architecture"},
-    {"get_default_config_path", (PyCFunction)LXC_get_default_config_path, METH_NOARGS,
+    {"attach_run_command", (PyCFunction)LXC_attach_run_command, METH_O,
+     "Runs a command when attaching, to use as the run parameter for attach "
+     "or attach_wait"},
+    {"attach_run_shell", (PyCFunction)LXC_attach_run_shell, METH_O,
+     "Starts up a shell when attaching, to use as the run parameter for "
+     "attach or attach_wait"},
+    {"get_default_config_path", (PyCFunction)LXC_get_default_config_path,
+     METH_NOARGS,
      "Returns the current LXC config path"},
     {"get_version", (PyCFunction)LXC_get_version, METH_NOARGS,
      "Returns the current LXC library version"},
+    {"list_containers", (PyCFunction)LXC_list_containers,
+     METH_VARARGS|METH_KEYWORDS,
+     "Returns a list of container names or objects"},
     {NULL, NULL, 0, NULL}
 };
 
@@ -1258,20 +1708,8 @@ PyInit__lxc(void)
     /* add constants */
     d = PyModule_GetDict(m);
 
-    #define PYLXC_EXPORT_CONST(c) PyDict_SetItemString(d, #c, PyLong_FromLong(c))
-
-    /* environment variable handling */
-    PYLXC_EXPORT_CONST(LXC_ATTACH_KEEP_ENV);
-    PYLXC_EXPORT_CONST(LXC_ATTACH_CLEAR_ENV);
-
-    /* attach options */
-    PYLXC_EXPORT_CONST(LXC_ATTACH_MOVE_TO_CGROUP);
-    PYLXC_EXPORT_CONST(LXC_ATTACH_DROP_CAPABILITIES);
-    PYLXC_EXPORT_CONST(LXC_ATTACH_SET_PERSONALITY);
-    PYLXC_EXPORT_CONST(LXC_ATTACH_LSM_NOW);
-    PYLXC_EXPORT_CONST(LXC_ATTACH_LSM_EXEC);
-    PYLXC_EXPORT_CONST(LXC_ATTACH_REMOUNT_PROC_SYS);
-    PYLXC_EXPORT_CONST(LXC_ATTACH_DEFAULT);
+    #define PYLXC_EXPORT_CONST(c) \
+        PyDict_SetItemString(d, #c, PyLong_FromLong(c))
 
     /* namespace flags (no other python lib exports this) */
     PYLXC_EXPORT_CONST(CLONE_NEWUTS);
@@ -1280,6 +1718,28 @@ PyInit__lxc(void)
     PYLXC_EXPORT_CONST(CLONE_NEWPID);
     PYLXC_EXPORT_CONST(CLONE_NEWNET);
     PYLXC_EXPORT_CONST(CLONE_NEWNS);
+
+    /* attach: environment variable handling */
+    PYLXC_EXPORT_CONST(LXC_ATTACH_CLEAR_ENV);
+    PYLXC_EXPORT_CONST(LXC_ATTACH_KEEP_ENV);
+
+    /* attach: attach options */
+    PYLXC_EXPORT_CONST(LXC_ATTACH_DEFAULT);
+    PYLXC_EXPORT_CONST(LXC_ATTACH_DROP_CAPABILITIES);
+    PYLXC_EXPORT_CONST(LXC_ATTACH_LSM_EXEC);
+    PYLXC_EXPORT_CONST(LXC_ATTACH_LSM_NOW);
+    PYLXC_EXPORT_CONST(LXC_ATTACH_MOVE_TO_CGROUP);
+    PYLXC_EXPORT_CONST(LXC_ATTACH_REMOUNT_PROC_SYS);
+    PYLXC_EXPORT_CONST(LXC_ATTACH_SET_PERSONALITY);
+
+    /* clone: clone flags */
+    PYLXC_EXPORT_CONST(LXC_CLONE_COPYHOOKS);
+    PYLXC_EXPORT_CONST(LXC_CLONE_KEEPMACADDR);
+    PYLXC_EXPORT_CONST(LXC_CLONE_KEEPNAME);
+    PYLXC_EXPORT_CONST(LXC_CLONE_SNAPSHOT);
+
+    /* create: create flags */
+    PYLXC_EXPORT_CONST(LXC_CREATE_QUIET);
 
     #undef PYLXC_EXPORT_CONST
 

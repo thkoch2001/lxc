@@ -1,7 +1,7 @@
 /* liblxcapi
  *
- * Copyright © 2012 Serge Hallyn <serge.hallyn@ubuntu.com>.
- * Copyright © 2012 Canonical Ltd.
+ * Copyright Â© 2012 Serge Hallyn <serge.hallyn@ubuntu.com>.
+ * Copyright Â© 2012 Canonical Ltd.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2, as
@@ -26,6 +26,8 @@
 #include <sys/wait.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <string.h>
+#include <sys/stat.h>
 #include "../lxc/cgroup.h"
 #include "../lxc/lxc.h"
 #include "../lxc/commands.h"
@@ -172,7 +174,7 @@ static int test_container(const char *lxcpath,
 		goto out2;
 	}
 	c->load_config(c, NULL);
-	c->want_daemonize(c);
+	c->want_daemonize(c, true);
 	if (!c->startl(c, 0, NULL)) {
 		TSTERR("starting container %s", name);
 		goto out3;

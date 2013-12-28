@@ -1,27 +1,29 @@
 pkginclude_HEADERS = \
-		arguments.h \
-		attach.h \
-		attach_options.h \
-		bdev.h \
-		caps.h \
-		cgroup.h \
-		conf.h \
-		console.h \
-		error.h \
-		list.h \
-		log.h \
-		lxccontainer.h \
-		lxc.h \
-		lxclock.h \
-		monitor.h \
-		namespace.h \
-		start.h \
-		state.h \
-		utils.h \
-		version.h
+	attach_options.h \
+	lxccontainer.h \
+	version.h
+
+noinst_HEADERS = \
+	arguments.h \
+	attach.h \
+	bdev.h \
+	caps.h \
+	cgroup.h \
+	conf.h \
+	console.h \
+	error.h \
+	list.h \
+	log.h \
+	lxc.h \
+	lxclock.h \
+	monitor.h \
+	namespace.h \
+	start.h \
+	state.h \
+	utils.h
 
 if IS_BIONIC
-pkginclude_HEADERS += \
+noinst_HEADERS += \
 	../include/ifaddrs.h \
 	../include/openpty.h \
 	../include/lxcmntent.h
@@ -29,7 +31,7 @@ endif
 
 if !HAVE_GETLINE
 if HAVE_FGETLN
-pkginclude_HEADERS += ../include/getline.h
+noinst_HEADERS += ../include/getline.h
 endif
 endif
 
@@ -87,7 +89,7 @@ liblxc_so_SOURCES = \
 	lxcutmp.c lxcutmp.h \
 	lxclock.h lxclock.c \
 	lxccontainer.c lxccontainer.h \
-	version.c version.h \
+	version.h \
 	\
 	$(LSM_SOURCES)
 
@@ -124,10 +126,6 @@ if ENABLE_SELINUX
 AM_CFLAGS += -DHAVE_SELINUX
 endif
 
-if HAVE_NEWUIDMAP
-AM_CFLAGS += -DHAVE_NEWUIDMAP
-endif
-
 if USE_CONFIGPATH_LOGS
 AM_CFLAGS += -DUSE_CONFIGPATH_LOGS
 endif
@@ -153,8 +151,10 @@ bin_SCRIPTS = \
 
 EXTRA_DIST = \
 	lxc-device \
+	lxc-devsetup \
 	lxc-ls \
-	lxc-top
+	lxc-top \
+	lxc.service
 
 if ENABLE_PYTHON
 bin_SCRIPTS += lxc-device
@@ -190,11 +190,8 @@ bin_PROGRAMS = \
 	lxc-destroy \
 	lxc-create \
 	lxc-user-nic \
-	lxc-snapshot
-
-if HAVE_NEWUIDMAP
-bin_PROGRAMS += lxc-usernsexec
-endif
+	lxc-snapshot \
+	lxc-usernsexec
 
 pkglibexec_PROGRAMS = \
 	lxc-init
@@ -228,7 +225,7 @@ lxc_kill_SOURCES = lxc_kill.c
 lxc_create_SOURCES = lxc_create.c
 lxc_snapshot_SOURCES = lxc_snapshot.c
 lxc_usernsexec_SOURCES = lxc_usernsexec.c
-lxc_user_nic_SOURCES = lxc_user_nic.c
+lxc_user_nic_SOURCES = lxc_user_nic.c network.c network.h
 
 install-exec-local: install-soPROGRAMS
 	mkdir -p $(DESTDIR)$(datadir)/lxc
@@ -237,6 +234,7 @@ install-exec-local: install-soPROGRAMS
 	cd $(DESTDIR)$(libdir); \
 	ln -sf liblxc.so.$(VERSION) liblxc.so.$(firstword $(subst ., ,$(VERSION))); \
 	ln -sf liblxc.so.$(firstword $(subst ., ,$(VERSION))) liblxc.so
+	chmod u+s $(DESTDIR)$(bindir)/lxc-user-nic
 
 uninstall-local:
 	$(RM) $(DESTDIR)$(libdir)/liblxc.so*

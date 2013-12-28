@@ -32,6 +32,7 @@ extern int lxc_convert_mac(char *macaddr, struct sockaddr *sockaddr);
  * Move a device between namespaces
  */
 extern int lxc_netdev_move_by_index(int ifindex, pid_t pid);
+extern int lxc_netdev_move_by_name(char *ifname, pid_t pid);
 
 /*
  * Delete a network device
@@ -44,6 +45,8 @@ extern int lxc_netdev_delete_by_index(int ifindex);
  */
 extern int lxc_netdev_rename_by_name(const char *oldname, const char *newname);
 extern int lxc_netdev_rename_by_index(int ifindex, const char *newname);
+
+extern int netdev_set_flag(const char *name, int flag);
 
 /*
  * Set the device network up or down
@@ -90,6 +93,12 @@ extern int lxc_ipv4_addr_get(int ifindex, struct in_addr **res);
 extern int lxc_ipv6_addr_get(int ifindex, struct in6_addr **res);
 
 /*
+ * Set a destination route to an interface
+ */
+extern int lxc_ipv4_dest_add(int ifindex, struct in_addr *dest);
+extern int lxc_ipv6_dest_add(int ifindex, struct in6_addr *dest);
+
+/*
  * Set default route.
  */
 extern int lxc_ipv4_gateway_add(int ifindex, struct in_addr *gw);
@@ -122,5 +131,11 @@ extern int lxc_neigh_proxy_on(const char *name, int family);
  */
 extern int lxc_neigh_proxy_off(const char *name, int family);
 
+/*
+ * Generate a new unique network interface name
+ */
+extern char *lxc_mkifname(char *template);
+
 extern const char *lxc_net_type_to_str(int type);
+extern int setup_private_host_hw_addr(char *veth1);
 #endif
