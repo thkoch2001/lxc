@@ -45,6 +45,7 @@ enum {
 	LXC_NET_MACVLAN,
 	LXC_NET_PHYS,
 	LXC_NET_VLAN,
+	LXC_NET_NONE,
 	LXC_NET_MAXCONFTYPE,
 };
 
@@ -163,6 +164,8 @@ struct id_map {
 	enum idtype idtype;
 	unsigned long hostid, nsid, range;
 };
+
+extern int lxc_free_idmap(struct lxc_list *idmap);
 
 /*
  * Defines a structure containing a pty information for
@@ -318,6 +321,8 @@ struct lxc_conf {
 	// store the config file specified values here.
 	char *logfile;  // the logfile as specifed in config
 	int loglevel;   // loglevel as specifed in config (if any)
+
+	int inherit_ns_fd[LXC_NS_MAX];
 };
 
 int run_lxc_hooks(const char *name, char *hook, struct lxc_conf *conf,
@@ -333,6 +338,7 @@ extern void lxc_conf_free(struct lxc_conf *conf);
 
 extern int pin_rootfs(const char *rootfs);
 
+extern int lxc_requests_empty_network(struct lxc_handler *handler);
 extern int lxc_create_network(struct lxc_handler *handler);
 extern void lxc_delete_network(struct lxc_handler *handler);
 extern int lxc_assign_network(struct lxc_list *networks, pid_t pid);
@@ -349,6 +355,7 @@ extern int lxc_clear_config_keepcaps(struct lxc_conf *c);
 extern int lxc_clear_cgroups(struct lxc_conf *c, const char *key);
 extern int lxc_clear_mount_entries(struct lxc_conf *c);
 extern int lxc_clear_hooks(struct lxc_conf *c, const char *key);
+extern int lxc_clear_idmaps(struct lxc_conf *c);
 
 /*
  * Configure the container from inside
@@ -356,7 +363,9 @@ extern int lxc_clear_hooks(struct lxc_conf *c, const char *key);
 
 struct cgroup_process_info;
 extern int lxc_setup(const char *name, struct lxc_conf *lxc_conf,
-			const char *lxcpath, struct cgroup_process_info *cgroup_info);
+			const char *lxcpath,
+			struct cgroup_process_info *cgroup_info,
+			void *data);
 
 extern void lxc_rename_phys_nics_on_shutdown(struct lxc_conf *conf);
 
@@ -365,4 +374,5 @@ extern int find_unmapped_nsuid(struct lxc_conf *conf);
 extern int mapped_hostid(int id, struct lxc_conf *conf);
 extern int chown_mapped_root(char *path, struct lxc_conf *conf);
 extern int ttys_shift_ids(struct lxc_conf *c);
+extern int userns_exec_1(struct lxc_conf *conf, int (*fn)(void *), void *data);
 #endif

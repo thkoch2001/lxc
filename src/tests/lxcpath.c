@@ -1,7 +1,7 @@
 /* liblxcapi
  *
- * Copyright © 2012 Serge Hallyn <serge.hallyn@ubuntu.com>.
- * Copyright © 2012 Canonical Ltd.
+ * Copyright Â© 2012 Serge Hallyn <serge.hallyn@ubuntu.com>.
+ * Copyright Â© 2012 Canonical Ltd.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2, as
@@ -24,6 +24,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <stdlib.h>
+#include <string.h>
 #include <errno.h>
 
 #define MYNAME "lxctest1"

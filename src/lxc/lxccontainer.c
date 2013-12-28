@@ -50,6 +50,7 @@
 #include <sched.h>
 #include <arpa/inet.h>
 #include <libgen.h>
+#include "lxclock.h"
 
 #if HAVE_IFADDRS_H
 #include <ifaddrs.h>
@@ -67,7 +68,7 @@
 
 lxc_log_define(lxc_container, lxc);
 
-static bool file_exists(char *f)
+static bool file_exists(const char *f)
 {
 	struct stat statbuf;
 
@@ -455,21 +456,23 @@ static bool lxcapi_load_config(struct lxc_container *c, const char *alt_file)
 	return ret;
 }
 
-static void lxcapi_want_daemonize(struct lxc_container *c)
+static bool lxcapi_want_daemonize(struct lxc_container *c, bool state)
 {
 	if (!c || !c->lxc_conf)
-		return;
+		return false;
 	if (container_mem_lock(c)) {
 		ERROR("Error getting mem lock");
-		return;
+		return false;
 	}
-	c->daemonize = 1;
+	c->daemonize = state;
 	/* daemonize implies close_all_fds so set it */
-	c->lxc_conf->close_all_fds = 1;
+	if (state == 1)
+		c->lxc_conf->close_all_fds = 1;
 	container_mem_unlock(c);
+	return true;
 }
 
-static bool lxcapi_want_close_all_fds(struct lxc_container *c)
+static bool lxcapi_want_close_all_fds(struct lxc_container *c, bool state)
 {
 	if (!c || !c->lxc_conf)
 		return false;
@@ -477,7 +480,7 @@ static bool lxcapi_want_close_all_fds(struct lxc_container *c)
 		ERROR("Error getting mem lock");
 		return false;
 	}
-	c->lxc_conf->close_all_fds = 1;
+	c->lxc_conf->close_all_fds = state;
 	container_mem_unlock(c);
 	return true;
 }
@@ -549,7 +552,7 @@ static bool lxcapi_start(struct lxc_container *c, int useinit, char * const argv
 {
 	int ret;
 	struct lxc_conf *conf;
-	int daemonize = 0;
+	bool daemonize = false;
 	char *default_args[] = {
 		"/sbin/init",
 		'\0',
@@ -1124,6 +1127,7 @@ bool prepend_lxc_header(char *path, const char *t, char *const argv[])
 		fprintf(f, "%02x", md_value[i]);
 	fprintf(f, "\n");
 #endif
+	fprintf(f, "# For additional config options, please look at lxc.conf(5)\n");
 	if (fwrite(contents, 1, flen, f) != flen) {
 		SYSERROR("Writing original contents");
 		free(contents);
@@ -1277,8 +1281,7 @@ static bool lxcapi_create(struct lxc_container *c, const char *t,
 		goto out_unlock;
 
 	/* reload config to get the rootfs */
-	if (c->lxc_conf)
-		lxc_conf_free(c->lxc_conf);
+	lxc_conf_free(c->lxc_conf);
 	c->lxc_conf = NULL;
 	if (!load_config_locked(c, c->configfile))
 		goto out_unlock;
@@ -1561,7 +1564,7 @@ err:
 	goto out;
 }
 
-static char** lxcapi_get_ips(struct lxc_container *c, char* interface, char* family, int scope)
+static char** lxcapi_get_ips(struct lxc_container *c, const char* interface, const char* family, int scope)
 {
 	int i, count = 0;
 	struct ifaddrs *interfaceArray = NULL, *tempIfAddr = NULL;
@@ -1863,11 +1866,18 @@ out:
 	return bret;
 }
 
+static int lxc_rmdir_onedev_wrapper(void *data)
+{
+	char *arg = (char *) data;
+	return lxc_rmdir_onedev(arg);
+}
+
 // do we want the api to support --force, or leave that to the caller?
 static bool lxcapi_destroy(struct lxc_container *c)
 {
 	struct bdev *r = NULL;
-	bool ret = false;
+	bool bret = false, am_unpriv;
+	int ret;
 
 	if (!c || !lxcapi_is_defined(c))
 		return false;
@@ -1881,20 +1891,23 @@ static bool lxcapi_destroy(struct lxc_container *c)
 		goto out;
 	}
 
+	am_unpriv = c->lxc_conf && geteuid() != 0 && !lxc_list_empty(&c->lxc_conf->id_map);
+
 	if (c->lxc_conf && has_snapshots(c)) {
 		ERROR("container %s has dependent snapshots", c->name);
 		goto out;
 	}
 
-	if (c->lxc_conf && c->lxc_conf->rootfs.path && c->lxc_conf->rootfs.mount)
+	if (!am_unpriv && c->lxc_conf->rootfs.path && c->lxc_conf->rootfs.mount) {
 		r = bdev_init(c->lxc_conf->rootfs.path, c->lxc_conf->rootfs.mount, NULL);
-	if (r) {
-		if (r->ops->destroy(r) < 0) {
+		if (r) {
+			if (r->ops->destroy(r) < 0) {
+				bdev_put(r);
+				ERROR("Error destroying rootfs for %s", c->name);
+				goto out;
+			}
 			bdev_put(r);
-			ERROR("Error destroying rootfs for %s", c->name);
-			goto out;
 		}
-		bdev_put(r);
 	}
 
 	mod_all_rdeps(c, false);
@@ -1902,15 +1915,19 @@ static bool lxcapi_destroy(struct lxc_container *c)
 	const char *p1 = lxcapi_get_config_path(c);
 	char *path = alloca(strlen(p1) + strlen(c->name) + 2);
 	sprintf(path, "%s/%s", p1, c->name);
-	if (lxc_rmdir_onedev(path) < 0) {
+	if (am_unpriv)
+		ret = userns_exec_1(c->lxc_conf, lxc_rmdir_onedev_wrapper, path);
+	else
+		ret = lxc_rmdir_onedev(path);
+	if (ret < 0) {
 		ERROR("Error destroying container directory for %s", c->name);
 		goto out;
 	}
-	ret = true;
+	bret = true;
 
 out:
 	container_disk_unlock(c);
-	return ret;
+	return bret;
 }
 
 static bool set_config_item_locked(struct lxc_container *c, const char *key, const char *v)
@@ -2091,10 +2108,10 @@ const char *lxc_get_default_zfs_root(void)
 
 const char *lxc_get_version(void)
 {
-	return lxc_version();
+	return LXC_VERSION;
 }
 
-static int copy_file(char *old, char *new)
+static int copy_file(const char *old, const char *new)
 {
 	int in, out;
 	ssize_t len, ret;
@@ -2399,7 +2416,7 @@ static int clone_update_rootfs(struct lxc_container *c0,
 		if (setenv("LXC_CONFIG_FILE", conf->rcfile, 1)) {
 			SYSERROR("failed to set environment variable for config path");
 		}
-		if (setenv("LXC_ROOTFS_MOUNT", conf->rootfs.mount, 1)) {
+		if (setenv("LXC_ROOTFS_MOUNT", bdev->dest, 1)) {
 			SYSERROR("failed to set environment variable for rootfs mount");
 		}
 		if (setenv("LXC_ROOTFS_PATH", conf->rootfs.path, 1)) {
@@ -2622,7 +2639,7 @@ int get_next_index(const char *lxcpath, char *cname)
 	}
 }
 
-static int lxcapi_snapshot(struct lxc_container *c, char *commentfile)
+static int lxcapi_snapshot(struct lxc_container *c, const char *commentfile)
 {
 	int i, flags, ret;
 	struct lxc_container *c2;
@@ -2841,7 +2858,7 @@ out_free:
 	return -1;
 }
 
-static bool lxcapi_snapshot_restore(struct lxc_container *c, char *snapname, char *newname)
+static bool lxcapi_snapshot_restore(struct lxc_container *c, const char *snapname, const char *newname)
 {
 	char clonelxcpath[MAXPATHLEN];
 	int ret;
@@ -2892,7 +2909,7 @@ static bool lxcapi_snapshot_restore(struct lxc_container *c, char *snapname, cha
 	return b;
 }
 
-static bool lxcapi_snapshot_destroy(struct lxc_container *c, char *snapname)
+static bool lxcapi_snapshot_destroy(struct lxc_container *c, const char *snapname)
 {
 	int ret;
 	char clonelxcpath[MAXPATHLEN];
@@ -2929,13 +2946,14 @@ static bool lxcapi_may_control(struct lxc_container *c)
 	return lxc_try_cmd(c->name, c->config_path) == 0;
 }
 
-static bool add_remove_device_node(struct lxc_container *c, char *src_path, char *dest_path, bool add)
+static bool add_remove_device_node(struct lxc_container *c, const char *src_path, const char *dest_path, bool add)
 {
 	int ret;
 	struct stat st;
 	char path[MAXPATHLEN];
 	char value[MAX_BUFFER];
-	char *directory_path = NULL, *p;
+	char *directory_path = NULL;
+	const char *p;
 
 	/* make sure container is running */
 	if (!c->is_running(c)) {
@@ -2958,9 +2976,9 @@ static bool add_remove_device_node(struct lxc_container *c, char *src_path, char
 		goto out;
 
 	/* continue if path is character device or block device */
-	if S_ISCHR(st.st_mode)
+	if (S_ISCHR(st.st_mode))
 		ret = snprintf(value, MAX_BUFFER, "c %d:%d rwm", major(st.st_rdev), minor(st.st_rdev));
-	else if S_ISBLK(st.st_mode)
+	else if (S_ISBLK(st.st_mode))
 		ret = snprintf(value, MAX_BUFFER, "b %d:%d rwm", major(st.st_rdev), minor(st.st_rdev));
 	else
 		goto out;
@@ -3014,12 +3032,12 @@ out:
 	return false;
 }
 
-static bool lxcapi_add_device_node(struct lxc_container *c, char *src_path, char *dest_path)
+static bool lxcapi_add_device_node(struct lxc_container *c, const char *src_path, const char *dest_path)
 {
 	return add_remove_device_node(c, src_path, dest_path, true);
 }
 
-static bool lxcapi_remove_device_node(struct lxc_container *c, char *src_path, char *dest_path)
+static bool lxcapi_remove_device_node(struct lxc_container *c, const char *src_path, const char *dest_path)
 {
 	return add_remove_device_node(c, src_path, dest_path, false);
 }

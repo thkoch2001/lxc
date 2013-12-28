@@ -20,6 +20,8 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <string.h>
+#include <fcntl.h>
 #define _GNU_SOURCE
 #include <getopt.h>
 
@@ -88,7 +90,7 @@ static void do_function(void *arguments)
         }
     } else if(strcmp(args->mode, "start") == 0) {
         if (c->is_defined(c) && !c->is_running(c)) {
-            c->want_daemonize(c);
+            c->want_daemonize(c, true);
             if (!c->start(c, false, NULL)) {
                 fprintf(stderr, "Starting the container (%s) failed...\n", name);
                 goto out;
@@ -160,7 +162,7 @@ int main(int argc, char *argv[]) {
             quiet = 1;
             break;
         case 'm': {
-            char *mode_tok, *tok, *saveptr;
+            char *mode_tok, *tok, *saveptr = NULL;
 
             modes = NULL;
             for (i = 0, mode_tok = optarg;

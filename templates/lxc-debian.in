@@ -93,6 +93,18 @@ EOF
     chroot $rootfs /usr/sbin/update-rc.d -f hwclock.sh remove
     chroot $rootfs /usr/sbin/update-rc.d -f hwclockfirst.sh remove
 
+    # set initial timezone as on host
+    if [ -f /etc/timezone ]; then
+        cat /etc/timezone > $rootfs/etc/timezone
+        chroot $rootfs dpkg-reconfigure -f noninteractive tzdata
+    elif [ -f /etc/sysconfig/clock ]; then
+        source /etc/sysconfig/clock
+        echo $ZONE > $rootfs/etc/timezone
+        chroot $rootfs dpkg-reconfigure -f noninteractive tzdata
+    else
+        echo "Timezone in container is not configured. Adjust it manually."
+    fi
+
     echo "root:root" | chroot $rootfs chpasswd
     echo "Root password is 'root', please change !"
 
@@ -383,7 +395,7 @@ fi
 config="$path/config"
 if [ -z "$rootfs" ]; then
     if grep -q '^lxc.rootfs' $config 2>/dev/null ; then
-        rootfs=`grep 'lxc.rootfs =' $config | awk -F= '{ print $2 }'`
+        rootfs=$(awk -F= '/^lxc.rootfs =/{ print $2 }' $config)
     else
         rootfs=$path/rootfs
     fi

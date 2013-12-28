@@ -27,6 +27,7 @@
 #include <unistd.h>
 #include <regex.h>
 #include <sys/types.h>
+#include <errno.h>
 
 #include <lxc/lxc.h>
 #include <lxc/log.h>
@@ -35,7 +36,18 @@
 
 lxc_log_define(lxc_monitor_ui, lxc_monitor);
 
+static bool quit_monitord;
+
+static int my_parser(struct lxc_arguments* args, int c, char* arg)
+{
+	switch (c) {
+	case 'Q': quit_monitord = true; break;
+	}
+	return 0;
+}
+
 static const struct option my_longopts[] = {
+	{"quit", no_argument, 0, 'Q'},
 	LXC_COMMON_OPTIONS
 };
 
@@ -48,10 +60,11 @@ lxc-monitor monitors the state of the NAME container\n\
 \n\
 Options :\n\
   -n, --name=NAME   NAME for name of the container\n\
-                    NAME may be a regular expression",
+                    NAME may be a regular expression\n\
+  -Q, --quit        tell lxc-monitord to quit\n",
 	.name     = ".*",
 	.options  = my_longopts,
-	.parser   = NULL,
+	.parser   = my_parser,
 	.checker  = NULL,
 	.lxcpath_additional = -1,
 };
@@ -74,6 +87,28 @@ int main(int argc, char *argv[])
 			 my_args.progname, my_args.quiet, my_args.lxcpath[0]))
 		return -1;
 
+	if (quit_monitord) {
+		int ret = EXIT_SUCCESS;
+		for (i = 0; i < my_args.lxcpath_cnt; i++) {
+			int fd;
+
+			fd = lxc_monitor_open(my_args.lxcpath[i]);
+			if (fd < 0) {
+				ERROR("Unable to open monitor on path: %s", my_args.lxcpath[i]);
+				ret = EXIT_FAILURE;
+				continue;
+			}
+			if (write(fd, "quit", 4) < 0) {
+				SYSERROR("Unable to close monitor on path: %s", my_args.lxcpath[i]);
+				ret = EXIT_FAILURE;
+				close(fd);
+				continue;
+			}
+			close(fd);
+		}
+		return ret;
+	}
+
 	len = strlen(my_args.name) + 3;
 	regexp = malloc(len + 3);
 	if (!regexp) {
@@ -89,8 +124,10 @@ int main(int argc, char *argv[])
 
 	if (regcomp(&preg, regexp, REG_NOSUB|REG_EXTENDED)) {
 		ERROR("failed to compile the regex '%s'", my_args.name);
+		free(regexp);
 		return -1;
 	}
+	free(regexp);
 
 	if (my_args.lxcpath_cnt > FD_SETSIZE) {
 		ERROR("too many paths requested, only the first %d will be monitored", FD_SETSIZE);
@@ -104,8 +141,10 @@ int main(int argc, char *argv[])
 		lxc_monitord_spawn(my_args.lxcpath[i]);
 
 		fd = lxc_monitor_open(my_args.lxcpath[i]);
-		if (fd < 0)
+		if (fd < 0) {
+			regfree(&preg);
 			return -1;
+		}
 		FD_SET(fd, &rfds);
 		if (fd > nfds)
 			nfds = fd;
@@ -118,8 +157,10 @@ int main(int argc, char *argv[])
 	for (;;) {
 		memcpy(&rfds, &rfds_save, sizeof(rfds));
 
-		if (lxc_monitor_read_fdset(&rfds, nfds, &msg, -1) < 0)
+		if (lxc_monitor_read_fdset(&rfds, nfds, &msg, -1) < 0) {
+			regfree(&preg);
 			return -1;
+		}
 
 		msg.name[sizeof(msg.name)-1] = '\0';
 		if (regexec(&preg, msg.name, 0, NULL, 0))

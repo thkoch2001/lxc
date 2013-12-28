@@ -47,6 +47,7 @@
 #include "namespace.h"
 #include "parse.h"
 #include "utils.h"
+#include "lxclock.h"
 
 #ifndef BLKGETSIZE64
 #define BLKGETSIZE64 _IOR(0x12,114,size_t)
@@ -450,7 +451,7 @@ static int dir_clonepaths(struct bdev *orig, struct bdev *new, const char *oldna
 
 static int dir_destroy(struct bdev *orig)
 {
-	if (!lxc_rmdir_onedev(orig->src))
+	if (lxc_rmdir_onedev(orig->src) < 0)
 		return -1;
 	return 0;
 }
@@ -500,24 +501,24 @@ struct bdev_ops dir_ops = {
 
 static int zfs_list_entry(const char *path, char *output, size_t inlen)
 {
-	FILE *f;
+	struct lxc_popen_FILE *f;
 	int found=0;
 
 	process_lock();
-	f = popen("zfs list 2> /dev/null", "r");
+	f = lxc_popen("zfs list 2> /dev/null");
 	process_unlock();
 	if (f == NULL) {
 		SYSERROR("popen failed");
 		return 0;
 	}
-	while (fgets(output, inlen, f)) {
+	while (fgets(output, inlen, f->f)) {
 		if (strstr(output, path)) {
 			found = 1;
 			break;
 		}
 	}
 	process_lock();
-	(void) pclose(f);
+	(void) lxc_pclose(f);
 	process_unlock();
 
 	return found;
@@ -812,7 +813,7 @@ static int lvm_umount(struct bdev *bdev)
 }
 
 static int lvm_compare_lv_attr(const char *path, int pos, const char expected) {
-	FILE *f;
+	struct lxc_popen_FILE *f;
 	int ret, len, status, start=0;
 	char *cmd, output[12];
 	const char *lvscmd = "lvs --unbuffered --noheadings -o lv_attr %s 2>/dev/null";
@@ -825,7 +826,7 @@ static int lvm_compare_lv_attr(const char *path, int pos, const char expected) {
 		return -1;
 
 	process_lock();
-	f = popen(cmd, "r");
+	f = lxc_popen(cmd);
 	process_unlock();
 
 	if (f == NULL) {
@@ -833,10 +834,10 @@ static int lvm_compare_lv_attr(const char *path, int pos, const char expected) {
 		return -1;
 	}
 
-	ret = fgets(output, 12, f) == NULL;
+	ret = fgets(output, 12, f->f) == NULL;
 
 	process_lock();
-	status = pclose(f);
+	status = lxc_pclose(f);
 	process_unlock();
 
 	if (ret || WEXITSTATUS(status))
@@ -962,8 +963,10 @@ static int lvm_snapshot(const char *orig, const char *path, unsigned long size)
 	// check if the original lv is backed by a thin pool, in which case we
 	// cannot specify a size that's different from the original size.
 	ret = lvm_is_thin_volume(orig);
-	if (ret == -1)
+	if (ret == -1) {
+		free(pathdup);
 		return -1;
+	}
 
 	if (!ret) {
 		ret = execlp("lvcreate", "lvcreate", "-s", "-L", sz, "-n", lv, orig, (char *)NULL);
@@ -1282,6 +1285,7 @@ static int btrfs_subvolume_create(const char *path)
 	p = strrchr(newfull, '/');
 	if (!p) {
 		ERROR("bad path: %s", path);
+		free(newfull);
 		return -1;
 	}
 	*p = '\0';
@@ -1418,6 +1422,7 @@ static int btrfs_destroy(struct bdev *orig)
 	p = strrchr(newfull, '/');
 	if (!p) {
 		ERROR("bad path: %s", path);
+		free(newfull);
 		return -1;
 	}
 	*p = '\0';

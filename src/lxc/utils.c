@@ -66,7 +66,7 @@ static int _recursive_rmdir_onedev(char *dirname, dev_t pdev)
 	process_unlock();
 	if (!dir) {
 		ERROR("%s: failed to open %s", __func__, dirname);
-		return 0;
+		return -1;
 	}
 
 	while (!readdir_r(dir, &dirent, &direntp)) {
@@ -95,7 +95,7 @@ static int _recursive_rmdir_onedev(char *dirname, dev_t pdev)
 		if (mystat.st_dev != pdev)
 			continue;
 		if (S_ISDIR(mystat.st_mode)) {
-			if (!_recursive_rmdir_onedev(pathname, pdev))
+			if (_recursive_rmdir_onedev(pathname, pdev) < 0)
 				failed=1;
 		} else {
 			if (unlink(pathname) < 0) {
@@ -118,17 +118,17 @@ static int _recursive_rmdir_onedev(char *dirname, dev_t pdev)
 		failed=1;
 	}
 
-	return !failed;
+	return failed ? -1 : 0;
 }
 
-/* returns 1 on success, 0 if there were any failures */
+/* returns 0 on success, -1 if there were any failures */
 extern int lxc_rmdir_onedev(char *path)
 {
 	struct stat mystat;
 
 	if (lstat(path, &mystat) < 0) {
 		ERROR("%s: failed to stat %s", __func__, path);
-		return 0;
+		return -1;
 	}
 
 	return _recursive_rmdir_onedev(path, mystat.st_dev);
@@ -150,10 +150,10 @@ static int mount_fs(const char *source, const char *target, const char *type)
 	return 0;
 }
 
-extern int lxc_setup_fs(void)
+extern void lxc_setup_fs(void)
 {
 	if (mount_fs("proc", "/proc", "proc"))
-		return -1;
+		INFO("failed to remount proc");
 
 	/* if we can't mount /dev/shm, continue anyway */
 	if (mount_fs("shmfs", "/dev/shm", "tmpfs"))
@@ -163,14 +163,12 @@ extern int lxc_setup_fs(void)
 	/* Sure, but it's read-only per config :) */
 	if (access("/dev/mqueue", F_OK) && mkdir("/dev/mqueue", 0666)) {
 		DEBUG("failed to create '/dev/mqueue'");
-		return 0;
+		return;
 	}
 
 	/* continue even without posix message queue support */
 	if (mount_fs("mqueue", "/dev/mqueue", "mqueue"))
 		INFO("failed to mount /dev/mqueue");
-
-	return 0;
 }
 
 /* borrowed from iproute2 */
@@ -255,7 +253,7 @@ const char *lxc_global_config_value(const char *option_name)
 		{ "cgroup.use",      NULL            },
 		{ NULL, NULL },
 	};
-	/* Protected by a mutex to eliminate conflicting load and store operations */ 
+	/* Protected by a mutex to eliminate conflicting load and store operations */
 	static const char *values[sizeof(options) / sizeof(options[0])] = { 0 };
 	const char *(*ptr)[2];
 	const char *value;
@@ -483,7 +481,7 @@ int sha1sum_file(char *fnam, unsigned char *digest)
 	process_lock();
 	f = fopen_cloexec(fnam, "r");
 	process_unlock();
-	if (f < 0) {
+	if (!f) {
 		SYSERROR("Error opening template");
 		return -1;
 	}
@@ -616,6 +614,137 @@ FILE *fopen_cloexec(const char *path, const char *mode)
 		close(fd);
 	errno = saved_errno;
 	return ret;
+}
+
+/* must be called with process_lock() held */
+extern struct lxc_popen_FILE *lxc_popen(const char *command)
+{
+	struct lxc_popen_FILE *fp = NULL;
+	int parent_end = -1, child_end = -1;
+	int pipe_fds[2];
+	pid_t child_pid;
+
+	int r = pipe2(pipe_fds, O_CLOEXEC);
+
+	if (r < 0) {
+		ERROR("pipe2 failure");
+		return NULL;
+	}
+
+	parent_end = pipe_fds[0];
+	child_end = pipe_fds[1];
+
+	child_pid = fork();
+
+	if (child_pid == 0) {
+		/* child */
+		int child_std_end = STDOUT_FILENO;
+
+		if (child_end != child_std_end) {
+			/* dup2() doesn't dup close-on-exec flag */
+			dup2(child_end, child_std_end);
+
+			/* it's safe not to close child_end here
+			 * as it's marked close-on-exec anyway
+			 */
+		} else {
+			/*
+			 * The descriptor is already the one we will use.
+			 * But it must not be marked close-on-exec.
+			 * Undo the effects.
+			 */
+			fcntl(child_end, F_SETFD, 0);
+		}
+
+		/*
+		 * Unblock signals.
+		 * This is the main/only reason
+		 * why we do our lousy popen() emulation.
+		 */
+		{
+			sigset_t mask;
+			sigfillset(&mask);
+			sigprocmask(SIG_UNBLOCK, &mask, NULL);
+		}
+
+		execl("/bin/sh", "sh", "-c", command, (char *) NULL);
+		exit(127);
+	}
+
+	/* parent */
+
+	close(child_end);
+	child_end = -1;
+
+	if (child_pid < 0) {
+		ERROR("fork failure");
+		goto error;
+	}
+
+	fp = calloc(1, sizeof(*fp));
+	if (!fp) {
+		ERROR("failed to allocate memory");
+		goto error;
+	}
+
+	fp->f = fdopen(parent_end, "r");
+	if (!fp->f) {
+		ERROR("fdopen failure");
+		goto error;
+	}
+
+	fp->child_pid = child_pid;
+
+	return fp;
+
+error:
+
+	if (fp) {
+		if (fp->f) {
+			fclose(fp->f);
+			parent_end = -1; /* so we do not close it second time */
+		}
+
+		free(fp);
+	}
+
+	if (parent_end != -1)
+		close(parent_end);
+
+	return NULL;
+}
+
+/* must be called with process_lock() held */
+extern int lxc_pclose(struct lxc_popen_FILE *fp)
+{
+	FILE *f = NULL;
+	pid_t child_pid = 0;
+	int wstatus = 0;
+	pid_t wait_pid;
+
+	if (fp) {
+		f = fp->f;
+		child_pid = fp->child_pid;
+		/* free memory (we still need to close file stream) */
+		free(fp);
+		fp = NULL;
+	}
+
+	if (!f || fclose(f)) {
+		ERROR("fclose failure");
+		return -1;
+	}
+
+	do {
+		wait_pid = waitpid(child_pid, &wstatus, 0);
+	} while (wait_pid == -1 && errno == EINTR);
+
+	if (wait_pid == -1) {
+		ERROR("waitpid failure");
+		return -1;
+	}
+
+	return wstatus;
 }
 
 char *lxc_string_replace(const char *needle, const char *replacement, const char *haystack)
