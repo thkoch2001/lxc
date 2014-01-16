@@ -4,9 +4,9 @@ Description: Correcting wrong default directory for lxc-init.
 diff -Naurp lxc.orig/configure.ac lxc/configure.ac
 --- lxc.orig/configure.ac
 +++ lxc/configure.ac
-@@ -347,7 +347,7 @@ AS_AC_EXPAND(LXC_USERNIC_DB, "$with_user
- AS_AC_EXPAND(LXCROOTFSMOUNT, "$with_rootfs_path")
+@@ -396,7 +396,7 @@ AS_AC_EXPAND(LXCROOTFSMOUNT, "$with_root
  AS_AC_EXPAND(LXCTEMPLATEDIR, "$datadir/lxc/templates")
+ AS_AC_EXPAND(LXCTEMPLATECONFIG, "$datadir/lxc/config")
  AS_AC_EXPAND(LXCHOOKDIR, "$datadir/lxc/hooks")
 -AS_AC_EXPAND(LXCINITDIR, "$libexecdir")
 +AS_AC_EXPAND(LXCINITDIR, "$libdir")
