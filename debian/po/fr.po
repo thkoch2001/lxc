@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: lxc\n"
 "Report-Msgid-Bugs-To: lxc@packages.debian.org\n"
-"POT-Creation-Date: 2014-01-16 15:24+0100\n"
+"POT-Creation-Date: 2014-01-16 15:31+0100\n"
 "PO-Revision-Date: 2012-03-12 07:52+0100\n"
 "Last-Translator: Christian Perrier <bubulle@debian.org>\n"
 "Language-Team: French <debian-l10n-french@lists.debian.org>\n"
@@ -23,46 +23,21 @@ msgstr ""
 msgid "Linux Containers: LXC setup"
 msgstr "Conteneurs Linux : configuration de LXC"
 
-#. Type: boolean
-#. Description
-#: ../lxc-stuff.templates:2001
-msgid "Automatically start Linux Containers on boot?"
-msgstr "Lancer automatiquement les conteneurs Linux à l'amorçage du système ?"
-
-#. Type: boolean
-#. Description
-#: ../lxc-stuff.templates:2001
-msgid ""
-"Linux Containers that have their configuration files copied or symlinked to "
-"the /etc/lxc/auto directory can be automatically started during system boot, "
-"and shut down on reboot or halt."
-msgstr ""
-"Les conteneurs Linux (« Linux  Containers ») dont les fichiers de "
-"configuration sont copiés ou liés dans /etc/lxc/auto peuvent être "
-"automatiquement démarrés durant l'amorçage du système et éteints au moment "
-"du redémarrage ou de l'arrêt."
-
-#. Type: boolean
-#. Description
-#: ../lxc-stuff.templates:2001
-msgid "If unsure, choose yes (default)."
-msgstr "Dans le doute, vous pouvez choisir cette option."
-
 #. Type: string
 #. Default
-#: ../lxc-stuff.templates:3001
+#: ../lxc-stuff.templates:2001
 msgid "/srv/lxc/containers"
 msgstr ""
 
 #. Type: string
 #. Description
-#: ../lxc-stuff.templates:3002
+#: ../lxc-stuff.templates:2002
 msgid "LXC directory:"
 msgstr "Répertoire de LXC :"
 
 #. Type: string
 #. Description
-#: ../lxc-stuff.templates:3002
+#: ../lxc-stuff.templates:2002
 msgid ""
 "Please specify the directory that will be used to store the Linux Containers."
 msgstr ""
@@ -70,6 +45,6 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../lxc-stuff.templates:3002
+#: ../lxc-stuff.templates:2002
 msgid "If unsure, use /srv/lxc/containers (default)."
 msgstr "Il est recommandé de choisir /srv/lxc/containers."

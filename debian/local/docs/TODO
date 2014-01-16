@@ -10,7 +10,6 @@ lxc-stuff:
     that /etc/lxc/auto is checked).
   * add debconf question about ipv4 forward enabling (already in live-debconfig).
   * clear tty and enable them dynamically
-  * add debconf multi-select for autostarts in /etc/lxc/auto
   * integrate example debian packages that contain /usr/share/lxc/cache/*
   * add debconf question to ask for level of mac conflict check
   * add a lxc-reboot command

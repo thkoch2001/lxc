@@ -55,9 +55,8 @@ in sysvinit. See http://bugs.debian.org/601757 for more information.
 3. Autostart
 
 LXC container can be automatically started on boot. In order to enable this, the
-LXC init script has to be enabled in /etc/default/lxc and and container that
-should be automatically started needs its configuration file symlinked (or copied)
-into the /etc/lxc/auto directory.
+container that should be automatically started needs its configuration file
+symlinked (or copied) into the /etc/lxc/auto directory.
 
 Note that the name in /etc/lxc/auto needs to be the container name, e.g.:
 

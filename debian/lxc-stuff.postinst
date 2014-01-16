@@ -22,16 +22,12 @@ case "${1}" in
 cat > "${_CONFFILE}" << EOF
 # /etc/default/lxc
 
-LXC_AUTO="${LXC_AUTO}"
 LXC_DIRECTORY="${LXC_DIRECTORY}"
 
 LXC_DEBCONFIG_WITH_LIVE_DEBCONFIG="true"
 EOF
 
 		fi
-
-		db_get lxc/auto
-		LXC_AUTO="${RET}" # boolean
 
 		db_get lxc/directory
 		LXC_DIRECTORY="${RET:-/srv/lxc/containers}" # string (w/o empty)
@@ -44,10 +40,6 @@ EOF
 		# them via debconf, (re-)add them to the config file.
 		cp -a -f "${_CONFFILE}" "${_CONFFILE}.tmp"
 
-		test -z "${LXC_AUTO}" || \
-		grep -Eq '^ *LXC_AUTO=' "${_CONFFILE}" || \
-		echo "LXC_AUTO=" >> "${_CONFFILE}"
-
 		test -z "${LXC_DIRECTORY}" || \
 		grep -Eq '^ *LXC_DIRECTORY=' "${_CONFFILE}" || \
 		echo "LXC_DIRECTORY=" >> "${_CONFFILE}"
@@ -56,8 +48,7 @@ EOF
 		grep -Eq '^ *LXC_DEBCONFIG_WITH_LIVE_DEBCONFIG=' "${_CONFFILE}" || \
 		echo "LXC_DEBCONFIG_WITH_LIVE_DEBCONFIG=" >> "${_CONFFILE}"
 
-		sed -e "s|^ *LXC_AUTO=.*|LXC_AUTO=\"${LXC_AUTO}\"|" \
-		    -e "s|^ *LXC_DIRECTORY=.*|LXC_DIRECTORY=\"${LXC_DIRECTORY}\"|" \
+		sed -e "s|^ *LXC_DIRECTORY=.*|LXC_DIRECTORY=\"${LXC_DIRECTORY}\"|" \
 		    -e "s|^ *LXC_DEBCONFIG_WITH_LIVE_DEBCONFIG=.*|LXC_DEBCONFIG_WITH_LIVE_DEBCONFIG=\"${LXC_DEBCONFIG_WITH_LIVE_DEBCONFIG}\"|" \
 		< "${_CONFFILE}" > "${_CONFFILE}.tmp"
 
