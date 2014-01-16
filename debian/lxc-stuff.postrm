@@ -2,28 +2,33 @@
 
 set -e
 
+if [ -e /usr/share/lxc/lxc.functions ]
+then
+	. /usr/share/lxc/lxc.functions || true
+fi
+
+globalconf="${globalconf:-/etc/lxc/lxc.conf}"
+lxc_path="${lxc_path:-/srv/lxc/containers}"
+
 case "${1}" in
 	remove)
 		dpkg-divert --package lxc-stuff --quiet --remove --rename --divert /usr/share/lxc/templates/lxc-debian.upstream /usr/share/lxc/templates/lxc-debian
 
-		if [ -e /etc/default/lxc ]
-		then
-			. /etc/default/lxc
-		fi
+		rmdir --ignore-fail-on-non-empty "${lxc_path}" > /dev/null 2>&1 || true
+		rmdir --ignore-fail-on-non-empty "$(dirname ${lxc_path})" > /dev/null 2>&1 || true
 
-		LXC_DIRECTORY="${LXC_DIRECTORY:-/srv/lxc/containers}"
-
-		rm -f /etc/default/lxc
-
-		rmdir --ignore-fail-on-non-empty "${LXC_DIRECTORY}" > /dev/null 2>&1 || true
-
-		for _DIRECTORY in "${LXC_DIRECTORY}" /etc/lxc /var/cache/lxc /var/log/lxc
+		for _DIRECTORY in "${lxc_path}" /etc/lxc /var/cache/lxc /var/log/lxc
 		do
 			dpkg-statoverride --force --remove "${_DIRECTORY}" > /dev/null 2>&1 || true
 		done
 		;;
 
-	purge|upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)
+	purge)
+		rm -f "${globalconf}"
+		rmdir --ignore-fail-on-non-empty "$(dirname ${globalconf})" > /dev/null 2>&1 || true
+		;;
+
+	upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)
 
 		;;
 

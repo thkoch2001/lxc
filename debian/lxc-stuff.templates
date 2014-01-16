@@ -2,7 +2,7 @@ Template: lxc/title
 Type: title
 _Description: Linux Containers: LXC setup
 
-Template: lxc/directory
+Template: lxc/containers
 Type: string
 _Default: /srv/lxc/containers
 _Description: LXC directory:

@@ -2,51 +2,47 @@
 
 set -e
 
+if [ -e "/usr/share/lxc/lxc.functions" ]
+then
+	. /usr/share/lxc/lxc.functions || true
+fi
+
+globalconf="${globalconf:-/etc/lxc/lxc.conf}"
+lxc_path="${lxc_path:-/srv/lxc/containers}"
+
 . /usr/share/debconf/confmodule
 
 case "${1}" in
 	configure)
-		for _CONFFILE in /etc/default/lxc /etc/default/lxc.d/*
-		do
-			if [ -e "${_CONFFILE}" ]
-			then
-				. "${_CONFFILE}" || true
-			fi
-		done
-
-		_CONFFILE="/etc/default/lxc"
-
-		if [ ! -e "${_CONFFILE}" ]
+		if [ ! -e "${globalconf}" ]
 		then
 
-cat > "${_CONFFILE}" << EOF
-# /etc/default/lxc
-
-LXC_DIRECTORY="${LXC_DIRECTORY}"
+cat > "${globalconf}" << EOF
+lxcpath="${lxc_path}"
 EOF
 
 		fi
 
-		db_get lxc/directory
-		LXC_DIRECTORY="${RET:-/srv/lxc/containers}" # string (w/o empty)
+		db_get lxc/containers
+		lxc_path="${RET:-/srv/lxc/containers}" # string (w/o empty)
 
 		db_stop
 
 		# If the admin deleted or commented some variables but then set
 		# them via debconf, (re-)add them to the config file.
-		cp -a -f "${_CONFFILE}" "${_CONFFILE}.tmp"
+		cp -a -f "${globalconf}" "${globalconf}.tmp"
 
-		test -z "${LXC_DIRECTORY}" || \
-		grep -Eq '^ *LXC_DIRECTORY=' "${_CONFFILE}" || \
-		echo "LXC_DIRECTORY=" >> "${_CONFFILE}"
+		test -z "${lxc_path}" || \
+		grep -Eq '^ *lxcpath=' "${globalconf}" || \
+		echo "lxcpath=" >> "${globalconf}"
 
-		sed -e "s|^ *LXC_DIRECTORY=.*|LXC_DIRECTORY=\"${LXC_DIRECTORY}\"|" \
-		< "${_CONFFILE}" > "${_CONFFILE}.tmp"
+		sed -e "s|^ *lxcpath=.*|lxcpath=${lxc_path}|" \
+		< "${globalconf}" > "${globalconf}.tmp"
 
-		mv -f "${_CONFFILE}.tmp" "${_CONFFILE}"
+		mv -f "${globalconf}.tmp" "${globalconf}"
 
 		# Create lxc directories
-		for _DIRECTORY in "${LXC_DIRECTORY}" /etc/lxc/auto /etc/lxc/debconfig /usr/share/lxc/cache /usr/share/lxc/packages /var/log/lxc
+		for _DIRECTORY in "${lxc_path}" /etc/lxc/auto /etc/lxc/debconfig /usr/share/lxc/cache /usr/share/lxc/packages /var/log/lxc
 		do
 			# Using ls to not fail on (temporarily) dangling symlinks
 			# which might be the sysadmins intention
@@ -57,7 +53,7 @@ EOF
 		done
 
 		# Restricting directory access to some directories for security reasons (private information and setuid programs)
-		for _DIRECTORY in "${LXC_DIRECTORY}" /etc/lxc /var/cache/lxc /var/log/lxc
+		for _DIRECTORY in "${lxc_path}" /etc/lxc /var/cache/lxc /var/log/lxc
 		do
 			if ! dpkg-statoverride --list "${_DIRECTORY}" > /dev/null 2>&1
 			then
