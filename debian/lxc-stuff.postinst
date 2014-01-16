@@ -23,8 +23,6 @@ cat > "${_CONFFILE}" << EOF
 # /etc/default/lxc
 
 LXC_DIRECTORY="${LXC_DIRECTORY}"
-
-LXC_DEBCONFIG_WITH_LIVE_DEBCONFIG="true"
 EOF
 
 		fi
@@ -34,8 +32,6 @@ EOF
 
 		db_stop
 
-		LXC_DEBCONFIG_WITH_LIVE_DEBCONFIG="${LXC_DEBCONFIG_WITH_LIVE_DEBCONFIG:-true}"
-
 		# If the admin deleted or commented some variables but then set
 		# them via debconf, (re-)add them to the config file.
 		cp -a -f "${_CONFFILE}" "${_CONFFILE}.tmp"
@@ -44,12 +40,7 @@ EOF
 		grep -Eq '^ *LXC_DIRECTORY=' "${_CONFFILE}" || \
 		echo "LXC_DIRECTORY=" >> "${_CONFFILE}"
 
-		test -z "${LXC_DEBCONFIG_WITH_LIVE_DEBCONFIG}" || \
-		grep -Eq '^ *LXC_DEBCONFIG_WITH_LIVE_DEBCONFIG=' "${_CONFFILE}" || \
-		echo "LXC_DEBCONFIG_WITH_LIVE_DEBCONFIG=" >> "${_CONFFILE}"
-
 		sed -e "s|^ *LXC_DIRECTORY=.*|LXC_DIRECTORY=\"${LXC_DIRECTORY}\"|" \
-		    -e "s|^ *LXC_DEBCONFIG_WITH_LIVE_DEBCONFIG=.*|LXC_DEBCONFIG_WITH_LIVE_DEBCONFIG=\"${LXC_DEBCONFIG_WITH_LIVE_DEBCONFIG}\"|" \
 		< "${_CONFFILE}" > "${_CONFFILE}.tmp"
 
 		mv -f "${_CONFFILE}.tmp" "${_CONFFILE}"

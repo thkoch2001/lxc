@@ -26,12 +26,10 @@ umask 0022
 
 Warnings ()
 {
-	case "${LXC_DEBCONFIG_WITH_LIVE_DEBCONFIG}" in
-		true)
-			case "${_DISTRIBUTION}" in
-				squeeze*|wheezy*)
-					if ! ls /usr/share/lxc/packages/live-debconfig_*.deb > /dev/null 2>&1
-					then
+	case "${_DISTRIBUTION}" in
+		squeeze*|wheezy*)
+			if ! ls /usr/share/lxc/packages/live-debconfig_*.deb > /dev/null 2>&1
+			then
 
 cat << EOF
 WARNING: This version of the lxc-debconfig template requires the live-debconfig
@@ -46,10 +44,8 @@ system will fail.
 Press enter to continue nevertheless, or Ctrl-c to abort..
 EOF
 
-						read WAITING
-					fi
-					;;
-			esac
+				read WAITING
+			fi
 			;;
 	esac
 }
@@ -302,21 +298,19 @@ EOF
 		done
 	fi
 
-	case "${LXC_DEBCONFIG_WITH_LIVE_DEBCONFIG}" in
-		true)
-			# Install live-debconfig
-			if ls /usr/share/lxc/packages/live-debconfig_*.deb > /dev/null 2>&1
-			then
-				# Install local live-debconfig package
-				cp -L /usr/share/lxc/packages/live-debconfig_*.deb "${_ROOTFS}"
-				Chroot "${_ROOTFS}" "dpkg -i $(basename ${_ROOTFS}/live-debconfig_*.deb)"
-				rm -f "${_ROOTFS}"/live-debconfig_*.deb
-			else
-				# Install remote live-debconfig package
-				Chroot "${_ROOTFS}" "apt-get install --yes live-debconfig"
-			fi
+	# Install live-debconfig
+	if ls /usr/share/lxc/packages/live-debconfig_*.deb > /dev/null 2>&1
+	then
+		# Install local live-debconfig package
+		cp -L /usr/share/lxc/packages/live-debconfig_*.deb "${_ROOTFS}"
+		Chroot "${_ROOTFS}" "dpkg -i $(basename ${_ROOTFS}/live-debconfig_*.deb)"
+		rm -f "${_ROOTFS}"/live-debconfig_*.deb
+	else
+		# Install remote live-debconfig package
+		Chroot "${_ROOTFS}" "apt-get install --yes live-debconfig"
+	fi
 
-			# Preseed live-debconfig
+	# Preseed live-debconfig
 cat > "${_ROOTFS}/preseed.cfg" << EOF
 # multiselect
 live-debconfig live-debconfig/components multiselect hostname, ifupdown, ${_INITSYSTEM}, util-linux, rsyslog, selinux, openssh-server
@@ -341,23 +335,21 @@ live-debconfig live-debconfig/rsyslog/imklog boolean false
 live-debconfig live-debconfig/selinux/enable boolean false
 EOF
 
-			if [ -n "${_PRESEED_FILE}" ]
-			then
-				for _FILE in ${_PRESEED_FILE}
-				do
-					grep -E '^ *live-debconfig' "${_FILE}" >> "${_ROOTFS}/preseed.cfg"
-				done
-			fi
+	if [ -n "${_PRESEED_FILE}" ]
+	then
+		for _FILE in ${_PRESEED_FILE}
+		do
+			grep -E '^ *live-debconfig' "${_FILE}" >> "${_ROOTFS}/preseed.cfg"
+		done
+	fi
 
-			# Apply preseed information
-			Chroot "${_ROOTFS}" "live-debconfig-set-selections preseed.cfg"
+	# Apply preseed information
+	Chroot "${_ROOTFS}" "live-debconfig-set-selections preseed.cfg"
 
-			rm -f "${_ROOTFS}/preseed.cfg"
+	rm -f "${_ROOTFS}/preseed.cfg"
 
-			# Run live-debconfig (first pass)
-			Chroot "${_ROOTFS}" "DEBIAN_FRONTEND=${_DEBCONF_FRONTEND:-dialog} DEBIAN_PRIORITY=${_DEBCONF_PRIORITY:-high} live-debconfig"
-			;;
-	esac
+	# Run live-debconfig (first pass)
+	Chroot "${_ROOTFS}" "DEBIAN_FRONTEND=${_DEBCONF_FRONTEND:-dialog} DEBIAN_PRIORITY=${_DEBCONF_PRIORITY:-high} live-debconfig"
 
 	# FIXME: Install additional packages after live-debconfig has been run.
 	# This is suboptimal, ideally we should install all packages but not run the maintainer scripts,
@@ -1092,14 +1084,6 @@ Usage ()
 
 	return 0
 }
-
-for _CONFFILE in /etc/default/lxc /etc/default/lxc.d/*
-do
-	if [ -e "${_CONFFILE}" ]
-	then
-		. "${_CONFFILE}" || true
-	fi
-done
 
 _OPTIONS="$(getopt -o d:hp:n:c -l apt-recommends:,debconf-frontend:,debconf-priority:,distribution:,preseed-file:,help,rootfs:,path:,name:,clean -- "$@")"
 
