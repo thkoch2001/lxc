@@ -1,3 +1,20 @@
+lxc (1.0.0~beta1-1) experimental; urgency=low
+
+  * Merging upstream version 1.0.0~beta1.
+  * Refreshing lxcinitdir.patch.
+  * Updating copyright notices for 2014.
+  * Updating upstream mailinglist reference in copyright file.
+  * Using /srv/lxc/containers instead of /var/lib/lxc as default value.
+  * Dropping lxc/auto debconf handling in lxc-stuff, if the lxc initscript
+    should not be used, it's better to disable it rather than to run it as
+    noop.
+  * Removing internal lxc-debconfig-with-live-debconfig option.
+  * Dropping /etc/default/lxc entirely, directly using upstreams
+    /etc/lxc/lxc.conf instead from now on.
+  * Moving /srv/share/ to /srv/lxc/data/.
+
+ -- Daniel Baumann <mail@daniel-baumann.ch>  Thu, 16 Jan 2014 17:20:14 +0100
+
 lxc (1.0.0~alpha3-5) experimental; urgency=low
 
   * Moving python3 depends to recommends.
