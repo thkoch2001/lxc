@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: lxc\n"
 "Report-Msgid-Bugs-To: lxc@packages.debian.org\n"
-"POT-Creation-Date: 2013-10-20 07:43+0200\n"
+"POT-Creation-Date: 2014-01-16 15:24+0100\n"
 "PO-Revision-Date: 2012-08-11 17:30+01:00\n"
 "Last-Translator: Joe Hansen <joedalton2@yahoo.dk>\n"
 "Language-Team: Danish <debian-l10n-danish@lists.debian.org>\n"
@@ -48,7 +48,7 @@ msgstr "Hvis i tvivl, så vælg ja »yes« (standard)."
 #. Type: string
 #. Default
 #: ../lxc-stuff.templates:3001
-msgid "/var/lib/lxc"
+msgid "/srv/lxc/containers"
 msgstr ""
 
 #. Type: string
@@ -68,5 +68,5 @@ msgstr ""
 #. Type: string
 #. Description
 #: ../lxc-stuff.templates:3002
-msgid "If unsure, use /var/lib/lxc (default)."
-msgstr "Hvis i tvivl, så brug /var/lib/lxc (standard)."
+msgid "If unsure, use /srv/lxc/containers (default)."
+msgstr "Hvis i tvivl, så brug /srv/lxc/containers (standard)."

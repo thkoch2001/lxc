@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: lxc 0.8.0~rc1-4\n"
 "Report-Msgid-Bugs-To: lxc@packages.debian.org\n"
-"POT-Creation-Date: 2013-10-20 07:43+0200\n"
+"POT-Creation-Date: 2014-01-16 15:24+0100\n"
 "PO-Revision-Date: 2012-05-21 21:39+0400\n"
 "Last-Translator: Yuri Kozlov <yuray@komyakino.ru>\n"
 "Language-Team: Russian <debian-l10n-russian@lists.debian.org>\n"
@@ -52,7 +52,7 @@ msgstr "Если не уверены, ответьте утвердительн�
 #. Type: string
 #. Default
 #: ../lxc-stuff.templates:3001
-msgid "/var/lib/lxc"
+msgid "/srv/lxc/containers"
 msgstr ""
 
 #. Type: string
@@ -72,5 +72,5 @@ msgstr ""
 #. Type: string
 #. Description
 #: ../lxc-stuff.templates:3002
-msgid "If unsure, use /var/lib/lxc (default)."
-msgstr "Если не уверены, используйте /var/lib/lxc (по умолчанию)."
+msgid "If unsure, use /srv/lxc/containers (default)."
+msgstr "Если не уверены, используйте /srv/lxc/containers (по умолчанию)."

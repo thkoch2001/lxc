@@ -13,7 +13,7 @@ override_dh_auto_install:
 
 	# currently hardcoding lxc directory
 	mkdir -p debian/lxc/etc/lxc
-	echo "lxcpath=/var/lib/lxc" >> debian/lxc/etc/lxc/lxc.conf
+	echo "lxcpath=/srv/lxc/containers" >> debian/lxc/etc/lxc/lxc.conf
 
 	# tests
 	mkdir -p debian/lxc-dev/usr/bin

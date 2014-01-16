@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: lxc\n"
 "Report-Msgid-Bugs-To: lxc@packages.debian.org\n"
-"POT-Creation-Date: 2013-10-20 07:43+0200\n"
+"POT-Creation-Date: 2014-01-16 15:24+0100\n"
 "PO-Revision-Date: 2012-07-29 08:00+0900\n"
 "Last-Translator: Kenshi Muto <kmuto@debian.org>\n"
 "Language-Team: debian-japanese <debian-japanese@lists.debian.org>\n"
@@ -48,7 +48,7 @@ msgstr "よくわからなければこの質問に「はい」と答えてくだ
 #. Type: string
 #. Default
 #: ../lxc-stuff.templates:3001
-msgid "/var/lib/lxc"
+msgid "/srv/lxc/containers"
 msgstr ""
 
 #. Type: string
@@ -67,5 +67,5 @@ msgstr "Linux コンテナを格納するのに利用するディレクトリを
 #. Type: string
 #. Description
 #: ../lxc-stuff.templates:3002
-msgid "If unsure, use /var/lib/lxc (default)."
-msgstr "よくわからなければ、/var/lib/lxc を使用してください (デフォルト)。"
+msgid "If unsure, use /srv/lxc/containers (default)."
+msgstr "よくわからなければ、/srv/lxc/containers を使用してください (デフォルト)。"

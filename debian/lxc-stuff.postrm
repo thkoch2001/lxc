@@ -11,7 +11,7 @@ case "${1}" in
 			. /etc/default/lxc
 		fi
 
-		LXC_DIRECTORY="${LXC_DIRECTORY:-/var/lib/lxc}"
+		LXC_DIRECTORY="${LXC_DIRECTORY:-/srv/lxc/containers}"
 
 		rm -f /etc/default/lxc
 

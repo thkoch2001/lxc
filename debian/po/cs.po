@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: lxc 0.8.0~rc1-5\n"
 "Report-Msgid-Bugs-To: lxc@packages.debian.org\n"
-"POT-Creation-Date: 2013-10-20 07:43+0200\n"
+"POT-Creation-Date: 2014-01-16 15:24+0100\n"
 "PO-Revision-Date: 2011-06-30 14:31+0200\n"
 "Last-Translator: Michal Simunek <michal.simunek@gmail.com>\n"
 "Language-Team: Czech <debian-l10n-czech@lists.debian.org>\n"
@@ -48,7 +48,7 @@ msgstr "Nejste-li si jistí, zvolte ano (výchozí)."
 #. Type: string
 #. Default
 #: ../lxc-stuff.templates:3001
-msgid "/var/lib/lxc"
+msgid "/srv/lxc/containers"
 msgstr ""
 
 #. Type: string
@@ -69,5 +69,5 @@ msgstr ""
 #. Type: string
 #. Description
 #: ../lxc-stuff.templates:3002
-msgid "If unsure, use /var/lib/lxc (default)."
-msgstr "Nejste-li si jistí, použijte /var/lib/lxc (výchozí)."
+msgid "If unsure, use /srv/lxc/containers (default)."
+msgstr "Nejste-li si jistí, použijte /srv/lxc/containers (výchozí)."

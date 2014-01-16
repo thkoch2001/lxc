@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: lxc 0.8.0-1\n"
 "Report-Msgid-Bugs-To: lxc@packages.debian.org\n"
-"POT-Creation-Date: 2013-10-20 07:43+0200\n"
+"POT-Creation-Date: 2014-01-16 15:24+0100\n"
 "PO-Revision-Date: 2012-11-15 20:06-0200\n"
 "Last-Translator: Adriano Rafael Gomes <adrianorg@gmail.com>\n"
 "Language-Team: Brazilian Portuguese <debian-l10n-portuguese@lists.debian."
@@ -51,7 +51,7 @@ msgstr "Se não tiver certeza, escolha sim (padrão)."
 #. Type: string
 #. Default
 #: ../lxc-stuff.templates:3001
-msgid "/var/lib/lxc"
+msgid "/srv/lxc/containers"
 msgstr ""
 
 #. Type: string
@@ -72,8 +72,8 @@ msgstr ""
 #. Type: string
 #. Description
 #: ../lxc-stuff.templates:3002
-msgid "If unsure, use /var/lib/lxc (default)."
-msgstr "Se não tiver certeza, use /var/lib/lxc (padrão)."
+msgid "If unsure, use /srv/lxc/containers (default)."
+msgstr "Se não tiver certeza, use /srv/lxc/containers (padrão)."
 
 #~ msgid "Linux Container: Shutdown method"
 #~ msgstr "Linux Container: Método de desligamento"

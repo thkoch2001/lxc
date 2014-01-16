@@ -61,23 +61,19 @@ into the /etc/lxc/auto directory.
 
 Note that the name in /etc/lxc/auto needs to be the container name, e.g.:
 
-  /etc/lxc/auto/www.example.org -> /var/lib/lxc/www.example.org/config
+  /etc/lxc/auto/www.example.org -> /srv/lxc/containers/www.example.org/config
 
 
 4. Directory
 
-LXC container are stored in /var/lib/lxc by default. Various components within the
+LXC container are stored in /srv/lxc/containers by default. Various components within the
 lxc package assume that the containers are there. Therefore, if you want to move
 the containers to another directory, use:
 
   # dpkg-reconfigure -plow lxc
 
 and answer the debconf question about the lxc directory accordingly. The package's
-maintainer scripts will take care about replacing /var/lib/lxc (if empty) with a
-symlink to your new lxc directory.
-
-In case you're doing things manually, make sure that /var/lib/lxc is a symlink
-pointing to your lxc directory at all times.
+maintainer scripts will take care about updating the /etc/lxc/lxc.conf file.
 
 
 5. Hierarchy of Preseed Files

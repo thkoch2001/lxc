@@ -34,7 +34,7 @@ EOF
 		LXC_AUTO="${RET}" # boolean
 
 		db_get lxc/directory
-		LXC_DIRECTORY="${RET:-/var/lib/lxc}" # string (w/o empty)
+		LXC_DIRECTORY="${RET:-/srv/lxc/containers}" # string (w/o empty)
 
 		db_stop
 
@@ -73,21 +73,6 @@ EOF
 				mkdir -p "${_DIRECTORY}"
 			fi
 		done
-
-		if [ "${LXC_DIRECTORY}" != "/var/lib/lxc" ]
-		then
-			if [ -h /var/lib/lxc ]
-			then
-				# Remove possibly old symlink
-				rm -f /var/lib/lxc
-			elif [ -e /var/lib/lxc ]
-			then
-				# Move old lxc directory
-				mv /var/lib/lxc /var/lib/lxc.orig
-			fi
-
-			ln -s "${LXC_DIRECTORY}" /var/lib/lxc
-		fi
 
 		# Restricting directory access to some directories for security reasons (private information and setuid programs)
 		for _DIRECTORY in "${LXC_DIRECTORY}" /etc/lxc /var/cache/lxc /var/log/lxc

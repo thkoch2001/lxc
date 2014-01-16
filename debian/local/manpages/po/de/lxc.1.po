@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: lxc\n"
-"POT-Creation-Date: 2014-01-16 15:10+0100\n"
+"POT-Creation-Date: 2014-01-16 15:21+0100\n"
 "PO-Revision-Date: 2010-05-24 09:59+0300\n"
 "Last-Translator: Daniel Baumann <mail@daniel-baumann.ch>\n"
 "Language-Team: none\n"
@@ -141,10 +141,11 @@ msgstr "I<CONTAINER>"
 
 #. type: Plain text
 #: en/lxc.1:29
-msgid "specifies a Linux Container in the LXC path (default /var/lib/lxc)."
+msgid ""
+"specifies a Linux Container in the LXC path (default /srv/lxc/containers)."
 msgstr ""
-"bezeichnet einen Linux Container im LXC Pfad (Standardeinstellung /var/lib/"
-"lxc)."
+"bezeichnet einen Linux Container im LXC Pfad (Standardeinstellung /srv/lxc/"
+"containers)."
 
 #. type: Plain text
 #: en/lxc.1:31
