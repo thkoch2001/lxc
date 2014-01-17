@@ -56,8 +56,13 @@ case "${_PROGRAM}" in
 		for _CONTAINER in ${_CONTAINERS}
 		do
 			case "${_PROGRAM}" in
-				clone|create|monitor|wait)
-					# programms do not require an existing container as argument
+				create)
+					# program does not require an existing container as argument
+					_NAME="--name ${_CONTAINER}"
+					;;
+
+				clone|monitor|wait)
+					# programs do not require an existing container as argument
 					_NAME=""
 					;;
 
