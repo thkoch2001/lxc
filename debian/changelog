@@ -1,3 +1,9 @@
+lxc (1.0.0~beta1-2) experimental; urgency=low
+
+  * Adding irker integration with lxc wrapper.
+
+ -- Daniel Baumann <mail@daniel-baumann.ch>  Fri, 17 Jan 2014 17:14:26 +0100
+
 lxc (1.0.0~beta1-1) experimental; urgency=low
 
   * Merging upstream version 1.0.0~beta1.
