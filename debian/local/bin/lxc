@@ -72,6 +72,28 @@ case "${_PROGRAM}" in
 					;;
 			esac
 
+			# Send IRC notification
+			for _FILE in /etc/default/irkerhook-lxc /etc/default/irkerhook-lxc.d/*
+			do
+				if [ -f "${_FILE}" ]
+				then
+					. "${_FILE}" || true
+				fi
+			done
+
+			case "${IRK_ENABLED}" in
+				true)
+					for LXC_PROGRAM in ${LXC_PROGRAMS}
+					do
+						if [ "${_PROGRAM}" = "${LXC_PROGRAM}" ]
+						then
+							irkerhook-lxc "\x0312$(hostname -f):\x03 \x0300lxc ${_PROGRAM} ${_CONTAINER}\x03"
+						fi
+					done
+					;;
+			esac
+
+			# Execute LXC command
 			lxc-${_PROGRAM} ${_NAME} ${_OPTIONS}
 		done
 		;;

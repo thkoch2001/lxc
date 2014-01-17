@@ -49,7 +49,9 @@ Depends:
  lxc (>= ${source:Version}),
 Breaks: lxc (<< 1.0.0~alpha)
 Replaces: lxc
-Recommends: debootstrap
+Recommends:
+ debootstrap,
+ irker,
 Suggests:
  live-debconfig-doc,
  gpgv,
