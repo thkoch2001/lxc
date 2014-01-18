@@ -2,10 +2,10 @@
 
 ### BEGIN INIT INFO
 # Provides:		irkerhook-lxc
-# Required-Start:	irker
-# Required-Stop:	irker
-# Should-Start:
-# Should-Stop:
+# Required-Start:
+# Required-Stop:
+# Should-Start:		irker
+# Should-Stop:		irker
 # Default-Start:	2 3 4 5
 # Default-Stop:		0 6
 # Short-Description:	irkerhook-lxc
@@ -18,7 +18,7 @@
 
 set -e
 
-if [ ! -x /usr/bin/irkerhook-lxc ]
+if [ ! -x /usr/bin/irkerhook-lxc ] || [ ! -x /usr/bin/irkerd ]
 then
 	exit 0
 fi
