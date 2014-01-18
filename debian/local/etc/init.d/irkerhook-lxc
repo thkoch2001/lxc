@@ -1,0 +1,63 @@
+#!/bin/sh
+
+### BEGIN INIT INFO
+# Provides:		irkerhook-lxc
+# Required-Start:	irker
+# Required-Stop:	irker
+# Should-Start:
+# Should-Stop:
+# Default-Start:	2 3 4 5
+# Default-Stop:		0 6
+# Short-Description:	irkerhook-lxc
+# Description:		irkerhook-lxc
+# X-Start-Before:
+# X-Stop-After:
+# X-Interactive:	true
+### END INIT INFO
+
+
+set -e
+
+if [ ! -x /usr/bin/irkerhook-lxc ]
+then
+	exit 0
+fi
+
+for _FILE in /etc/default/irkerhook-lxc /etc/default/irkerhook-lxc.d/*
+do
+	if [ -f "${_FILE}" ]
+	then
+		. "${_FILE}" || true
+	fi
+done
+
+if [ "${IRK_ENABLED}" != "true" ]
+then
+	exit 0
+fi
+
+. /lib/lsb/init-functions
+
+case "${1}" in
+	start)
+		log_daemon_msg "Starting irkerhook-lxc"
+		sleep 1
+
+		_KERNEL="$(uname -r)"
+		irkerhook-lxc "\x0312$(hostname -f):\x03 \x0300system started (linux ${_KERNEL})\x03"
+		;;
+
+	stop)
+		log_daemon_msg "Stopping irkerhook-lxc"
+
+		_UPTIME="$(uptime | sed -e 's|.*up ||' -e 's|,.*||')"
+		irkerhook-lxc "\x0312$(hostname -f):\x03 \x0300system stopped (uptime ${_UPTIME})\x03"
+		;;
+
+	*)
+		log_success_msg "Usage: ${0} {start|stop}"
+		exit 1
+		;;
+esac
+
+exit 0
