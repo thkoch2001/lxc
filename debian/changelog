@@ -1,3 +1,12 @@
+lxc (1.0.0~beta1-3) experimental; urgency=low
+
+  * Correcting lxc-create handling in lxc convenience wrapper.
+  * Setting global log-path to /var/log/lxc.
+  * Adding irkerhook-lxc initscript.
+  * Don't start initscripts on package installation.
+
+ -- Daniel Baumann <mail@daniel-baumann.ch>  Sat, 18 Jan 2014 08:42:33 +0100
+
 lxc (1.0.0~beta1-2) experimental; urgency=low
 
   * Adding irker integration with lxc wrapper.
