@@ -49,7 +49,7 @@ Lxc ()
 				then
 					log_progress_msg "${_CONTAINER}"
 
-					lxc-start -n ${_CONTAINER} -f ${_CONFIG} -d ${_OPTIONS}
+					lxc start ${_CONTAINER} -f ${_CONFIG} -d ${_OPTIONS}
 				else
 					log_progress_msg "${_CONTAINER} (skip)"
 				fi
