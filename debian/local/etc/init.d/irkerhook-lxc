@@ -10,7 +10,7 @@
 # Default-Stop:		0 6
 # Short-Description:	irkerhook-lxc
 # Description:		irkerhook-lxc
-# X-Start-Before:
+# X-Start-Before:	lxc
 # X-Stop-After:
 # X-Interactive:	true
 ### END INIT INFO
