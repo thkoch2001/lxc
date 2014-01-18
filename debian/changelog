@@ -1,3 +1,14 @@
+lxc (1.0.0~beta1-4) experimental; urgency=low
+
+  * Starting irkerhook-lxc initscript before lxc.
+  * Using fancy color for some actions in irc notification.
+  * Building without log-path set to /var/log/lxc, it would need to have
+    all subdirectories for the containers created.
+  * Using lxc wrapper for starting containers in lxc-initscript as well.
+  * Relaxing depends of irkerhook-lxc initscript on installed irker.
+
+ -- Daniel Baumann <mail@daniel-baumann.ch>  Sat, 18 Jan 2014 10:02:17 +0100
+
 lxc (1.0.0~beta1-3) experimental; urgency=low
 
   * Correcting lxc-create handling in lxc convenience wrapper.
