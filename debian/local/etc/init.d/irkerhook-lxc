@@ -44,14 +44,14 @@ case "${1}" in
 		sleep 1
 
 		_KERNEL="$(uname -r)"
-		irkerhook-lxc "\x0312$(hostname -f):\x03 \x0300system started (linux ${_KERNEL})\x03"
+		irkerhook-lxc "\x0312$(hostname -f):\x03 host system \x0303started\x03 (linux ${_KERNEL})"
 		;;
 
 	stop)
 		log_daemon_msg "Stopping irkerhook-lxc"
 
 		_UPTIME="$(uptime | sed -e 's|.*up ||' -e 's|,.*||')"
-		irkerhook-lxc "\x0312$(hostname -f):\x03 \x0300system stopped (uptime ${_UPTIME})\x03"
+		irkerhook-lxc "\x0312$(hostname -f):\x03 host system \x0304stopped\x03 (uptime ${_UPTIME})"
 		;;
 
 	*)

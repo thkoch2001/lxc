@@ -92,7 +92,25 @@ case "${_PROGRAM}" in
 					do
 						if [ "${_PROGRAM}" = "${LXC_PROGRAM}" ]
 						then
-							irkerhook-lxc "\x0312$(hostname -f):\x03 \x0300lxc ${_PROGRAM} ${_CONTAINER}\x03"
+							case "${_PROGRAM}" in
+								start|create)
+									_COLOR="03"
+									;;
+
+								stop|kill|destroy)
+									_COLOR="04"
+									;;
+
+								restart)
+									_COLOR="07"
+									;;
+
+								*)
+									_COLOR="00"
+									;;
+							esac
+
+							irkerhook-lxc "\x0312$(hostname -f):\x03 container \x03${_COLOR}${_PROGRAM}\x03 ${_CONTAINER}"
 						fi
 					done
 					;;
