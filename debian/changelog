@@ -1,3 +1,9 @@
+lxc (1.0.0~beta1-5) experimental; urgency=low
+
+  * Adding support for multiple channels in irkerhook-lxc.
+
+ -- Daniel Baumann <mail@daniel-baumann.ch>  Sun, 19 Jan 2014 08:42:08 +0100
+
 lxc (1.0.0~beta1-4) experimental; urgency=low
 
   * Starting irkerhook-lxc initscript before lxc.
