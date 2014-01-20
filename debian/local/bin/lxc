@@ -93,7 +93,21 @@ case "${_PROGRAM}" in
 						if [ "${_PROGRAM}" = "${LXC_PROGRAM}" ]
 						then
 							case "${_PROGRAM}" in
-								start|create)
+								create)
+									_COLOR="03"
+
+									if ! echo "${_OPTIONS}" | grep -qs "\-t"
+									then
+										# No template was specified
+										if [ -e /etc/progress-linux_version ]
+										then
+											_OPTIONS="${_OPTIONS} -t progress-linux"
+										else
+											_OPTIONS="${_OPTIONS} -t debian"
+										fi
+									fi
+									;;
+								start)
 									_COLOR="03"
 									;;
 
