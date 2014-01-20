@@ -930,12 +930,8 @@ EOF
 			_SOURCE="$(echo ${_ENTRY} | awk '{ print $1 }')"
 			_TARGET="$(echo ${_ENTRY} | awk '{ print $2 }')"
 
-			if [ -f "${_SOURCE}" ]
-			then
-				mkdir -p "${_ROOTFS}/$(dirname ${_TARGET})"
-			else
-				mkdir -p "${_ROOTFS}/${_TARGET}"
-			fi
+			mkdir -p "${_SOURCE}"
+			mkdir -p "${_TARGET}"
 		fi
 	done
 
