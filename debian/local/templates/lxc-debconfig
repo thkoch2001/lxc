@@ -202,18 +202,16 @@ Configure_system ()
 				esac
 			done
 			;;
+	esac
 
-		*)
-			if [ "${_APT_RECOMMENDS}" = "false" ]
-			then
+	if [ "${_APT_RECOMMENDS}" = "false" ]
+	then
 
 cat > "${_ROOTFS}/etc/apt/apt.conf.d/recommends.conf" << EOF
 APT::Install-Recommends "false";
 EOF
 
-			fi
-			;;
-	esac
+	fi
 
 	# Configure fstab
 
