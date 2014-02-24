@@ -1,0 +1,43 @@
+Author: Daniel Baumann <mail@daniel-baumann.ch>
+Description: Correcting wrong default directory for sysvinit scripts.
+
+diff -Naurp lxc.orig/config/init/sysvinit/Makefile.am lxc/config/init/sysvinit/Makefile.am
+--- lxc.orig/config/init/sysvinit/Makefile.am
++++ lxc/config/init/sysvinit/Makefile.am
+@@ -2,12 +2,12 @@ EXTRA_DIST = lxc
+ 
+ if INIT_SCRIPT_SYSV
+ install-sysvinit: lxc
+-	$(MKDIR_P) $(DESTDIR)$(sysconfdir)/rc.d/init.d
+-	$(INSTALL_SCRIPT) lxc $(DESTDIR)$(sysconfdir)/rc.d/init.d/lxc
++	$(MKDIR_P) $(DESTDIR)$(sysconfdir)/init.d
++	$(INSTALL_SCRIPT) lxc $(DESTDIR)$(sysconfdir)/init.d/lxc
+ 
+ uninstall-sysvinit:
+-	rm -f $(DESTDIR)$(sysconfdir)/rc.d/init.d/lxc
+-	rmdir $(DESTDIR)$(sysconfdir)/rc.d/init.d || :
++	rm -f $(DESTDIR)$(sysconfdir)/init.d/lxc
++	rmdir $(DESTDIR)$(sysconfdir)/init.d || :
+ 
+ install-data-local: install-sysvinit
+ uninstall-local: uninstall-sysvinit
+diff -Naurp lxc.orig/config/init/sysvinit/Makefile.in lxc/config/init/sysvinit/Makefile.in
+--- lxc.orig/config/init/sysvinit/Makefile.in
++++ lxc/config/init/sysvinit/Makefile.in
+@@ -458,12 +458,12 @@ uninstall-am: uninstall-local
+ 
+ 
+ @INIT_SCRIPT_SYSV_TRUE@install-sysvinit: lxc
+-@INIT_SCRIPT_SYSV_TRUE@	$(MKDIR_P) $(DESTDIR)$(sysconfdir)/rc.d/init.d
+-@INIT_SCRIPT_SYSV_TRUE@	$(INSTALL_SCRIPT) lxc $(DESTDIR)$(sysconfdir)/rc.d/init.d/lxc
++@INIT_SCRIPT_SYSV_TRUE@	$(MKDIR_P) $(DESTDIR)$(sysconfdir)/init.d
++@INIT_SCRIPT_SYSV_TRUE@	$(INSTALL_SCRIPT) lxc $(DESTDIR)$(sysconfdir)/init.d/lxc
+ 
+ @INIT_SCRIPT_SYSV_TRUE@uninstall-sysvinit:
+-@INIT_SCRIPT_SYSV_TRUE@	rm -f $(DESTDIR)$(sysconfdir)/rc.d/init.d/lxc
+-@INIT_SCRIPT_SYSV_TRUE@	rmdir $(DESTDIR)$(sysconfdir)/rc.d/init.d || :
++@INIT_SCRIPT_SYSV_TRUE@	rm -f $(DESTDIR)$(sysconfdir)/init.d/lxc
++@INIT_SCRIPT_SYSV_TRUE@	rmdir $(DESTDIR)$(sysconfdir)/init.d || :
+ 
+ @INIT_SCRIPT_SYSV_TRUE@install-data-local: install-sysvinit
+ @INIT_SCRIPT_SYSV_TRUE@uninstall-local: uninstall-sysvinit
