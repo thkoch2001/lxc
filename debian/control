@@ -28,10 +28,10 @@ Depends:
  ${misc:Depends},
  ${shlibs:Depends},
 Recommends:
- lxc-stuff,
  lua5.2,
  python3,
  rsync,
+Suggests: lxc-stuff
 Description: Linux Containers userspace tools
  Containers are insulated areas inside a system, which have their own namespace
  for filesystem, network, PID, IPC, CPU and memory allocation and which can be
