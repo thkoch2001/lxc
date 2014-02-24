@@ -6,6 +6,7 @@ Uploaders: Jonas Genannt <jonas.genannt@capi2name.de>
 Build-Depends:
  debhelper (>= 9),
  dh-autoreconf,
+ doxygen,
  autotools-dev,
  docbook2x,
  libapparmor-dev,
