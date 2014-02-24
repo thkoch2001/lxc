@@ -1,3 +1,12 @@
+lxc (1.0.0~beta1-6) experimental; urgency=low
+
+  * Choosing default template based on host distribution for lxc-create
+    when using lxc wrapper.
+  * Correcting creation of mount entry directories.
+  * Correcting recommends handling.
+
+ -- Daniel Baumann <mail@daniel-baumann.ch>  Mon, 24 Feb 2014 07:39:45 +0100
+
 lxc (1.0.0~beta1-5) experimental; urgency=low
 
   * Adding support for multiple channels in irkerhook-lxc.
