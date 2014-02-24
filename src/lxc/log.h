@@ -28,6 +28,7 @@
 #include <stdio.h>
 #include <sys/time.h>
 #include <string.h>
+#include <strings.h>
 #include <stdbool.h>
 
 #ifndef O_CLOEXEC
@@ -233,8 +234,6 @@ static inline void LXC_##PRIORITY(struct lxc_log_locinfo* locinfo,	\
 /*
  * top categories
  */
-extern struct lxc_log_category lxc_log_category_lxc;
-
 #define TRACE(format, ...) do {						\
 	struct lxc_log_locinfo locinfo = LXC_LOG_LOCINFO_INIT;		\
 	LXC_TRACE(&locinfo, format, ##__VA_ARGS__);			\
@@ -299,4 +298,5 @@ extern const char *lxc_log_get_file(void);
 extern int lxc_log_get_level(void);
 extern bool lxc_log_has_valid_level(void);
 extern const char *lxc_log_get_prefix(void);
+extern void lxc_log_options_no_override();
 #endif

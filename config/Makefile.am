@@ -1,1 +1,1 @@
-SUBDIRS = etc templates
+SUBDIRS = apparmor bash etc init templates

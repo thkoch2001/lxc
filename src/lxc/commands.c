@@ -26,27 +26,25 @@
 #include <unistd.h>
 #include <signal.h>
 #include <fcntl.h>
+#include <poll.h>
 #include <sys/socket.h>
 #include <sys/un.h>
-#include <sys/poll.h>
 #include <sys/param.h>
 #include <malloc.h>
 #include <stdlib.h>
 
-#include <lxc/log.h>
-#include <lxc/lxc.h>
-#include <lxc/conf.h>
-#include <lxc/start.h>	/* for struct lxc_handler */
-#include <lxc/utils.h>
-#include <lxc/cgroup.h>
-
+#include "log.h"
+#include "lxc.h"
+#include "conf.h"
+#include "start.h"	/* for struct lxc_handler */
+#include "utils.h"
+#include "cgroup.h"
 #include "commands.h"
 #include "console.h"
 #include "confile.h"
 #include "mainloop.h"
 #include "af_unix.h"
 #include "config.h"
-#include "lxclock.h"
 
 /*
  * This file provides the different functions for clients to
@@ -82,7 +80,7 @@ static int fill_sock_name(char *path, int len, const char *name,
 	int ret;
 
 	if (!inpath) {
-		lxcpath = default_lxc_path();
+		lxcpath = lxc_global_config_value("lxc.lxcpath");
 		if (!lxcpath) {
 			ERROR("Out of memory getting lxcpath");
 			return -1;
@@ -99,7 +97,7 @@ static int fill_sock_name(char *path, int len, const char *name,
 
 static const char *lxc_cmd_str(lxc_cmd_t cmd)
 {
-	static const char *cmdname[LXC_CMD_MAX] = {
+	static const char * const cmdname[LXC_CMD_MAX] = {
 		[LXC_CMD_CONSOLE]         = "console",
 		[LXC_CMD_STOP]            = "stop",
 		[LXC_CMD_GET_STATE]       = "get_state",
@@ -432,16 +430,16 @@ static int lxc_cmd_get_cgroup_callback(int fd, struct lxc_cmd_req *req,
 				       struct lxc_handler *handler)
 {
 	struct lxc_cmd_rsp rsp;
-	char *path;
+	const char *path;
 
 	if (req->datalen < 1)
 		return -1;
 
-	path = lxc_cgroup_get_hierarchy_path_handler(req->data, handler);
+	path = cgroup_get_cgroup(handler, req->data);
 	if (!path)
 		return -1;
 	rsp.datalen = strlen(path) + 1,
-	rsp.data = path;
+	rsp.data = (char *)path;
 	rsp.ret = 0;
 
 	return lxc_cmd_rsp_send(fd, &rsp);
@@ -585,7 +583,6 @@ static int lxc_cmd_stop_callback(int fd, struct lxc_cmd_req *req,
 				 struct lxc_handler *handler)
 {
 	struct lxc_cmd_rsp rsp;
-	int ret;
 	int stopsignal = SIGKILL;
 
 	if (handler->conf->stopsignal)
@@ -593,18 +590,15 @@ static int lxc_cmd_stop_callback(int fd, struct lxc_cmd_req *req,
 	memset(&rsp, 0, sizeof(rsp));
 	rsp.ret = kill(handler->pid, stopsignal);
 	if (!rsp.ret) {
-		char *path = lxc_cgroup_get_hierarchy_path_handler("freezer", handler);
-		if (!path) {
-			ERROR("container %s:%s is not in a freezer cgroup",
-				handler->lxcpath, handler->name);
+		/* we can't just use lxc_unfreeze() since we are already in the
+		 * context of handling the STOP cmd in lxc-start, and calling
+		 * lxc_unfreeze() would do another cmd (GET_CGROUP) which would
+		 * deadlock us
+		 */
+		if (cgroup_unfreeze(handler))
 			return 0;
-		}
-		ret = lxc_unfreeze_bypath(path);
-		if (!ret)
-			return 0;
-
-		ERROR("failed to unfreeze container");
-		rsp.ret = ret;
+		ERROR("Failed to unfreeze %s:%s", handler->lxcpath, handler->name);
+		rsp.ret = -1;
 	}
 
 	return lxc_cmd_rsp_send(fd, &rsp);
@@ -749,9 +743,7 @@ static void lxc_cmd_fd_cleanup(int fd, struct lxc_handler *handler,
 {
 	lxc_console_free(handler->conf, fd);
 	lxc_mainloop_del_handler(descr, fd);
-	process_lock();
 	close(fd);
-	process_unlock();
 }
 
 static int lxc_cmd_handler(int fd, uint32_t events, void *data,
@@ -824,9 +816,7 @@ static int lxc_cmd_accept(int fd, uint32_t events, void *data,
 {
 	int opt = 1, ret = -1, connection;
 
-	process_lock();
 	connection = accept(fd, NULL, 0);
-	process_unlock();
 	if (connection < 0) {
 		SYSERROR("failed to accept connection");
 		return -1;
@@ -853,9 +843,7 @@ out:
 	return ret;
 
 out_close:
-	process_lock();
 	close(connection);
-	process_unlock();
 	goto out;
 }
 
@@ -884,9 +872,7 @@ int lxc_cmd_init(const char *name, struct lxc_handler *handler,
 
 	if (fcntl(fd, F_SETFD, FD_CLOEXEC)) {
 		SYSERROR("failed to set sigfd to close-on-exec");
-		process_lock();
 		close(fd);
-		process_unlock();
 		return -1;
 	}
 
@@ -903,9 +889,7 @@ int lxc_cmd_mainloop_add(const char *name,
 	ret = lxc_mainloop_add_handler(descr, fd, lxc_cmd_accept, handler);
 	if (ret) {
 		ERROR("failed to add handler for command socket");
-		process_lock();
 		close(fd);
-		process_unlock();
 	}
 
 	return ret;

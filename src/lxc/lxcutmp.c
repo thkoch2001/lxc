@@ -62,31 +62,22 @@ static int timerfd_settime (int __ufd, int __flags,
 #include "mainloop.h"
 #include "lxc.h"
 #include "log.h"
-#include "lxclock.h"
 
 #ifndef __USE_GNU
 #define __USE_GNU
 #endif
 #ifdef HAVE_UTMPX_H
 #include <utmpx.h>
+#ifndef HAVE_UTMPXNAME
+#include <utmp.h>
+#endif
+
 #else
 #include <utmp.h>
 
 #ifndef RUN_LVL
 #define RUN_LVL 1
 #endif
-
-static int utmpxname(const char *file) {
-	int result;
-	result = utmpname(file);
-
-#ifdef IS_BIONIC
-	/* Yeah bionic is that weird */
-	result = result - 1;
-#endif
-
-	return result;
-}
 
 static void setutxent(void) {
 	return setutent();
@@ -105,6 +96,21 @@ static void endutxent (void) {
 #endif
 }
 #endif
+
+#ifndef HAVE_UTMPXNAME
+static int utmpxname(const char *file) {
+	int result;
+	result = utmpname(file);
+
+#ifdef IS_BIONIC
+	/* Yeah bionic is that weird */
+	result = result - 1;
+#endif
+
+	return result;
+}
+#endif
+
 #undef __USE_GNU
 
 /* This file watches the /var/run/utmp file in the container
@@ -161,7 +167,7 @@ static int utmp_handler(int fd, uint32_t events, void *data,
 		return -1;
 	}
 
-	if (read(fd, buffer, size) < 0) {
+	if (read(fd, buffer, size) < size) {
 		SYSERROR("failed to read notification");
 		return -1;
 	}
@@ -285,7 +291,7 @@ static int utmp_get_ntasks(struct lxc_handler *handler)
 {
 	int ntasks;
 
-	ntasks = lxc_cgroup_nrtasks_handler(handler);
+	ntasks = cgroup_nrtasks(handler);
 
 	if (ntasks < 0) {
 		ERROR("failed to get the number of tasks");
@@ -344,9 +350,7 @@ run_ok:
 
 	memset(utmp_data, 0, sizeof(struct lxc_utmp));
 
-	process_lock();
 	fd = inotify_init();
-	process_unlock();
 	if (fd < 0) {
 		SYSERROR("failed to inotify_init");
 		goto out;
@@ -380,9 +384,7 @@ run_ok:
 
 	return 0;
 out_close:
-	process_lock();
 	close(fd);
-	process_unlock();
 out:
 	free(utmp_data);
 	return -1;
@@ -432,9 +434,7 @@ int lxc_utmp_add_timer(struct lxc_epoll_descr *descr,
 	struct itimerspec timeout;
 	struct lxc_utmp *utmp_data = (struct lxc_utmp *)data;
 
-	process_lock();
 	fd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK | TFD_CLOEXEC);
-	process_unlock();
 	if (fd < 0) {
 		SYSERROR("failed to create timer");
 		return -1;
@@ -458,9 +458,7 @@ int lxc_utmp_add_timer(struct lxc_epoll_descr *descr,
 
 	if (lxc_mainloop_add_handler(descr, fd, callback, utmp_data)) {
 		SYSERROR("failed to add utmp timer to mainloop");
-		process_lock();
 		close(fd);
-		process_unlock();
 		return -1;
 	}
 
@@ -481,9 +479,7 @@ int lxc_utmp_del_timer(struct lxc_epoll_descr *descr,
 		SYSERROR("failed to del utmp timer from mainloop");
 
 	/* shutdown timer_fd */
-	process_lock();
 	close(utmp_data->timer_fd);
-	process_unlock();
 	utmp_data->timer_fd = -1;
 
 	if (result < 0)

@@ -30,6 +30,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
@@ -43,12 +44,10 @@
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
 #include <linux/sockios.h>
-#include <linux/if_bridge.h>
 
 #include "nl.h"
 #include "network.h"
 #include "conf.h"
-#include "lxclock.h"
 
 #if HAVE_IFADDRS_H
 #include <ifaddrs.h>
@@ -295,6 +294,116 @@ out:
 	netlink_close(&nlh);
 	nlmsg_free(nlmsg);
 	nlmsg_free(answer);
+	return err;
+}
+
+int netdev_get_mtu(int ifindex)
+{
+	struct nl_handler nlh;
+	struct nlmsg *nlmsg = NULL, *answer = NULL;
+	struct ip_req *ip_req;
+	struct nlmsghdr *msg;
+	int err, res;
+	int recv_len = 0, answer_len;
+	int readmore = 0;
+
+	err = netlink_open(&nlh, NETLINK_ROUTE);
+	if (err)
+		return err;
+
+	err = -ENOMEM;
+	nlmsg = nlmsg_alloc(NLMSG_GOOD_SIZE);
+	if (!nlmsg)
+		goto out;
+
+	answer = nlmsg_alloc(NLMSG_GOOD_SIZE);
+	if (!answer)
+		goto out;
+
+	/* Save the answer buffer length, since it will be overwritten
+	 * on the first receive (and we might need to receive more than
+	 * once. */
+	answer_len = answer->nlmsghdr.nlmsg_len;
+
+	ip_req = (struct ip_req *)nlmsg;
+	ip_req->nlmsg.nlmsghdr.nlmsg_len =
+		NLMSG_LENGTH(sizeof(struct ifaddrmsg));
+	ip_req->nlmsg.nlmsghdr.nlmsg_flags = NLM_F_REQUEST|NLM_F_DUMP;
+	ip_req->nlmsg.nlmsghdr.nlmsg_type = RTM_GETLINK;
+	ip_req->ifa.ifa_family = AF_UNSPEC;
+
+	/* Send the request for addresses, which returns all addresses
+	 * on all interfaces. */
+	err = netlink_send(&nlh, nlmsg);
+	if (err < 0)
+		goto out;
+
+	do {
+		/* Restore the answer buffer length, it might have been
+		 * overwritten by a previous receive. */
+		answer->nlmsghdr.nlmsg_len = answer_len;
+
+		/* Get the (next) batch of reply messages */
+		err = netlink_rcv(&nlh, answer);
+		if (err < 0)
+			goto out;
+
+		recv_len = err;
+		err = 0;
+
+		/* Satisfy the typing for the netlink macros */
+		msg = &answer->nlmsghdr;
+
+		while (NLMSG_OK(msg, recv_len)) {
+
+			/* Stop reading if we see an error message */
+			if (msg->nlmsg_type == NLMSG_ERROR) {
+				struct nlmsgerr *errmsg = (struct nlmsgerr*)NLMSG_DATA(msg);
+				err = errmsg->error;
+				goto out;
+			}
+
+			/* Stop reading if we see a NLMSG_DONE message */
+			if (msg->nlmsg_type == NLMSG_DONE) {
+				readmore = 0;
+				break;
+			}
+
+			struct ifinfomsg *ifi = NLMSG_DATA(msg);
+			if (ifi->ifi_index == ifindex) {
+				struct rtattr *rta = IFLA_RTA(ifi);
+				int attr_len = msg->nlmsg_len - NLMSG_LENGTH(sizeof(*ifi));
+				res = 0;
+				while(RTA_OK(rta, attr_len)) {
+					/* Found a local address for the requested interface,
+					 * return it. */
+					if (rta->rta_type == IFLA_MTU) {
+						memcpy(&res, RTA_DATA(rta), sizeof(int));
+						err = res;
+						goto out;
+					}
+					rta = RTA_NEXT(rta, attr_len);
+				}
+
+			}
+
+			/* Keep reading more data from the socket if the
+			 * last message had the NLF_F_MULTI flag set */
+			readmore = (msg->nlmsg_flags & NLM_F_MULTI);
+
+			/* Look at the next message received in this buffer */
+			msg = NLMSG_NEXT(msg, recv_len);
+		}
+	} while (readmore);
+
+	/* If we end up here, we didn't find any result, so signal an
+	 * error */
+	err = -1;
+
+out:
+	netlink_close(&nlh);
+	nlmsg_free(answer);
+	nlmsg_free(nlmsg);
 	return err;
 }
 
@@ -588,18 +697,14 @@ static int proc_sys_net_write(const char *path, const char *value)
 {
 	int fd, err = 0;
 
-	process_lock();
 	fd = open(path, O_WRONLY);
-	process_unlock();
 	if (fd < 0)
 		return -errno;
 
 	if (write(fd, value, strlen(value)) < 0)
 		err = -errno;
 
-	process_lock();
 	close(fd);
-	process_unlock();
 	return err;
 }
 
@@ -1081,9 +1186,7 @@ int lxc_bridge_attach(const char *bridge, const char *ifname)
 	if (!index)
 		return -EINVAL;
 
-	process_lock();
 	fd = socket(AF_INET, SOCK_STREAM, 0);
-	process_unlock();
 	if (fd < 0)
 		return -errno;
 
@@ -1091,16 +1194,14 @@ int lxc_bridge_attach(const char *bridge, const char *ifname)
 	ifr.ifr_name[IFNAMSIZ-1] = '\0';
 	ifr.ifr_ifindex = index;
 	err = ioctl(fd, SIOCBRADDIF, &ifr);
-	process_lock();
 	close(fd);
-	process_unlock();
 	if (err)
 		err = -errno;
 
 	return err;
 }
 
-static char* lxc_network_types[LXC_NET_MAXCONFTYPE + 1] = {
+static const char* const lxc_network_types[LXC_NET_MAXCONFTYPE + 1] = {
 	[LXC_NET_VETH]    = "veth",
 	[LXC_NET_MACVLAN] = "macvlan",
 	[LXC_NET_VLAN]    = "vlan",
@@ -1115,7 +1216,7 @@ const char *lxc_net_type_to_str(int type)
 	return lxc_network_types[type];
 }
 
-static char padchar[] =
+static const char padchar[] =
 "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 char *lxc_mkifname(char *template)
@@ -1131,15 +1232,11 @@ char *lxc_mkifname(char *template)
 	getifaddrs(&ifaddr);
 
 	/* Initialize the random number generator */
-	process_lock();
 	urandom = fopen ("/dev/urandom", "r");
-	process_unlock();
 	if (urandom != NULL) {
 		if (fread (&seed, sizeof(seed), 1, urandom) <= 0)
 			seed = time(0);
-		process_lock();
 		fclose(urandom);
-		process_unlock();
 	}
 	else
 		seed = time(0);
@@ -1189,26 +1286,20 @@ int setup_private_host_hw_addr(char *veth1)
 	int err;
 	int sockfd;
 
-	process_lock();
 	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-	process_unlock();
 	if (sockfd < 0)
 		return -errno;
 
 	snprintf((char *)ifr.ifr_name, IFNAMSIZ, "%s", veth1);
 	err = ioctl(sockfd, SIOCGIFHWADDR, &ifr);
 	if (err < 0) {
-		process_lock();
 		close(sockfd);
-		process_unlock();
 		return -errno;
 	}
 
 	ifr.ifr_hwaddr.sa_data[0] = 0xfe;
 	err = ioctl(sockfd, SIOCSIFHWADDR, &ifr);
-	process_lock();
 	close(sockfd);
-	process_unlock();
 	if (err < 0)
 		return -errno;
 

@@ -20,6 +20,19 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
+# Detect use under userns (unsupported)
+for arg in "$@"; do
+    [ "$arg" = "--" ] && break
+    if [ "$arg" = "--mapped-uid" -o "$arg" = "--mapped-gid" ]; then
+        echo "This template can't be used for unprivileged containers." 1>&2
+        echo "You may want to try the \"download\" template instead." 1>&2
+        exit 1
+    fi
+done
+
+# Make sure the usual locations are in PATH
+export PATH=$PATH:/usr/sbin:/usr/bin:/sbin:/bin
+
 am_in_userns() {
     [ -e /proc/self/uid_map ] || { echo no; return; }
     [ "$(wc -l /proc/self/uid_map | awk '{ print $1 }')" -eq 1 ] || { echo yes; return; }
@@ -255,8 +268,8 @@ EOF
 
         # add necessary config files
         mkdir $rootfs/etc/dropbear
-        dropbearkey -t rsa -f $rootfs/etc/dropbear/dropbear_rsa_host_key &> /dev/null
-        dropbearkey -t dss -f $rootfs/etc/dropbear/dropbear_dss_host_key &> /dev/null
+        dropbearkey -t rsa -f $rootfs/etc/dropbear/dropbear_rsa_host_key > /dev/null 2>&1
+        dropbearkey -t dss -f $rootfs/etc/dropbear/dropbear_dss_host_key > /dev/null 2>&1
 
         echo "'dropbear' ssh utility installed"
     fi
@@ -272,6 +285,7 @@ copy_configuration()
 
 grep -q "^lxc.rootfs" $path/config 2>/dev/null || echo "lxc.rootfs = $rootfs" >> $path/config
 cat <<EOF >> $path/config
+lxc.haltsignal = SIGUSR1
 lxc.utsname = $name
 lxc.tty = 1
 lxc.pts = 1

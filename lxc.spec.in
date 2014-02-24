@@ -23,6 +23,17 @@
 %global with_python %{?_with_python: 1} %{?!_with_python: 0}
 %global with_lua %{?_with_lua: 1} %{?!_with_lua: 0}
 
+# Set with_systemd on distros that use it, so we can install the service
+# file, otherwise the sysvinit script will be installed
+%if 0%{?fedora} >= 14 || 0%{?rhel} >= 7 || 0%{?suse_version} >= 1210
+%global with_systemd 1
+%define init_script systemd
+BuildRequires: systemd-units
+%else
+%global with_systemd 0
+%define init_script sysvinit
+%endif
+
 # RPM needs alpha/beta/rc in Release: not Version: to ensure smooth
 # package upgrades from alpha->beta->rc->release. For more info see:
 # http://fedoraproject.org/wiki/Packaging%3aNamingGuidelines#NonNumericRelease
@@ -43,7 +54,7 @@ Group: Applications/System
 License: LGPLv2+
 BuildRoot: %{_tmppath}/%{name}-%{version}-build
 Requires: openssl rsync
-BuildRequires: libcap libcap-devel docbook2X
+BuildRequires: libcap libcap-devel docbook2X graphviz
 
 %if %{with_python}
 Requires: python3
@@ -78,7 +89,7 @@ development of the Linux containers.
 %package	lua
 Summary:	Lua bindings for %{name}
 Group:		System Environment/Libraries
-Requires:	lua-filesystem
+Requires:	lua-filesystem lua-alt-getopt
 BuildRequires:	lua-devel
 %description	lua
 The %{name}-lua package contains %{name} bindings for lua.
@@ -94,18 +105,14 @@ PATH=$PATH:/usr/sbin:/sbin %configure $args \
 %if %{with_python}
   --enable-python \
 %endif
-  --disable-rpath
+  --disable-rpath \
+  --with-init-script=%{init_script}
 make %{?_smp_mflags}
 
 %install
 rm -rf %{buildroot}
 make install DESTDIR=%{buildroot}
 find %{buildroot} -type f -name '*.la' -exec rm -f {} ';'
-
-# Install some of our systemd stuff...
-install -d -m 755 %{buildroot}/lib/systemd/system
-install -c -m 644 src/lxc/lxc.service %{buildroot}/lib/systemd/system
-install -c -m 755 src/lxc/lxc-devsetup %{buildroot}/%{_libexecdir}/%{name}
 
 %clean
 rm -rf %{buildroot}
@@ -117,15 +124,6 @@ rm -rf %{buildroot}
 %files
 %defattr(-,root,root)
 %{_bindir}/*
-%attr(4111,root,root) %{_bindir}/lxc-attach
-%attr(4111,root,root) %{_bindir}/lxc-create
-%attr(4111,root,root) %{_bindir}/lxc-clone
-%attr(4111,root,root) %{_bindir}/lxc-start
-%attr(4111,root,root) %{_bindir}/lxc-netstat
-%attr(4111,root,root) %{_bindir}/lxc-unshare
-%attr(4111,root,root) %{_bindir}/lxc-execute
-%attr(4111,root,root) %{_bindir}/lxc-checkpoint
-%attr(4111,root,root) %{_bindir}/lxc-restart
 %{_mandir}/man1/lxc*
 %{_mandir}/man5/lxc*
 %{_mandir}/man7/lxc*
@@ -134,9 +132,14 @@ rm -rf %{buildroot}
 %{_mandir}/ja/man7/lxc*
 %{_datadir}/doc/*
 %{_datadir}/lxc/*
+%{_sysconfdir}/bash_completion.d
 %config(noreplace) %{_sysconfdir}/lxc/*
 
-/lib/systemd/system/*
+%if %{with_systemd}
+%{_unitdir}/lxc.service
+%else
+%{_sysconfdir}/rc.d/init.d/lxc
+%endif
 
 %files libs
 %defattr(-,root,root)
@@ -146,8 +149,17 @@ rm -rf %{buildroot}
 %{_libdir}/python*
 %endif
 %{_localstatedir}/*
+%{_libexecdir}/%{name}
 %attr(4555,root,root) %{_libexecdir}/%{name}/lxc-init
+%attr(4111,root,root) %{_libexecdir}/%{name}/lxc-user-nic
+%if %{with_systemd}
 %attr(555,root,root) %{_libexecdir}/%{name}/lxc-devsetup
+%endif
+
+%if %{with_python}
+%{_libdir}/python3.3/site-packages/_lxc*
+%{_libdir}/python3.3/site-packages/lxc/*
+%endif
 
 %if %{with_lua}
 %files lua

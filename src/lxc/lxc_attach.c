@@ -22,6 +22,7 @@
  */
 
 #define _GNU_SOURCE
+#include <assert.h>
 #include <sys/wait.h>
 #include <sys/types.h>
 #include <stdlib.h>
@@ -64,6 +65,8 @@ static int add_to_simple_array(char ***array, ssize_t *capacity, char *value)
 {
 	ssize_t count = 0;
 
+	assert(array);
+
 	if (*array)
 		for (; (*array)[count]; count++);
 
@@ -77,6 +80,8 @@ static int add_to_simple_array(char ***array, ssize_t *capacity, char *value)
 		*array = new_array;
 		*capacity = new_capacity;
 	}
+
+	assert(*array);
 
 	(*array)[count] = value;
 	return 0;
@@ -203,6 +208,7 @@ int main(int argc, char *argv[])
 			   my_args.progname, my_args.quiet, my_args.lxcpath[0]);
 	if (ret)
 		return ret;
+	lxc_log_options_no_override();
 
 	if (remount_sys_proc)
 		attach_options.attach_flags |= LXC_ATTACH_REMOUNT_PROC_SYS;

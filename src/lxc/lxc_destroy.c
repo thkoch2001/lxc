@@ -24,13 +24,12 @@
 #include <unistd.h>
 #include <sys/types.h>
 
-#include <lxc/lxc.h>
-#include <lxc/log.h>
-
+#include "lxc.h"
+#include "log.h"
 #include "arguments.h"
 #include "utils.h"
 
-lxc_log_define(lxc_destroy, lxc);
+lxc_log_define(lxc_destroy_ui, lxc);
 
 static int my_parser(struct lxc_arguments* args, int c, char* arg)
 {
@@ -73,6 +72,7 @@ int main(int argc, char *argv[])
 	if (lxc_log_init(my_args.name, my_args.log_file, my_args.log_priority,
 			 my_args.progname, my_args.quiet, my_args.lxcpath[0]))
 		exit(1);
+	lxc_log_options_no_override();
 
 	c = lxc_container_new(my_args.name, my_args.lxcpath[0]);
 	if (!c) {

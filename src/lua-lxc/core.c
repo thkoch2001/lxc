@@ -30,7 +30,7 @@
 #include <unistd.h>
 #include <libgen.h>
 #include <lxc/lxccontainer.h>
-#include <lxc/commands.h>
+#include "lxc/commands.h"
 
 #if LUA_VERSION_NUM < 502
 #define luaL_newlib(L,l) (lua_newtable(L), luaL_register(L,NULL,l))
@@ -412,7 +412,7 @@ static int lxc_version_get(lua_State *L) {
 }
 
 static int lxc_default_config_path_get(lua_State *L) {
-    const char *lxcpath = lxc_get_default_config_path();
+    const char *lxcpath = lxc_get_global_config_item("lxc.lxcpath");
 
     lua_pushstring(L, lxcpath);
     return 1;

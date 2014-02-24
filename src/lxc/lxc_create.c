@@ -25,35 +25,46 @@
 #include <ctype.h>
 #include <fcntl.h>
 #include <sys/types.h>
+#include <stdint.h>
 
-#include <lxc/lxc.h>
-#include <lxc/log.h>
-#include <lxc/bdev.h>
-
+#include "lxc.h"
+#include "log.h"
+#include "bdev.h"
 #include "arguments.h"
 #include "utils.h"
 
-lxc_log_define(lxc_create, lxc);
+lxc_log_define(lxc_create_ui, lxc);
 
-/* we pass fssize in bytes */
-static unsigned long get_fssize(char *s)
+static uint64_t get_fssize(char *s)
 {
-	unsigned long ret;
+	uint64_t ret;
 	char *end;
 
-	ret = strtoul(s, &end, 0);
+	ret = strtoull(s, &end, 0);
 	if (end == s)
+	{
+		fprintf(stderr, "Invalid blockdev size '%s', using default size\n", s);
 		return 0;
+	}
 	while (isblank(*end))
 		end++;
-	if (!(*end))
-		return ret;
-	if (*end == 'g' || *end == 'G')
-		ret *= 1000000000;
-	else if (*end == 'm' || *end == 'M')
-		ret *= 1000000;
+	if (*end == '\0')
+		ret *= 1024ULL * 1024ULL; // MB by default
+	else if (*end == 'b' || *end == 'B')
+		ret *= 1ULL;
 	else if (*end == 'k' || *end == 'K')
-		ret *= 1000;
+		ret *= 1024ULL;
+	else if (*end == 'm' || *end == 'M')
+		ret *= 1024ULL * 1024ULL;
+	else if (*end == 'g' || *end == 'G')
+		ret *= 1024ULL * 1024ULL * 1024ULL;
+	else if (*end == 't' || *end == 'T')
+		ret *= 1024ULL * 1024ULL * 1024ULL * 1024ULL;
+	else
+	{		
+		fprintf(stderr, "Invalid blockdev unit size '%c' in '%s', using default size\n", *end, s);
+		return 0;
+	}
 	return ret;
 }
 
@@ -96,10 +107,13 @@ static void create_helpfn(const struct lxc_arguments *args) {
 
 	if (!args->template)
 		return;
-	if ((pid = fork()) < 0)
-		return;
-	if (pid)
+
+	pid = fork();
+	if (pid) {
 		wait_for_pid(pid);
+		return;
+	}
+
 	len = strlen(LXCTEMPLATEDIR) + strlen(args->template) + strlen("/lxc-") + 1;
 	path = alloca(len);
 	ret = snprintf(path, len,  "%s/lxc-%s", LXCTEMPLATEDIR, args->template);
@@ -131,22 +145,22 @@ Options :\n\
   --lvname=LVNAME    Use LVM lv name LVNAME\n\
                      (Default: container name)\n\
   --vgname=VG        Use LVM vg called VG\n\
-                     (Default: lxc))\n\
+                     (Default: lxc)\n\
   --thinpool=TP      Use LVM thin pool called TP\n\
-                     (Default: lxc))\n\
+                     (Default: lxc)\n\
   --fstype=TYPE      Create fstype TYPE\n\
-                     (Default: ext3))\n\
-  --fssize=SIZE      Create filesystem of size SIZE\n\
-                     (Default: 1G))\n\
+                     (Default: ext3)\n\
+  --fssize=SIZE[U]   Create filesystem of size SIZE * unit U (bBkKmMgGtT)\n\
+                     (Default: 1G, default unit: M)\n\
   --dir=DIR          Place rootfs directory under DIR\n\
   --zfsroot=PATH     Create zfs under given zfsroot\n\
-                     (Default: tank/lxc))\n",
+                     (Default: tank/lxc)\n",
 	.options  = my_longopts,
 	.parser   = my_parser,
 	.checker  = NULL,
 };
 
-bool validate_bdev_args(struct lxc_arguments *a)
+static bool validate_bdev_args(struct lxc_arguments *a)
 {
 	if (strcmp(a->bdevtype, "best") != 0) {
 		if (a->fstype || a->fssize) {
@@ -187,6 +201,7 @@ int main(int argc, char *argv[])
 	if (lxc_log_init(my_args.name, my_args.log_file, my_args.log_priority,
 			 my_args.progname, my_args.quiet, my_args.lxcpath[0]))
 		exit(1);
+	lxc_log_options_no_override();
 
 	memset(&spec, 0, sizeof(spec));
 	if (!my_args.bdevtype)
@@ -195,6 +210,9 @@ int main(int argc, char *argv[])
 		exit(1);
 
 	if (geteuid()) {
+		if (mkdir_p(my_args.lxcpath[0], 0755)) {
+			exit(1);
+		}
 		if (access(my_args.lxcpath[0], O_RDWR) < 0) {
 			fprintf(stderr, "You lack access to %s\n", my_args.lxcpath[0]);
 			exit(1);
@@ -218,7 +236,7 @@ int main(int argc, char *argv[])
 	if (my_args.configfile)
 		c->load_config(c, my_args.configfile);
 	else
-		c->load_config(c, LXC_DEFAULT_CONFIG);
+		c->load_config(c, lxc_global_config_value("lxc.default_config"));
 
 	if (my_args.fstype)
 		spec.fstype = my_args.fstype;

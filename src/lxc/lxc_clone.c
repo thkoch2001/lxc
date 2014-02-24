@@ -22,55 +22,70 @@
 #include <signal.h>
 #include <stdio.h>
 #include <sys/types.h>
+#include <stdint.h>
 #include <sys/wait.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <ctype.h>
+
+#include <lxc/lxccontainer.h>
 
 #include "log.h"
 #include "config.h"
 #include "lxc.h"
 #include "conf.h"
 #include "state.h"
-#include <lxc/lxccontainer.h>
 
-lxc_log_define(lxc_clone, lxc);
+lxc_log_define(lxc_clone_ui, lxc);
 
-static unsigned long get_fssize(char *s)
+/* we pass fssize in bytes */
+static uint64_t get_fssize(char *s)
 {
-       unsigned long ret;
-       char *end;
+	uint64_t ret;
+	char *end;
 
-       ret = strtoul(s, &end, 0);
-       if (end == s)
-               return 0;
-       while (isblank(*end))
-               end++;
-       if (!(*end))
-               return ret;
-       if (*end == 'g' || *end == 'G')
-               ret *= 1000000000;
-       else if (*end == 'm' || *end == 'M')
-               ret *= 1000000;
-       else if (*end == 'k' || *end == 'K')
-               ret *= 1000;
-       return ret;
+	ret = strtoull(s, &end, 0);
+	if (end == s)
+	{
+		fprintf(stderr, "Invalid blockdev size '%s', using default size\n", s);
+		return 0;
+	}
+	while (isblank(*end))
+		end++;
+	if (*end == '\0')
+		ret *= 1024ULL * 1024ULL; // MB by default
+	else if (*end == 'b' || *end == 'B')
+		ret *= 1ULL;
+	else if (*end == 'k' || *end == 'K')
+		ret *= 1024ULL;
+	else if (*end == 'm' || *end == 'M')
+		ret *= 1024ULL * 1024ULL;
+	else if (*end == 'g' || *end == 'G')
+		ret *= 1024ULL * 1024ULL * 1024ULL;
+	else if (*end == 't' || *end == 'T')
+		ret *= 1024ULL * 1024ULL * 1024ULL * 1024ULL;
+	else
+	{		
+		fprintf(stderr, "Invalid blockdev unit size '%c' in '%s', using default size\n", *end, s);
+		return 0;
+	}
+	return ret;
 }
 
-void usage(const char *me)
+static void usage(const char *me)
 {
-	printf("Usage: %s [-s] [-B backingstore] [-L size] [-K] [-M] [-H]\n", me);
+	printf("Usage: %s [-s] [-B backingstore] [-L size[unit]] [-K] [-M] [-H]\n", me);
 	printf("          [-p lxcpath] [-P newlxcpath] orig new\n");
 	printf("\n");
 	printf("  -s: snapshot rather than copy\n");
 	printf("  -B: use specified new backingstore.  Default is the same as\n");
-	printf("      the original.  Options include btrfs, lvm, overlayfs, \n");
+	printf("      the original.  Options include aufs, btrfs, lvm, overlayfs, \n");
 	printf("      dir and loop\n");
-	printf("  -L: for blockdev-backed backingstore, use specified size\n");
+	printf("  -L: for blockdev-backed backingstore, use specified size * specified\n");
+	printf("      unit. Default size is the size of the source blockdev, default\n");
+	printf("      unit is MB\n");
 	printf("  -K: Keep name - do not change the container name\n");
 	printf("  -M: Keep macaddr - do not choose a random new mac address\n");
-	printf("  -H: copy Hooks - copy mount hooks into container directory\n");
-	printf("      and substitute container names and lxcpaths\n");
 	printf("  -p: use container orig from custom lxcpath\n");
 	printf("  -P: create container new in custom lxcpath\n");
 	exit(1);
@@ -85,7 +100,6 @@ static struct option options[] = {
 	{ "vgname", required_argument, 0, 'v'},
 	{ "keepname", no_argument, 0, 'K'},
 	{ "keepmac", no_argument, 0, 'M'},
-	{ "copyhooks", no_argument, 0, 'H'},  // should this be default?
 	{ "lxcpath", required_argument, 0, 'p'},
 	{ "newpath", required_argument, 0, 'P'},
 	{ "fstype", required_argument, 0, 't'},
@@ -96,9 +110,9 @@ static struct option options[] = {
 int main(int argc, char *argv[])
 {
 	struct lxc_container *c1 = NULL, *c2 = NULL;
-	int snapshot = 0, keepname = 0, keepmac = 0, copyhooks = 0;
+	int snapshot = 0, keepname = 0, keepmac = 0;
 	int flags = 0, option_index;
-	long newsize = 0;
+	uint64_t newsize = 0;
 	char *bdevtype = NULL, *lxcpath = NULL, *newpath = NULL, *fstype = NULL;
 	char *orig = NULL, *new = NULL, *vgname = NULL;
 	char **args = NULL;
@@ -120,7 +134,6 @@ int main(int argc, char *argv[])
 		case 'v': vgname = optarg; break;
 		case 'K': keepname = 1; break;
 		case 'M': keepmac = 1; break;
-		case 'H': copyhooks = 1; break;
 		case 'p': lxcpath = optarg; break;
 		case 'P': newpath = optarg; break;
 		case 't': fstype = optarg; break;
@@ -143,7 +156,6 @@ int main(int argc, char *argv[])
 	if (snapshot)  flags |= LXC_CLONE_SNAPSHOT;
 	if (keepname)  flags |= LXC_CLONE_KEEPNAME;
 	if (keepmac)   flags |= LXC_CLONE_KEEPMACADDR;
-	if (copyhooks) flags |= LXC_CLONE_COPYHOOKS;
 
 	// vgname and fstype could be supported by sending them through the
 	// bdevdata.  However, they currently are not yet.  I'm not convinced

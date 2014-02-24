@@ -36,7 +36,6 @@
 #include "log.h"
 #include "caps.h"
 #include "utils.h"
-#include "lxclock.h"
 
 #define LXC_LOG_PREFIX_SIZE	32
 #define LXC_LOG_BUFFER_SIZE	512
@@ -162,10 +161,8 @@ static int log_open(const char *name)
 	int fd;
 	int newfd;
 
-	process_lock();
 	fd = lxc_unpriv(open(name, O_CREAT | O_WRONLY |
 			     O_APPEND | O_CLOEXEC, 0666));
-	process_unlock();
 	if (fd == -1) {
 		ERROR("failed to open log file \"%s\" : %s", name,
 		      strerror(errno));
@@ -179,9 +176,7 @@ static int log_open(const char *name)
 	if (newfd == -1)
 		ERROR("failed to dup log fd %d : %s", fd, strerror(errno));
 
-	process_lock();
 	close(fd);
-	process_unlock();
 	return newfd;
 }
 
@@ -195,6 +190,9 @@ static char *build_log_path(const char *name, const char *lxcpath)
 {
 	char *p;
 	int len, ret, use_dir;
+
+	if (!name)
+		return NULL;
 
 #if USE_CONFIGPATH_LOGS
 	use_dir = 1;
@@ -248,10 +246,13 @@ static int __lxc_log_set_file(const char *fname, int create_dirs)
 {
 	if (lxc_log_fd != -1) {
 		// we are overriding the default.
-		process_lock();
 		close(lxc_log_fd);
-		process_unlock();
 		free(log_fname);
+	}
+
+	if (!fname || strlen(fname) == 0) {
+		log_fname = NULL;
+		return 0;
 	}
 
 #if USE_CONFIGPATH_LOGS
@@ -300,15 +301,8 @@ extern int lxc_log_init(const char *name, const char *file,
 		return 0;
 	}
 
-	if (priority) {
-		if (lxc_priority == LXC_LOG_PRIORITY_NOTSET) {
-			ERROR("invalid log priority %s", priority);
-			return -1;
-		}
-
-		lxc_loglevel_specified = 1;
+	if (priority)
 		lxc_priority = lxc_log_priority_to_int(priority);
-	}
 
 	lxc_log_category_lxc.priority = lxc_priority;
 	lxc_log_category_lxc.appender = &log_appender_logfile;
@@ -322,16 +316,24 @@ extern int lxc_log_init(const char *name, const char *file,
 	if (file) {
 		if (strcmp(file, "none") == 0)
 			return 0;
-		lxc_logfile_specified = 1;
 		ret = __lxc_log_set_file(file, 1);
 	} else {
+
+		/* For now, unprivileged containers have to set -l to get logging */
+		if (geteuid())
+			return 0;
+
+		/* if no name was specified, there nothing to do */
+		if (!name)
+			return 0;
+
 		ret = -1;
 
 		if (!lxcpath)
 			lxcpath = LOGPATH;
 
 		/* try LOGPATH if lxcpath is the default */
-		if (strcmp(lxcpath, default_lxc_path()) == 0)
+		if (strcmp(lxcpath, lxc_global_config_value("lxc.lxcpath")) == 0)
 			ret = _lxc_log_set_file(name, NULL, 0);
 
 		/* try in lxcpath */
@@ -368,15 +370,12 @@ extern int lxc_log_set_level(int level)
 		ERROR("invalid log priority %d", level);
 		return -1;
 	}
-	lxc_loglevel_specified = 1;
 	lxc_log_category_lxc.priority = level;
 	return 0;
 }
 
 extern int lxc_log_get_level(void)
 {
-	if (!lxc_loglevel_specified)
-		return LXC_LOG_PRIORITY_NOTSET;
 	return lxc_log_category_lxc.priority;
 }
 
@@ -397,7 +396,6 @@ extern int lxc_log_set_file(const char *fname)
 {
 	if (lxc_logfile_specified)
 		return 0;
-	lxc_logfile_specified = 1;
 	return __lxc_log_set_file(fname, 0);
 }
 
@@ -415,4 +413,13 @@ extern void lxc_log_set_prefix(const char *prefix)
 extern const char *lxc_log_get_prefix(void)
 {
 	return log_prefix;
+}
+
+extern void lxc_log_options_no_override()
+{
+	if (lxc_log_get_file())
+		lxc_logfile_specified = 1;
+
+	if (lxc_log_get_level() != LXC_LOG_PRIORITY_NOTSET)
+		lxc_loglevel_specified = 1;
 }

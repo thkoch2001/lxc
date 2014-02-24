@@ -26,8 +26,8 @@
 #include <sys/stat.h>
 #include <sys/mount.h>
 #include <sys/apparmor.h>
+
 #include "log.h"
-#include "lxclock.h"
 #include "lsm/lsm.h"
 
 lxc_log_define(lxc_apparmor, lxc);
@@ -50,15 +50,11 @@ static int apparmor_enabled(void)
 	ret = stat(AA_MOUNT_RESTR, &statbuf);
 	if (ret != 0)
 		return 0;
-	process_lock();
 	fin = fopen(AA_ENABLED_FILE, "r");
-	process_unlock();
 	if (!fin)
 		return 0;
 	ret = fscanf(fin, "%c", &e);
-	process_lock();
 	fclose(fin);
-	process_unlock();
 	if (ret == 1 && e == 'Y')
 		return 1;
 	return 0;
@@ -78,11 +74,9 @@ static char *apparmor_process_label_get(pid_t pid)
 		return NULL;
 	}
 again:
-	process_lock();
 	f = fopen(path, "r");
-	process_unlock();
 	if (!f) {
-		SYSERROR("opening %s\n", path);
+		SYSERROR("opening %s", path);
 		if (buf)
 			free(buf);
 		return NULL;
@@ -92,19 +86,15 @@ again:
 	if (!newbuf) {
 		free(buf);
 		ERROR("out of memory");
-		process_lock();
 		fclose(f);
-		process_unlock();
 		return NULL;
 	}
 	buf = newbuf;
 	memset(buf, 0, sz);
 	ret = fread(buf, 1, sz - 1, f);
-	process_lock();
 	fclose(f);
-	process_unlock();
 	if (ret < 0) {
-		ERROR("reading %s\n", path);
+		ERROR("reading %s", path);
 		free(buf);
 		return NULL;
 	}

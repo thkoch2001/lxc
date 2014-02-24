@@ -42,7 +42,7 @@ lxc_log_define(lxc_init, lxc);
 
 static int quiet;
 
-static struct option options[] = {
+static const struct option options[] = {
 	{ "name",        required_argument, NULL, 'n' },
 	{ "logpriority", required_argument, NULL, 'l' },
 	{ "quiet",       no_argument,       NULL, 'q' },
@@ -111,6 +111,7 @@ int main(int argc, char *argv[])
 			   basename(argv[0]), quiet, lxcpath);
 	if (err < 0)
 		exit(EXIT_FAILURE);
+	lxc_log_options_no_override();
 
 	if (!argv[optind]) {
 		ERROR("missing command to launch");
@@ -123,11 +124,14 @@ int main(int argc, char *argv[])
 	 * mask all the signals so we are safe to install a
 	 * signal handler and to fork
 	 */
-	sigfillset(&mask);
-	sigdelset(&mask, SIGILL);
-	sigdelset(&mask, SIGSEGV);
-	sigdelset(&mask, SIGBUS);
-	sigprocmask(SIG_SETMASK, &mask, &omask);
+	if (sigfillset(&mask) ||
+	    sigdelset(&mask, SIGILL) ||
+	    sigdelset(&mask, SIGSEGV) ||
+	    sigdelset(&mask, SIGBUS) ||
+	    sigprocmask(SIG_SETMASK, &mask, &omask)) {
+		SYSERROR("failed to set signal mask");
+		exit(EXIT_FAILURE);
+	}
 
 	for (i = 1; i < NSIG; i++) {
 		struct sigaction act;
@@ -140,18 +144,26 @@ int main(int argc, char *argv[])
 		    i == SIGSEGV ||
 		    i == SIGBUS ||
 		    i == SIGSTOP ||
-		    i == SIGKILL)
+		    i == SIGKILL ||
+		    i == 32 || i == 33)
 			continue;
 
-		sigfillset(&act.sa_mask);
-		sigdelset(&act.sa_mask, SIGILL);
-		sigdelset(&act.sa_mask, SIGSEGV);
-		sigdelset(&act.sa_mask, SIGBUS);
-		sigdelset(&act.sa_mask, SIGSTOP);
-		sigdelset(&act.sa_mask, SIGKILL);
+		if (sigfillset(&act.sa_mask) ||
+		    sigdelset(&act.sa_mask, SIGILL) ||
+		    sigdelset(&act.sa_mask, SIGSEGV) ||
+		    sigdelset(&act.sa_mask, SIGBUS) ||
+		    sigdelset(&act.sa_mask, SIGSTOP) ||
+		    sigdelset(&act.sa_mask, SIGKILL)) {
+			ERROR("failed to set signal");
+			exit(EXIT_FAILURE);
+		}
+
 		act.sa_flags = 0;
 		act.sa_handler = interrupt_handler;
-		sigaction(i, &act, NULL);
+		if (sigaction(i, &act, NULL) && errno != EINVAL) {
+			SYSERROR("failed to sigaction");
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	lxc_setup_fs();
@@ -170,7 +182,10 @@ int main(int argc, char *argv[])
 		for (i = 1; i < NSIG; i++)
 			signal(i, SIG_DFL);
 
-		sigprocmask(SIG_SETMASK, &omask, NULL);
+		if (sigprocmask(SIG_SETMASK, &omask, NULL)) {
+			SYSERROR("failed to set signal mask");
+			exit(EXIT_FAILURE);
+		}
 
 		NOTICE("about to exec '%s'", aargv[0]);
 
@@ -180,8 +195,11 @@ int main(int argc, char *argv[])
 	}
 
 	/* let's process the signals now */
-	sigdelset(&omask, SIGALRM);
-	sigprocmask(SIG_SETMASK, &omask, NULL);
+	if (sigdelset(&omask, SIGALRM) ||
+	    sigprocmask(SIG_SETMASK, &omask, NULL)) {
+		SYSERROR("failed to set signal mask");
+		exit(EXIT_FAILURE);
+	}
 
 	/* no need of other inherited fds but stderr */
 	close(fileno(stdin));

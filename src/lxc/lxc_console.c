@@ -32,13 +32,14 @@
 #include <unistd.h>
 #include <signal.h>
 #include <libgen.h>
+#include <poll.h>
 #include <sys/param.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <sys/poll.h>
 #include <sys/ioctl.h>
 
 #include <lxc/lxccontainer.h>
+
 #include "error.h"
 #include "lxc.h"
 #include "log.h"
@@ -46,7 +47,7 @@
 #include "arguments.h"
 #include "commands.h"
 
-lxc_log_define(lxc_console_ui, lxc_console);
+lxc_log_define(lxc_console_ui, lxc);
 
 static char etoc(const char *expr)
 {
@@ -104,6 +105,7 @@ int main(int argc, char *argv[])
 			   my_args.progname, my_args.quiet, my_args.lxcpath[0]);
 	if (ret)
 		return EXIT_FAILURE;
+	lxc_log_options_no_override();
 
 	c = lxc_container_new(my_args.name, my_args.lxcpath[0]);
 	if (!c) {

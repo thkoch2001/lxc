@@ -33,7 +33,7 @@ static int quiet = 0;
 static int delay = 0;
 static const char *template = "busybox";
 
-static struct option options[] = {
+static const struct option options[] = {
     { "threads",     required_argument, NULL, 'j' },
     { "iterations",  required_argument, NULL, 'i' },
     { "template",    required_argument, NULL, 't' },
@@ -63,7 +63,7 @@ static void usage(void) {
 struct thread_args {
     int thread_id;
     int return_code;
-    char *mode;
+    const char *mode;
 };
 
 static void do_function(void *arguments)
@@ -190,6 +190,11 @@ int main(int argc, char *argv[]) {
     for (iter = 1; iter <= iterations; iter++) {
         int fd;
         fd = open("/", O_RDONLY);
+        if (fd < 0) {
+            fprintf(stderr, "Failed to open /\n");
+            continue;
+        }
+
         if (!quiet)
             printf("\nIteration %d/%d maxfd:%d\n", iter, iterations, fd);
         close(fd);
@@ -219,7 +224,7 @@ int main(int argc, char *argv[]) {
                     }
                 }
                 if (args[j].return_code) {
-                    fprintf(stderr, "thread returned error %d", args[j].return_code);
+                    fprintf(stderr, "thread returned error %d\n", args[j].return_code);
                     exit(EXIT_FAILURE);
                 }
             }

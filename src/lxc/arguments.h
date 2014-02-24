@@ -25,6 +25,7 @@
 #define __arguments_h
 
 #include <getopt.h>
+#include <stdint.h>
 
 struct lxc_arguments;
 
@@ -56,25 +57,23 @@ struct lxc_arguments {
 	/* for lxc-start */
 	const char *share_ns[32]; // size must be greater than LXC_NS_MAX
 
-	/* for lxc-checkpoint/restart */
-	const char *statefile;
-	int statefd;
-	int flags;
-
 	/* for lxc-console */
 	int ttynum;
 	char escape;
 
-	/* for lxc-wait and lxc-shutdown */
+	/* for lxc-wait */
 	char *states;
 	long timeout;
-	int nowait;
-	int reboot;
-	int hardstop;
+
+	/* for lxc-autostart */
 	int shutdown;
 
 	/* for lxc-stop */
+	int hardstop;
+	int nokill;
 	int nolock;
+	int nowait;
+	int reboot;
 
 	/* for lxc-destroy */
 	int force;
@@ -85,9 +84,14 @@ struct lxc_arguments {
 	/* lxc-create */
 	char *bdevtype, *configfile, *template;
 	char *fstype;
-	unsigned long fssize;
+	uint64_t fssize;
 	char *lvname, *vgname, *thinpool;
 	char *zfsroot, *lowerdir, *dir;
+
+	/* auto-start */
+	int all;
+	int list;
+	char *groups;
 
 	/* remaining arguments */
 	char *const *argv;
@@ -101,6 +105,7 @@ struct lxc_arguments {
 	{"name", required_argument, 0, 'n'}, \
 	{"help", no_argument, 0, 'h'}, \
 	{"usage", no_argument,	0, OPT_USAGE}, \
+	{"version", no_argument,	0, OPT_VERSION}, \
 	{"quiet", no_argument,	0, 'q'}, \
 	{"logfile", required_argument, 0, 'o'}, \
 	{"logpriority", required_argument, 0, 'l'}, \
@@ -109,6 +114,7 @@ struct lxc_arguments {
 
 /* option keys for long only options */
 #define	OPT_USAGE 0x1000
+#define	OPT_VERSION OPT_USAGE-1
 
 extern int lxc_arguments_parse(struct lxc_arguments *args,
 			       int argc, char *const argv[]);

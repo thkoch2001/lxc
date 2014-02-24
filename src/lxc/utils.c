@@ -40,12 +40,6 @@
 #include <sys/wait.h>
 #include <assert.h>
 
-#ifndef HAVE_GETLINE
-#ifdef HAVE_FGETLN
-#include <../include/getline.h>
-#endif
-#endif
-
 #include "utils.h"
 #include "log.h"
 #include "lxclock.h"
@@ -61,9 +55,7 @@ static int _recursive_rmdir_onedev(char *dirname, dev_t pdev)
 	int ret, failed=0;
 	char pathname[MAXPATHLEN];
 
-	process_lock();
 	dir = opendir(dirname);
-	process_unlock();
 	if (!dir) {
 		ERROR("%s: failed to open %s", __func__, dirname);
 		return -1;
@@ -110,9 +102,7 @@ static int _recursive_rmdir_onedev(char *dirname, dev_t pdev)
 		failed=1;
 	}
 
-	process_lock();
 	ret = closedir(dir);
-	process_unlock();
 	if (ret) {
 		ERROR("%s: failed to close directory %s", __func__, dirname);
 		failed=1;
@@ -202,7 +192,7 @@ extern int mkdir_p(const char *dir, mode_t mode)
 		makeme = strndup(orig, dir - orig);
 		if (*makeme) {
 			if (mkdir(makeme, mode) && errno != EEXIST) {
-				SYSERROR("failed to create directory '%s'\n", makeme);
+				SYSERROR("failed to create directory '%s'", makeme);
 				free(makeme);
 				return -1;
 			}
@@ -244,19 +234,47 @@ static char *copy_global_config_value(char *p)
 
 const char *lxc_global_config_value(const char *option_name)
 {
-	static const char *options[][2] = {
-		{ "lvm_vg",          DEFAULT_VG      },
-		{ "lvm_thin_pool",   DEFAULT_THIN_POOL },
-		{ "zfsroot",         DEFAULT_ZFSROOT },
-		{ "lxcpath",         LXCPATH         },
-		{ "cgroup.pattern",  DEFAULT_CGROUP_PATTERN },
-		{ "cgroup.use",      NULL            },
+	static const char * const options[][2] = {
+		{ "lxc.bdev.lvm.vg",        DEFAULT_VG      },
+		{ "lxc.bdev.lvm.thin_pool", DEFAULT_THIN_POOL },
+		{ "lxc.bdev.zfs.root",      DEFAULT_ZFSROOT },
+		{ "lxc.lxcpath",            NULL            },
+		{ "lxc.default_config",     NULL            },
+		{ "lxc.cgroup.pattern",     DEFAULT_CGROUP_PATTERN },
+		{ "lxc.cgroup.use",         NULL            },
 		{ NULL, NULL },
 	};
-	/* Protected by a mutex to eliminate conflicting load and store operations */
+
+	/* placed in the thread local storage pool for non-bionic targets */
+#ifdef HAVE_TLS
+	static __thread const char *values[sizeof(options) / sizeof(options[0])] = { 0 };
+#else
 	static const char *values[sizeof(options) / sizeof(options[0])] = { 0 };
-	const char *(*ptr)[2];
-	const char *value;
+#endif
+	char *user_config_path = NULL;
+	char *user_default_config_path = NULL;
+	char *user_lxc_path = NULL;
+
+	if (geteuid() > 0) {
+		const char *user_home = getenv("HOME");
+		if (!user_home)
+			user_home = "/";
+
+		user_config_path = malloc(sizeof(char) * (22 + strlen(user_home)));
+		user_default_config_path = malloc(sizeof(char) * (26 + strlen(user_home)));
+		user_lxc_path = malloc(sizeof(char) * (19 + strlen(user_home)));
+
+		sprintf(user_config_path, "%s/.config/lxc/lxc.conf", user_home);
+		sprintf(user_default_config_path, "%s/.config/lxc/default.conf", user_home);
+		sprintf(user_lxc_path, "%s/.local/share/lxc/", user_home);
+	}
+	else {
+		user_config_path = strdup(LXC_GLOBAL_CONF);
+		user_default_config_path = strdup(LXC_DEFAULT_CONFIG);
+		user_lxc_path = strdup(LXCPATH);
+	}
+
+	const char * const (*ptr)[2];
 	size_t i;
 	char buf[1024], *p, *p2;
 	FILE *fin = NULL;
@@ -266,21 +284,22 @@ const char *lxc_global_config_value(const char *option_name)
 			break;
 	}
 	if (!(*ptr)[0]) {
+		free(user_config_path);
+		free(user_default_config_path);
+		free(user_lxc_path);
 		errno = EINVAL;
 		return NULL;
 	}
 
-	static_lock();
 	if (values[i]) {
-		value = values[i];
-		static_unlock();
-		return value;
+		free(user_config_path);
+		free(user_default_config_path);
+		free(user_lxc_path);
+		return values[i];
 	}
-	static_unlock();
 
-	process_lock();
-	fin = fopen_cloexec(LXC_GLOBAL_CONF, "r");
-	process_unlock();
+	fin = fopen_cloexec(user_config_path, "r");
+	free(user_config_path);
 	if (fin) {
 		while (fgets(buf, 1024, fin)) {
 			if (buf[0] == '#')
@@ -313,71 +332,76 @@ const char *lxc_global_config_value(const char *option_name)
 			while (*p && (*p == ' ' || *p == '\t')) p++;
 			if (!*p)
 				continue;
-			static_lock();
+
+			free(user_default_config_path);
+
+			if (strcmp(option_name, "lxc.lxcpath") == 0) {
+				free(user_lxc_path);
+				user_lxc_path = copy_global_config_value(p);
+				remove_trailing_slashes(user_lxc_path);
+				values[i] = user_lxc_path;
+				goto out;
+			}
+
 			values[i] = copy_global_config_value(p);
-			static_unlock();
+			free(user_lxc_path);
 			goto out;
 		}
 	}
 	/* could not find value, use default */
-	static_lock();
-	values[i] = (*ptr)[1];
+	if (strcmp(option_name, "lxc.lxcpath") == 0) {
+		remove_trailing_slashes(user_lxc_path);
+		values[i] = user_lxc_path;
+		free(user_default_config_path);
+	}
+	else if (strcmp(option_name, "lxc.default_config") == 0) {
+		values[i] = user_default_config_path;
+		free(user_lxc_path);
+	}
+	else {
+		free(user_default_config_path);
+		free(user_lxc_path);
+		values[i] = (*ptr)[1];
+	}
 	/* special case: if default value is NULL,
 	 * and there is no config, don't view that
 	 * as an error... */
 	if (!values[i])
 		errno = 0;
-	static_unlock();
 
 out:
-	process_lock();
 	if (fin)
 		fclose(fin);
-	process_unlock();
 
-	static_lock();
-	value = values[i];
-	static_unlock();
-	return value;
+	return values[i];
 }
 
-const char *default_lvm_vg(void)
+char *get_rundir()
 {
-	return lxc_global_config_value("lvm_vg");
-}
+	char *rundir;
+	const char *homedir;
 
-const char *default_lvm_thin_pool(void)
-{
-	return lxc_global_config_value("lvm_thin_pool");
-}
-
-const char *default_zfs_root(void)
-{
-	return lxc_global_config_value("zfsroot");
-}
-
-const char *default_lxc_path(void)
-{
-	return lxc_global_config_value("lxcpath");
-}
-
-const char *default_cgroup_use(void)
-{
-	return lxc_global_config_value("cgroup.use");
-}
-
-const char *default_cgroup_pattern(void)
-{
-	return lxc_global_config_value("cgroup.pattern");
-}
-
-const char *get_rundir()
-{
-	const char *rundir;
+	if (geteuid() == 0) {
+		rundir = strdup(RUNTIME_PATH);
+		return rundir;
+	}
 
 	rundir = getenv("XDG_RUNTIME_DIR");
-	if (geteuid() == 0 || rundir == NULL)
-		rundir = "/run";
+	if (rundir) {
+		rundir = strdup(rundir);
+		return rundir;
+	}
+
+	INFO("XDG_RUNTIME_DIR isn't set in the environment.");
+	homedir = getenv("HOME");
+	if (!homedir) {
+		ERROR("HOME isn't set in the environment.");
+		return NULL;
+	}
+
+	rundir = malloc(sizeof(char) * (17 + strlen(homedir)));
+	sprintf(rundir, "%s/.cache/lxc/run/", homedir);
+
 	return rundir;
 }
 
@@ -450,15 +474,6 @@ ssize_t lxc_read_nointr_expect(int fd, void* buf, size_t count, const void* expe
 	return ret;
 }
 
-static inline int lock_fclose(FILE *f)
-{
-	int ret;
-	process_lock();
-	ret = fclose(f);
-	process_unlock();
-	return ret;
-}
-
 #if HAVE_LIBGNUTLS
 #include <gnutls/gnutls.h>
 #include <gnutls/crypto.h>
@@ -478,40 +493,38 @@ int sha1sum_file(char *fnam, unsigned char *digest)
 
 	if (!fnam)
 		return -1;
-	process_lock();
 	f = fopen_cloexec(fnam, "r");
-	process_unlock();
 	if (!f) {
 		SYSERROR("Error opening template");
 		return -1;
 	}
 	if (fseek(f, 0, SEEK_END) < 0) {
 		SYSERROR("Error seeking to end of template");
-		lock_fclose(f);
+		fclose(f);
 		return -1;
 	}
 	if ((flen = ftell(f)) < 0) {
 		SYSERROR("Error telling size of template");
-		lock_fclose(f);
+		fclose(f);
 		return -1;
 	}
 	if (fseek(f, 0, SEEK_SET) < 0) {
 		SYSERROR("Error seeking to start of template");
-		lock_fclose(f);
+		fclose(f);
 		return -1;
 	}
 	if ((buf = malloc(flen+1)) == NULL) {
 		SYSERROR("Out of memory");
-		lock_fclose(f);
+		fclose(f);
 		return -1;
 	}
 	if (fread(buf, 1, flen, f) != flen) {
 		SYSERROR("Failure reading template");
 		free(buf);
-		lock_fclose(f);
+		fclose(f);
 		return -1;
 	}
-	if (lock_fclose(f) < 0) {
+	if (fclose(f) < 0) {
 		SYSERROR("Failre closing template");
 		free(buf);
 		return -1;
@@ -568,10 +581,6 @@ const char** lxc_va_arg_list_to_argv_const(va_list ap, size_t skip)
 	return (const char**)lxc_va_arg_list_to_argv(ap, skip, 0);
 }
 
-/*
- * fopen_cloexec: must be called with process_lock() held
- * if it is needed.
- */
 FILE *fopen_cloexec(const char *path, const char *mode)
 {
 	int open_mode = 0;
@@ -616,7 +625,6 @@ FILE *fopen_cloexec(const char *path, const char *mode)
 	return ret;
 }
 
-/* must be called with process_lock() held */
 extern struct lxc_popen_FILE *lxc_popen(const char *command)
 {
 	struct lxc_popen_FILE *fp = NULL;
@@ -653,7 +661,10 @@ extern struct lxc_popen_FILE *lxc_popen(const char *command)
 			 * But it must not be marked close-on-exec.
 			 * Undo the effects.
 			 */
-			fcntl(child_end, F_SETFD, 0);
+			if (fcntl(child_end, F_SETFD, 0) != 0) {
+				SYSERROR("Failed to remove FD_CLOEXEC from fd.");
+				exit(127);
+			}
 		}
 
 		/*
@@ -714,7 +725,6 @@ error:
 	return NULL;
 }
 
-/* must be called with process_lock() held */
 extern int lxc_pclose(struct lxc_popen_FILE *fp)
 {
 	FILE *f = NULL;
@@ -1024,39 +1034,12 @@ size_t lxc_array_len(void **array)
 	return result;
 }
 
-void **lxc_dup_array(void **array, lxc_dup_fn element_dup_fn, lxc_free_fn element_free_fn)
-{
-	size_t l = lxc_array_len(array);
-	void **result = calloc(l + 1, sizeof(void *));
-	void **pp;
-	void *p;
-	int saved_errno = 0;
-
-	if (!result)
-		return NULL;
-
-	for (l = 0, pp = array; pp && *pp; pp++, l++) {
-		p = element_dup_fn(*pp);
-		if (!p) {
-			saved_errno = errno;
-			lxc_free_array(result, element_free_fn);
-			errno = saved_errno;
-			return NULL;
-		}
-		result[l] = p;
-	}
-
-	return result;
-}
-
 int lxc_write_to_file(const char *filename, const void* buf, size_t count, bool add_newline)
 {
 	int fd, saved_errno;
 	ssize_t ret;
 
-	process_lock();
 	fd = open(filename, O_WRONLY | O_TRUNC | O_CREAT | O_CLOEXEC, 0666);
-	process_unlock();
 	if (fd < 0)
 		return -1;
 	ret = lxc_write_nointr(fd, buf, count);
@@ -1069,16 +1052,12 @@ int lxc_write_to_file(const char *filename, const void* buf, size_t count, bool 
 		if (ret != 1)
 			goto out_error;
 	}
-	process_lock();
 	close(fd);
-	process_unlock();
 	return 0;
 
 out_error:
 	saved_errno = errno;
-	process_lock();
 	close(fd);
-	process_unlock();
 	errno = saved_errno;
 	return -1;
 }
@@ -1088,9 +1067,7 @@ int lxc_read_from_file(const char *filename, void* buf, size_t count)
 	int fd = -1, saved_errno;
 	ssize_t ret;
 
-	process_lock();
 	fd = open(filename, O_RDONLY | O_CLOEXEC);
-	process_unlock();
 	if (fd < 0)
 		return -1;
 
@@ -1110,9 +1087,7 @@ int lxc_read_from_file(const char *filename, void* buf, size_t count)
 		ERROR("read %s: %s", filename, strerror(errno));
 
 	saved_errno = errno;
-	process_lock();
 	close(fd);
-	process_unlock();
 	errno = saved_errno;
 	return ret;
 }
@@ -1135,4 +1110,87 @@ void **lxc_append_null_to_array(void **array, size_t count)
 		array[count] = NULL;
 	}
 	return array;
+}
+
+int randseed(bool srand_it)
+{
+	/*
+	   srand pre-seed function based on /dev/urandom
+	   */
+	unsigned int seed=time(NULL)+getpid();
+
+	FILE *f;
+	f = fopen("/dev/urandom", "r");
+	if (f) {
+		int ret = fread(&seed, sizeof(seed), 1, f);
+		if (ret != 1)
+			DEBUG("unable to fread /dev/urandom, %s, fallback to time+pid rand seed", strerror(errno));
+		fclose(f);
+	}
+
+	if (srand_it)
+		srand(seed);
+
+	return seed;
+}
+
+uid_t get_ns_uid(uid_t orig)
+{
+	char *line = NULL;
+	size_t sz = 0;
+	uid_t nsid, hostid, range;
+	FILE *f = fopen("/proc/self/uid_map", "r");
+	if (!f)
+		return 0;
+
+	while (getline(&line, &sz, f) != -1) {
+		if (sscanf(line, "%u %u %u", &nsid, &hostid, &range) != 3)
+			continue;
+		if (hostid <= orig && hostid + range > orig) {
+			nsid += orig - hostid;
+			goto found;
+		}
+	}
+
+	nsid = 0;
+found:
+	fclose(f);
+	free(line);
+	return nsid;
+}
+
+bool dir_exists(const char *path)
+{
+	struct stat sb;
+	int ret;
+
+	ret = stat(path, &sb);
+	if (ret < 0)
+		// could be something other than eexist, just say no
+		return false;
+	return S_ISDIR(sb.st_mode);
+}
+
+/* Note we don't use SHA-1 here as we don't want to depend on HAVE_GNUTLS.
+ * FNV has good anti collision properties and we're not worried
+ * about pre-image resistance or one-way-ness, we're just trying to make
+ * the name unique in the 108 bytes of space we have.
+ */
+uint64_t fnv_64a_buf(void *buf, size_t len, uint64_t hval)
+{
+	unsigned char *bp;
+
+	for(bp = buf; bp < (unsigned char *)buf + len; bp++)
+	{
+		/* xor the bottom with the current octet */
+		hval ^= (uint64_t)*bp;
+
+		/* gcc optimised:
+		 * multiply by the 64 bit FNV magic prime mod 2^64
+		 */
+		hval += (hval << 1) + (hval << 4) + (hval << 5) +
+			(hval << 7) + (hval << 8) + (hval << 40);
+	}
+
+	return hval;
 }

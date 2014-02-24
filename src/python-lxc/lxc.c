@@ -25,9 +25,9 @@
 #include <Python.h>
 #include "structmember.h"
 #include <lxc/lxccontainer.h>
-#include <lxc/utils.h>
-#include <lxc/namespace.h>
-#include <lxc/confile.h>
+#include "lxc/utils.h"
+#include "lxc/namespace.h"
+#include "lxc/confile.h"
 #include <stdio.h>
 #include <sys/wait.h>
 
@@ -325,9 +325,16 @@ LXC_attach_run_shell(PyObject *self, PyObject *arg)
 }
 
 static PyObject *
-LXC_get_default_config_path(PyObject *self, PyObject *args)
+LXC_get_global_config_item(PyObject *self, PyObject *args, PyObject *kwds)
 {
-    return PyUnicode_FromString(lxc_get_default_config_path());
+    static char *kwlist[] = {"key", NULL};
+    char* key = NULL;
+
+    if (! PyArg_ParseTupleAndKeywords(args, kwds, "s|", kwlist,
+                                      &key))
+        return NULL;
+
+    return PyUnicode_FromString(lxc_get_global_config_item(key));
 }
 
 static PyObject *
@@ -836,6 +843,10 @@ Container_get_config_item(Container *self, PyObject *args, PyObject *kwds)
         return NULL;
     }
 
+    if (len == 0) {
+        return PyUnicode_FromString("");
+    }
+
     char* value = (char*) malloc(sizeof(char)*len + 1);
     if (value == NULL)
         return PyErr_NoMemory();
@@ -996,6 +1007,30 @@ Container_get_ips(Container *self, PyObject *args, PyObject *kwds)
 }
 
 static PyObject *
+Container_get_running_config_item(Container *self, PyObject *args,
+                                  PyObject *kwds)
+{
+    static char *kwlist[] = {"key", NULL};
+    char* key = NULL;
+    char* value = NULL;
+    PyObject *ret = NULL;
+
+    if (! PyArg_ParseTupleAndKeywords(args, kwds, "s|", kwlist,
+                                      &key))
+        return NULL;
+
+    value = self->container->get_running_config_item(self->container, key);
+
+    if (!value)
+        Py_RETURN_NONE;
+
+    ret = PyUnicode_FromString(value);
+    free(value);
+    return ret;
+}
+
+
+static PyObject *
 Container_load_config(Container *self, PyObject *args, PyObject *kwds)
 {
     static char *kwlist[] = {"path", NULL};
@@ -1024,6 +1059,23 @@ static PyObject *
 Container_reboot(Container *self, PyObject *args, PyObject *kwds)
 {
     if (self->container->reboot(self->container)) {
+        Py_RETURN_TRUE;
+    }
+
+    Py_RETURN_FALSE;
+}
+
+static PyObject *
+Container_rename(Container *self, PyObject *args, PyObject *kwds)
+{
+    char *new_name = NULL;
+    static char *kwlist[] = {"new_name", NULL};
+
+    if (! PyArg_ParseTupleAndKeywords(args, kwds, "s|", kwlist,
+                                      &new_name))
+        return NULL;
+
+    if (self->container->rename(self->container, new_name)) {
         Py_RETURN_TRUE;
     }
 
@@ -1509,6 +1561,12 @@ static PyMethodDef Container_methods[] = {
      "\n"
      "Get a tuple of IPs for the container."
     },
+    {"get_running_config_item", (PyCFunction)Container_get_running_config_item,
+     METH_VARARGS|METH_KEYWORDS,
+     "get_running_config_item(key) -> string\n"
+     "\n"
+     "Get the runtime value of a config key."
+    },
     {"load_config", (PyCFunction)Container_load_config,
      METH_VARARGS|METH_KEYWORDS,
      "load_config(path = DEFAULT) -> boolean\n"
@@ -1521,6 +1579,12 @@ static PyMethodDef Container_methods[] = {
      "reboot() -> boolean\n"
      "\n"
      "Ask the container to reboot."
+    },
+    {"rename", (PyCFunction)Container_rename,
+     METH_VARARGS|METH_KEYWORDS,
+     "rename(new_name) -> boolean\n"
+     "\n"
+     "Rename the container."
     },
     {"remove_device_node", (PyCFunction)Container_remove_device_node,
      METH_VARARGS|METH_KEYWORDS,
@@ -1557,9 +1621,8 @@ static PyMethodDef Container_methods[] = {
      METH_VARARGS|METH_KEYWORDS,
      "shutdown(timeout = -1) -> boolean\n"
      "\n"
-     "Sends SIGPWR to the container and wait for it to shutdown "
-     "unless timeout is set to a positive value, in which case "
-     "the container will be killed when the timeout is reached."
+     "Sends SIGPWR to the container and wait for it to shutdown."
+     "-1 means wait forever, 0 means skip waiting."
     },
     {"snapshot", (PyCFunction)Container_snapshot,
      METH_VARARGS|METH_KEYWORDS,
@@ -1670,8 +1733,8 @@ static PyMethodDef LXC_methods[] = {
     {"attach_run_shell", (PyCFunction)LXC_attach_run_shell, METH_O,
      "Starts up a shell when attaching, to use as the run parameter for "
      "attach or attach_wait"},
-    {"get_default_config_path", (PyCFunction)LXC_get_default_config_path,
-     METH_NOARGS,
+    {"get_global_config_item", (PyCFunction)LXC_get_global_config_item,
+     METH_VARARGS|METH_KEYWORDS,
      "Returns the current LXC config path"},
     {"get_version", (PyCFunction)LXC_get_version, METH_NOARGS,
      "Returns the current LXC library version"},
@@ -1733,9 +1796,10 @@ PyInit__lxc(void)
     PYLXC_EXPORT_CONST(LXC_ATTACH_SET_PERSONALITY);
 
     /* clone: clone flags */
-    PYLXC_EXPORT_CONST(LXC_CLONE_COPYHOOKS);
+    PYLXC_EXPORT_CONST(LXC_CLONE_KEEPBDEVTYPE);
     PYLXC_EXPORT_CONST(LXC_CLONE_KEEPMACADDR);
     PYLXC_EXPORT_CONST(LXC_CLONE_KEEPNAME);
+    PYLXC_EXPORT_CONST(LXC_CLONE_MAYBE_SNAPSHOT);
     PYLXC_EXPORT_CONST(LXC_CLONE_SNAPSHOT);
 
     /* create: create flags */
