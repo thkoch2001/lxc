@@ -1,3 +1,24 @@
+lxc (1.0.0-1) experimental; urgency=low
+
+  * Merging upstream version 1.0.0.
+  * Lowering lxc-stuff recommends to suggests.
+  * Installing lxc-debconfig as lxc-debian in lxc-stuff only on progress-
+    linux.
+  * Dropping lxc bash-completion, upstream has stolen^Wtaken without
+    credit to its original author, Gaé Lucas <gaetanlcs@gmail.com>, the
+    debian version and improved it a bit (*sigh*).
+  * Dropping initscript in lxc-stuff now that upstream has one too.
+  * Including new systemd files in lxc.
+  * Refreshing lxcinitdir.patch.
+  * Adding build-depends to doxygen.
+  * Including apidoc in lxc-dev.
+  * Updating todo file.
+  * Correcting wrong default directory for sysvinit scripts.
+  * Still uploading to experimental since it's completely untested yet,
+    but soon starting migration to unstable (Closes: #739782).
+
+ -- Daniel Baumann <mail@daniel-baumann.ch>  Mon, 24 Feb 2014 16:17:41 +0100
+
 lxc (1.0.0~beta1-6) experimental; urgency=low
 
   * Choosing default template based on host distribution for lxc-create
