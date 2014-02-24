@@ -1,7 +1,7 @@
 lxc:
-  * add native systemd job to complement sysvinit initscript.
   * update package description
   * add a oem-config hook function.
+  * check apparmor integration
 
 lxc-stuff:
   * get rid of lxc-initscript by re-adding the same logic to lxc wrapper itself,
@@ -23,6 +23,7 @@ lxc-stuff:
   * don't hardcode lxcpath via /etc/lxc/lxc.conf but keep it updated with the
     debconf foo from the lxc package itself.
   * use lxc.functions in debian/local/lxc-* commands
+  * do something about the automatic bridge+dhcpd+resolver-setup use-case
 
 lxc-debconfig:
   * include removal of backup files and such from live-build:share/hooks/*
