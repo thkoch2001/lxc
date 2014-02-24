@@ -8,7 +8,24 @@ DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
 	dh ${@} --with autoreconf,autotools_dev
 
 override_dh_auto_configure:
-	dh_auto_configure -- --disable-rpath --enable-apparmor --enable-doc --enable-configpath-log --enable-lua --enable-python --enable-seccomp --enable-selinux --enable-tests --with-distro=debian
+	dh_auto_configure -- \
+		--disable-rpath \
+		--enable-doc \
+		--enable-api-docs \
+		--enable-apparmor \
+		--enable-selinux \
+		--enable-seccomp \
+		--disable-cgmanager \
+		--enable-capabilities \
+		--enable-examples \
+		--enable-python \
+		--disable-mutex-debugging \
+		--enable-lua \
+		--enable-bash \
+		--enable-tests \
+		--enable-configpath-log \
+		--with-distro=debian \
+		--with-init-script=sysvinit,systemd
 
 override_dh_auto_install:
 	dh_auto_install
@@ -33,7 +50,6 @@ override_dh_install:
 	dh_install --fail-missing
 
 override_dh_installinit:
-	dh_installinit -plxc-stuff --onlyscripts --no-restart-on-upgrade --no-start --name lxc
 	dh_installinit -plxc-stuff --onlyscripts --no-restart-on-upgrade --no-start --name irkerhook-lxc
 
 override_dh_link:
