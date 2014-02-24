@@ -24,6 +24,19 @@
 #  License along with this library; if not, write to the Free Software
 #  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
+# Detect use under userns (unsupported)
+for arg in "$@"; do
+    [ "$arg" = "--" ] && break
+    if [ "$arg" = "--mapped-uid" -o "$arg" = "--mapped-gid" ]; then
+        echo "This template can't be used for unprivileged containers." 1>&2
+        echo "You may want to try the \"download\" template instead." 1>&2
+        exit 1
+    fi
+done
+
+# Make sure the usual locations are in PATH
+export PATH=$PATH:/usr/sbin:/usr/bin:/sbin:/bin
+
 set -e
 
 LOCALSTATEDIR="@LOCALSTATEDIR@"
@@ -87,15 +100,15 @@ EOF
 
     # make sure we have the current locale defined in the container
     if [ -z "$LANG" ] || echo $LANG | grep -E -q "^C(\..+)*$"; then
-        chroot $rootfs locale-gen en_US.UTF-8
-        chroot $rootfs update-locale LANG=en_US.UTF-8
+        chroot $rootfs locale-gen en_US.UTF-8 || true
+        chroot $rootfs update-locale LANG=en_US.UTF-8 || true
     else
-        chroot $rootfs locale-gen $LANG
-        chroot $rootfs update-locale LANG=$LANG
+        chroot $rootfs locale-gen $LANG || true
+        chroot $rootfs update-locale LANG=$LANG || true
     fi
 
     # generate new SSH keys
-    if [ -x $rootfs$LOCALSTATEDIR/lib/dpkg/info/openssh-server.postinst ]; then
+    if [ -x $rootfs/var/lib/dpkg/info/openssh-server.postinst ]; then
         cat > $rootfs/usr/sbin/policy-rc.d << EOF
 #!/bin/sh
 exit 101
@@ -104,7 +117,7 @@ EOF
 
         rm -f $rootfs/etc/ssh/ssh_host_*key*
         mv $rootfs/etc/init/ssh.conf $rootfs/etc/init/ssh.conf.disabled
-        DPKG_MAINTSCRIPT_PACKAGE=openssh DPKG_MAINTSCRIPT_NAME=postinst chroot $rootfs $LOCALSTATEDIR/lib/dpkg/info/openssh-server.postinst configure
+        DPKG_MAINTSCRIPT_PACKAGE=openssh DPKG_MAINTSCRIPT_NAME=postinst chroot $rootfs /var/lib/dpkg/info/openssh-server.postinst configure
         mv $rootfs/etc/init/ssh.conf.disabled $rootfs/etc/init/ssh.conf
 
         sed -i "s/root@$(hostname)/root@$hostname/g" $rootfs/etc/ssh/ssh_host_*.pub
@@ -147,6 +160,33 @@ finalize_user()
     return 0
 }
 
+# A function to try and autodetect squid-deb-proxy servers on the local network
+# if either the squid-deb-proxy-client package is installed on the host or
+# a parent container set the 50squid-deb-proxy-client file.
+squid_deb_proxy_autodetect()
+{
+    local apt_discover=/usr/share/squid-deb-proxy-client/apt-avahi-discover
+    local proxy_file=/etc/apt/apt.conf.d/50squid-deb-proxy-client
+    squid_proxy_line=  # That's a global :/
+
+    # Maybe the host is aware of a squid-deb-proxy?
+    if [ -f $apt_discover ]; then
+        echo -n "Discovering squid-deb-proxy..."
+        squid_proxy_line=$($apt_discover)
+        if [ -n "$squid_proxy_line" ]; then
+            echo "found squid-deb-proxy: $squid_proxy_line"
+        else
+            echo "no squid-deb-proxy found"
+        fi
+    fi
+
+    # Are we in a nested container, and the parent already knows of a proxy?
+    if [ -f $proxy_file ]; then
+        # Extract the squid URL from the file (whatever is between "")
+        squid_proxy_line=`cat $proxy_file | sed "s/.*\"\(.*\)\".*/\1/"`
+    fi
+}
+
 #
 # Choose proxies for container
 # http_proxy will be used by debootstrap on the host.
@@ -162,7 +202,13 @@ choose_container_proxy()
     fi
     case "$HTTP_PROXY" in
     none)
-        APT_PROXY=
+        squid_deb_proxy_autodetect
+        if [ -n "$squid_proxy_line" ]; then
+            APT_PROXY=$squid_proxy_line
+            export http_proxy=$squid_proxy_line
+        else
+            APT_PROXY=
+        fi
         ;;
     apt)
         RES=`apt-config shell APT_PROXY Acquire::http::Proxy`
@@ -239,7 +285,7 @@ cleanup()
 suggest_flush()
 {
     echo "Container upgrade failed.  The container cache may be out of date,"
-    echo "in which case flushing the case (see -F in the hep output) may help."
+    echo "in which case flushing the cache (see -F in the help output) may help."
 }
 
 download_ubuntu()
@@ -338,7 +384,7 @@ install_ubuntu()
     mkdir -p $LOCALSTATEDIR/lock/subsys/
 
     (
-        flock -x 200
+        flock -x 9
         if [ $? -ne 0 ]; then
             echo "Cache repository is busy."
             return 1
@@ -369,7 +415,7 @@ install_ubuntu()
 
         return 0
 
-    ) 200>$LOCALSTATEDIR/lock/subsys/lxc-ubuntu$release
+    ) 9>$LOCALSTATEDIR/lock/subsys/lxc-ubuntu$release
 
     return $?
 }
@@ -519,7 +565,7 @@ EOF
         cat /etc/timezone > $rootfs/etc/timezone
         chroot $rootfs dpkg-reconfigure -f noninteractive tzdata
     elif [ -f /etc/sysconfig/clock ]; then
-        source /etc/sysconfig/clock
+        . /etc/sysconfig/clock
         echo $ZONE > $rootfs/etc/timezone
         chroot $rootfs dpkg-reconfigure -f noninteractive tzdata
     else
@@ -625,6 +671,10 @@ else
         arch="amd64"
     elif [ "$arch" = "armv7l" ]; then
         arch="armhf"
+    elif [ "$arch" = "aarch64" ]; then
+        arch="arm64"
+    elif [ "$arch" = "ppc64le" ]; then
+        arch="ppc64el"
     fi
 fi
 
@@ -670,7 +720,7 @@ if [ -n "$bindhome" ]; then
 fi
 
 
-if [ "$arch" == "i686" ]; then
+if [ "$arch" = "i686" ]; then
     arch=i386
 fi
 
@@ -679,8 +729,13 @@ if [ $hostarch = "i386" -a $arch = "amd64" ]; then
     exit 1
 fi
 
-if [ $hostarch = "armhf" -o $hostarch = "armel" ] && \
-   [ $arch != "armhf" -a $arch != "armel" ]; then
+if [ $hostarch = "armhf" -o $hostarch = "armel" -o $hostarch = "arm64" ] && \
+   [ $arch != "armhf" -a $arch != "armel" -a $arch != "arm64" ]; then
+    echo "can't create $arch container on $hostarch"
+    exit 1
+fi
+
+if [ $arch = "arm64" ] && [ $hostarch != "arm64" ]; then
     echo "can't create $arch container on $hostarch"
     exit 1
 fi

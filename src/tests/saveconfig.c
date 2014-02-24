@@ -38,7 +38,7 @@ static int create_ubuntu(void)
 		return -1;
 	}
 	if (pid == 0) {
-		ret = execlp("lxc-create", "lxc-create", "-t", "ubuntu", "-f", LXC_DEFAULT_CONFIG, "-n", MYNAME, NULL);
+		ret = execlp("lxc-create", "lxc-create", "-t", "ubuntu", "-n", MYNAME, NULL);
 		// Should not return
 		perror("execl");
 		exit(1);
@@ -95,6 +95,16 @@ int main(int argc, char *argv[])
 	rename(LXCPATH "/" MYNAME "/config", LXCPATH "/" MYNAME "/config.bak");
 	if (!c->save_config(c, NULL)) {
 		fprintf(stderr, "%d: failed writing config file\n", __LINE__);
+		goto out;
+	}
+
+	if (!c->destroy(c)) {
+		fprintf(stderr, "%d: error deleting %s\n", __LINE__, MYNAME);
+		goto out;
+	}
+
+	if (c->is_defined(c)) {
+		fprintf(stderr, "%d: %s thought it was defined\n", __LINE__, MYNAME);
 		goto out;
 	}
 

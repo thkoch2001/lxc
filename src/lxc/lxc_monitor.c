@@ -29,12 +29,12 @@
 #include <sys/types.h>
 #include <errno.h>
 
-#include <lxc/lxc.h>
-#include <lxc/log.h>
-#include <lxc/monitor.h>
+#include "lxc.h"
+#include "log.h"
+#include "monitor.h"
 #include "arguments.h"
 
-lxc_log_define(lxc_monitor_ui, lxc_monitor);
+lxc_log_define(lxc_monitor_ui, lxc);
 
 static bool quit_monitord;
 
@@ -86,6 +86,7 @@ int main(int argc, char *argv[])
 	if (lxc_log_init(my_args.name, my_args.log_file, my_args.log_priority,
 			 my_args.progname, my_args.quiet, my_args.lxcpath[0]))
 		return -1;
+	lxc_log_options_no_override();
 
 	if (quit_monitord) {
 		int ret = EXIT_SUCCESS;

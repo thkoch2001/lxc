@@ -28,6 +28,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <grp.h>
 #include <sys/param.h>
 #include <sys/prctl.h>
 #include <sys/mount.h>
@@ -50,6 +51,9 @@
 #include "commands.h"
 #include "cgroup.h"
 #include "lxclock.h"
+#include "conf.h"
+#include "lxcseccomp.h"
+#include <lxc/lxccontainer.h>
 #include "lsm/lsm.h"
 
 #if HAVE_SYS_PERSONALITY_H
@@ -62,7 +66,7 @@
 
 lxc_log_define(lxc_attach, lxc);
 
-struct lxc_proc_context_info *lxc_proc_get_context_info(pid_t pid)
+static struct lxc_proc_context_info *lxc_proc_get_context_info(pid_t pid)
 {
 	struct lxc_proc_context_info *info = calloc(1, sizeof(*info));
 	FILE *proc_file;
@@ -79,9 +83,7 @@ struct lxc_proc_context_info *lxc_proc_get_context_info(pid_t pid)
 	/* read capabilities */
 	snprintf(proc_fn, MAXPATHLEN, "/proc/%d/status", pid);
 
-	process_lock();
 	proc_file = fopen(proc_fn, "r");
-	process_unlock();
 	if (!proc_file) {
 		SYSERROR("Could not open %s", proc_fn);
 		goto out_error;
@@ -98,9 +100,7 @@ struct lxc_proc_context_info *lxc_proc_get_context_info(pid_t pid)
 
 	if (line)
 		free(line);
-	process_lock();
 	fclose(proc_file);
-	process_unlock();
 
 	if (!found) {
 		SYSERROR("Could not read capability bounding set from %s", proc_fn);
@@ -111,18 +111,14 @@ struct lxc_proc_context_info *lxc_proc_get_context_info(pid_t pid)
 	/* read personality */
 	snprintf(proc_fn, MAXPATHLEN, "/proc/%d/personality", pid);
 
-	process_lock();
 	proc_file = fopen(proc_fn, "r");
-	process_unlock();
 	if (!proc_file) {
 		SYSERROR("Could not open %s", proc_fn);
 		goto out_error;
 	}
 
 	ret = fscanf(proc_file, "%lx", &info->personality);
-	process_lock();
 	fclose(proc_file);
-	process_unlock();
 
 	if (ret == EOF || ret == 0) {
 		SYSERROR("Could not read personality from %s", proc_fn);
@@ -142,20 +138,22 @@ static void lxc_proc_put_context_info(struct lxc_proc_context_info *ctx)
 {
 	if (ctx->lsm_label)
 		free(ctx->lsm_label);
+	if (ctx->container)
+		lxc_container_put(ctx->container);
 	free(ctx);
 }
 
-int lxc_attach_to_ns(pid_t pid, int which)
+static int lxc_attach_to_ns(pid_t pid, int which)
 {
 	char path[MAXPATHLEN];
 	/* according to <http://article.gmane.org/gmane.linux.kernel.containers.lxc.devel/1429>,
 	 * the file for user namepsaces in /proc/$pid/ns will be called
 	 * 'user' once the kernel supports it
 	 */
-	static char *ns[] = { "mnt", "pid", "uts", "ipc", "user", "net" };
+	static char *ns[] = { "user", "mnt", "pid", "uts", "ipc", "net" };
 	static int flags[] = {
-		CLONE_NEWNS, CLONE_NEWPID, CLONE_NEWUTS, CLONE_NEWIPC,
-		CLONE_NEWUSER, CLONE_NEWNET
+		CLONE_NEWUSER, CLONE_NEWNS, CLONE_NEWPID, CLONE_NEWUTS, CLONE_NEWIPC,
+		CLONE_NEWNET
 	};
 	static const int size = sizeof(ns) / sizeof(char *);
 	int fd[size];
@@ -178,19 +176,15 @@ int lxc_attach_to_ns(pid_t pid, int which)
 		}
 
 		snprintf(path, MAXPATHLEN, "/proc/%d/ns/%s", pid, ns[i]);
-		process_lock();
 		fd[i] = open(path, O_RDONLY | O_CLOEXEC);
-		process_unlock();
 		if (fd[i] < 0) {
 			saved_errno = errno;
 
 			/* close all already opened file descriptors before
 			 * we return an error, so we don't leak them
 			 */
-			process_lock();
 			for (j = 0; j < i; j++)
 				close(fd[j]);
-			process_unlock();
 
 			errno = saved_errno;
 			SYSERROR("failed to open '%s'", path);
@@ -210,15 +204,13 @@ int lxc_attach_to_ns(pid_t pid, int which)
 			return -1;
 		}
 
-		process_lock();
 		close(fd[i]);
-		process_unlock();
 	}
 
 	return 0;
 }
 
-int lxc_attach_remount_sys_proc()
+static int lxc_attach_remount_sys_proc(void)
 {
 	int ret;
 
@@ -261,7 +253,7 @@ int lxc_attach_remount_sys_proc()
 	return 0;
 }
 
-int lxc_attach_drop_privs(struct lxc_proc_context_info *ctx)
+static int lxc_attach_drop_privs(struct lxc_proc_context_info *ctx)
 {
 	int last_cap = lxc_caps_last_cap();
 	int cap;
@@ -279,7 +271,7 @@ int lxc_attach_drop_privs(struct lxc_proc_context_info *ctx)
 	return 0;
 }
 
-int lxc_attach_set_environment(enum lxc_attach_env_policy_t policy, char** extra_env, char** extra_keep)
+static int lxc_attach_set_environment(enum lxc_attach_env_policy_t policy, char** extra_env, char** extra_keep)
 {
 	if (policy == LXC_ATTACH_CLEAR_ENV) {
 		char **extra_keep_store = NULL;
@@ -330,8 +322,10 @@ int lxc_attach_set_environment(enum lxc_attach_env_policy_t policy, char** extra
 		if (extra_keep_store) {
 			size_t i;
 			for (i = 0; extra_keep[i]; i++) {
-				if (extra_keep_store[i])
-					setenv(extra_keep[i], extra_keep_store[i], 1);
+				if (extra_keep_store[i]) {
+					if (setenv(extra_keep[i], extra_keep_store[i], 1) < 0)
+						SYSERROR("Unable to set environment variable");
+				}
 				free(extra_keep_store[i]);
 			}
 			free(extra_keep_store);
@@ -387,7 +381,7 @@ int lxc_attach_set_environment(enum lxc_attach_env_policy_t policy, char** extra
 	return 0;
 }
 
-char *lxc_attach_getpwshell(uid_t uid)
+static char *lxc_attach_getpwshell(uid_t uid)
 {
 	/* local variables */
 	pid_t pid;
@@ -400,18 +394,14 @@ char *lxc_attach_getpwshell(uid_t uid)
 	 * getent program, and we need to capture its
 	 * output, so we use a pipe for that purpose
 	 */
-	process_lock();
 	ret = pipe(pipes);
-	process_unlock();
 	if (ret < 0)
 		return NULL;
 
 	pid = fork();
 	if (pid < 0) {
-		process_lock();
 		close(pipes[0]);
 		close(pipes[1]);
-		process_unlock();
 		return NULL;
 	}
 
@@ -423,13 +413,9 @@ char *lxc_attach_getpwshell(uid_t uid)
 		int found = 0;
 		int status;
 
-		process_lock();
 		close(pipes[1]);
-		process_unlock();
 
-		process_lock();
 		pipe_f = fdopen(pipes[0], "r");
-		process_unlock();
 		while (getline(&line, &line_bufsz, pipe_f) != -1) {
 			char *token;
 			char *saveptr = NULL;
@@ -486,9 +472,7 @@ char *lxc_attach_getpwshell(uid_t uid)
 		}
 
 		free(line);
-		process_lock();
 		fclose(pipe_f);
-		process_unlock();
 	again:
 		if (waitpid(pid, &status, 0) < 0) {
 			if (errno == EINTR)
@@ -521,7 +505,6 @@ char *lxc_attach_getpwshell(uid_t uid)
 			NULL
 		};
 
-		process_unlock(); // we're no longer sharing
 		close(pipes[0]);
 
 		/* we want to capture stdout */
@@ -552,7 +535,7 @@ char *lxc_attach_getpwshell(uid_t uid)
 	}
 }
 
-void lxc_attach_get_init_uidgid(uid_t* init_uid, gid_t* init_gid)
+static void lxc_attach_get_init_uidgid(uid_t* init_uid, gid_t* init_gid)
 {
 	FILE *proc_file;
 	char proc_fn[MAXPATHLEN];
@@ -615,10 +598,32 @@ static int attach_child_main(void* data);
 /* define default options if no options are supplied by the user */
 static lxc_attach_options_t attach_static_default_options = LXC_ATTACH_OPTIONS_DEFAULT;
 
+static bool fetch_seccomp(const char *name, const char *lxcpath,
+		struct lxc_proc_context_info *i, lxc_attach_options_t *options)
+{
+	struct lxc_container *c;
+	
+	if (!(options->namespaces & CLONE_NEWNS) || !(options->attach_flags & LXC_ATTACH_LSM))
+		return true;
+
+	c = lxc_container_new(name, lxcpath);
+	if (!c)
+		return false;
+	i->container = c;
+	if (!c->lxc_conf)
+		return false;
+	if (lxc_read_seccomp_config(c->lxc_conf) < 0) {
+		ERROR("Error reading seccomp policy");
+		return false;
+	}
+
+	return true;
+}
+
 int lxc_attach(const char* name, const char* lxcpath, lxc_attach_exec_t exec_function, void* exec_payload, lxc_attach_options_t* options, pid_t* attached_process)
 {
 	int ret, status;
-	pid_t init_pid, pid, attached_pid;
+	pid_t init_pid, pid, attached_pid, expected;
 	struct lxc_proc_context_info *init_ctx;
 	char* cwd;
 	char* new_cwd;
@@ -638,6 +643,9 @@ int lxc_attach(const char* name, const char* lxcpath, lxc_attach_exec_t exec_fun
 		ERROR("failed to get context of the init process, pid = %ld", (long)init_pid);
 		return -1;
 	}
+
+	if (!fetch_seccomp(name, lxcpath, init_ctx, options))
+		WARN("Failed to get seccomp policy");
 
 	cwd = getcwd(NULL, 0);
 
@@ -683,9 +691,7 @@ int lxc_attach(const char* name, const char* lxcpath, lxc_attach_exec_t exec_fun
 	 *   close socket                                 close socket
 	 *                                                run program
 	 */
-	process_lock();
 	ret = socketpair(PF_LOCAL, SOCK_STREAM | SOCK_CLOEXEC, 0, ipc_sockets);
-	process_unlock();
 	if (ret < 0) {
 		SYSERROR("could not set up required IPC mechanism for attaching");
 		free(cwd);
@@ -716,15 +722,26 @@ int lxc_attach(const char* name, const char* lxcpath, lxc_attach_exec_t exec_fun
 
 	if (pid) {
 		pid_t to_cleanup_pid = pid;
-		int expected = 0;
 
 		/* inital thread, we close the socket that is for the
 		 * subprocesses
 		 */
-		process_lock();
 		close(ipc_sockets[1]);
-		process_unlock();
 		free(cwd);
+
+		/* attach to cgroup, if requested */
+		if (options->attach_flags & LXC_ATTACH_MOVE_TO_CGROUP) {
+			if (!cgroup_attach(name, lxcpath, pid))
+				goto cleanup_error;
+		}
+
+		/* Let the child process know to go ahead */
+		status = 0;
+		ret = lxc_write_nointr(ipc_sockets[0], &status, sizeof(status));
+		if (ret <= 0) {
+			ERROR("error using IPC to notify attached process for initialization (0)");
+			goto cleanup_error;
+		}
 
 		/* get pid from intermediate process */
 		ret = lxc_read_nointr_expect(ipc_sockets[0], &attached_pid, sizeof(attached_pid), NULL);
@@ -759,32 +776,6 @@ int lxc_attach(const char* name, const char* lxcpath, lxc_attach_exec_t exec_fun
 			goto cleanup_error;
 		}
 
-		/* attach to cgroup, if requested */
-		if (options->attach_flags & LXC_ATTACH_MOVE_TO_CGROUP) {
-			struct cgroup_meta_data *meta_data;
-			struct cgroup_process_info *container_info;
-
-			meta_data = lxc_cgroup_load_meta();
-			if (!meta_data) {
-				ERROR("could not move attached process %ld to cgroup of container", (long)attached_pid);
-				goto cleanup_error;
-			}
-
-			container_info = lxc_cgroup_get_container_info(name, lxcpath, meta_data);
-			lxc_cgroup_put_meta(meta_data);
-			if (!container_info) {
-				ERROR("could not move attached process %ld to cgroup of container", (long)attached_pid);
-				goto cleanup_error;
-			}
-
-			ret = lxc_cgroup_enter(container_info, attached_pid, false);
-			lxc_cgroup_process_info_free(container_info);
-			if (ret < 0) {
-				ERROR("could not move attached process %ld to cgroup of container", (long)attached_pid);
-				goto cleanup_error;
-			}
-		}
-
 		/* tell attached process we're done */
 		status = 2;
 		ret = lxc_write_nointr(ipc_sockets[0], &status, sizeof(status));
@@ -795,9 +786,7 @@ int lxc_attach(const char* name, const char* lxcpath, lxc_attach_exec_t exec_fun
 
 		/* now shut down communication with child, we're done */
 		shutdown(ipc_sockets[0], SHUT_RDWR);
-		process_lock();
 		close(ipc_sockets[0]);
-		process_unlock();
 		lxc_proc_put_context_info(init_ctx);
 
 		/* we're done, the child process should now execute whatever
@@ -813,20 +802,27 @@ int lxc_attach(const char* name, const char* lxcpath, lxc_attach_exec_t exec_fun
 		 * otherwise the pid we're waiting for may never exit
 		 */
 		shutdown(ipc_sockets[0], SHUT_RDWR);
-		process_lock();
 		close(ipc_sockets[0]);
-		process_unlock();
 		if (to_cleanup_pid)
 			(void) wait_for_pid(to_cleanup_pid);
 		lxc_proc_put_context_info(init_ctx);
 		return -1;
 	}
 
-	process_unlock(); // we're no longer sharing
 	/* first subprocess begins here, we close the socket that is for the
 	 * initial thread
 	 */
 	close(ipc_sockets[0]);
+
+	/* Wait for the parent to have setup cgroups */
+	expected = 0;
+	status = -1;
+	ret = lxc_read_nointr_expect(ipc_sockets[1], &status, sizeof(status), &expected);
+	if (ret <= 0) {
+		ERROR("error communicating with child process");
+		shutdown(ipc_sockets[1], SHUT_RDWR);
+		rexit(-1);
+	}
 
 	/* attach now, create another subprocess later, since pid namespaces
 	 * only really affect the children of the current process
@@ -889,7 +885,7 @@ int lxc_attach(const char* name, const char* lxcpath, lxc_attach_exec_t exec_fun
 	rexit(0);
 }
 
-int attach_child_main(void* data)
+static int attach_child_main(void* data)
 {
 	struct attach_clone_payload* payload = (struct attach_clone_payload*)data;
 	int ipc_socket = payload->ipc_socket;
@@ -980,10 +976,12 @@ int attach_child_main(void* data)
 		new_gid = options->gid;
 
 	/* try to set the uid/gid combination */
-	if ((new_gid != 0 || options->namespaces & CLONE_NEWUSER) && setgid(new_gid)) {
-		SYSERROR("switching to container gid");
-		shutdown(ipc_socket, SHUT_RDWR);
-		rexit(-1);
+	if ((new_gid != 0 || options->namespaces & CLONE_NEWUSER)) {
+		if (setgid(new_gid) || setgroups(0, NULL)) {
+			SYSERROR("switching to container gid");
+			shutdown(ipc_socket, SHUT_RDWR);
+			rexit(-1);
+		}
 	}
 	if ((new_uid != 0 || options->namespaces & CLONE_NEWUSER) && setuid(new_uid)) {
 		SYSERROR("switching to container uid");
@@ -1025,6 +1023,13 @@ int attach_child_main(void* data)
 			rexit(-1);
 		}
 	}
+
+	if (init_ctx->container && init_ctx->container->lxc_conf &&
+			lxc_seccomp_load(init_ctx->container->lxc_conf) != 0) {
+		ERROR("Loading seccomp policy");
+		rexit(-1);
+	}
+
 	lxc_proc_put_context_info(init_ctx);
 
 	/* The following is done after the communication socket is
@@ -1058,8 +1063,11 @@ int attach_child_main(void* data)
 		flags = fcntl(fd, F_GETFL);
 		if (flags < 0)
 			continue;
-		if (flags & FD_CLOEXEC)
-			fcntl(fd, F_SETFL, flags & ~FD_CLOEXEC);
+		if (flags & FD_CLOEXEC) {
+			if (fcntl(fd, F_SETFL, flags & ~FD_CLOEXEC) < 0) {
+				SYSERROR("Unable to clear CLOEXEC from fd");
+			}
+		}
 	}
 
 	/* we're done, so we can now do whatever the user intended us to do */

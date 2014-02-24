@@ -20,9 +20,9 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
-#define _GNU_SOURCE
+#include "config.h"
+
 #include <stdio.h>
-#undef _GNU_SOURCE
 #include <libgen.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -40,14 +40,14 @@
 #include <netinet/in.h>
 #include <net/if.h>
 
+#include <lxc/lxccontainer.h>
+
 #include "log.h"
 #include "caps.h"
 #include "lxc.h"
-#include <lxc/lxccontainer.h>
 #include "conf.h"
 #include "cgroup.h"
 #include "utils.h"
-#include "config.h"
 #include "confile.h"
 #include "arguments.h"
 
@@ -55,7 +55,7 @@
 #define OPT_SHARE_IPC OPT_USAGE+2
 #define OPT_SHARE_UTS OPT_USAGE+3
 
-lxc_log_define(lxc_start_ui, lxc_start);
+lxc_log_define(lxc_start_ui, lxc);
 
 static struct lxc_list defines;
 
@@ -210,7 +210,6 @@ int main(int argc, char *argv[])
 		"/sbin/init",
 		'\0',
 	};
-	FILE *pid_fp = NULL;
 	struct lxc_container *c;
 
 	lxc_list_init(&defines);
@@ -229,6 +228,7 @@ int main(int argc, char *argv[])
 	if (lxc_log_init(my_args.name, my_args.log_file, my_args.log_priority,
 			 my_args.progname, my_args.quiet, my_args.lxcpath[0]))
 		return err;
+	lxc_log_options_no_override();
 
 	const char *lxcpath = my_args.lxcpath[0];
 
@@ -301,10 +301,8 @@ int main(int argc, char *argv[])
 	}
 
 	if (my_args.pidfile != NULL) {
-		pid_fp = fopen(my_args.pidfile, "w");
-		if (pid_fp == NULL) {
-			SYSERROR("failed to create pidfile '%s' for '%s'",
-				 my_args.pidfile, my_args.name);
+		if (ensure_path(&c->pidfile, my_args.pidfile) < 0) {
+			ERROR("failed to ensure pidfile '%s'", my_args.pidfile);
 			goto out;
 		}
 	}
@@ -324,30 +322,16 @@ int main(int argc, char *argv[])
 		conf->inherit_ns_fd[i] = fd;
 	}
 
-	if (my_args.daemonize) {
-		c->want_daemonize(c, true);
-	}
-
-	if (pid_fp != NULL) {
-		if (fprintf(pid_fp, "%d\n", getpid()) < 0) {
-			SYSERROR("failed to write '%s'", my_args.pidfile);
-			goto out;
-		}
-		fclose(pid_fp);
+	if (!my_args.daemonize) {
+		c->want_daemonize(c, false);
 	}
 
 	if (my_args.close_all_fds)
 		c->want_close_all_fds(c, true);
 
 	err = c->start(c, 0, args) ? 0 : -1;
-
-	if (my_args.pidfile)
-		unlink(my_args.pidfile);
-
 out:
 	lxc_container_put(c);
-	if (pid_fp)
-		fclose(pid_fp);
 	return err;
 }
 

@@ -31,9 +31,8 @@
 #include <sys/types.h>
 #include <stdbool.h>
 
-#include <lxc/list.h>
-
-#include <lxc/start.h> /* for lxc_handler */
+#include "list.h"
+#include "start.h" /* for lxc_handler */
 
 #if HAVE_SCMP_FILTER_CTX
 typedef void * scmp_filter_ctx;
@@ -89,8 +88,8 @@ struct ifla_veth {
 };
 
 struct ifla_vlan {
-	uint   flags;
-	uint   fmask;
+	unsigned int   flags;
+	unsigned int   fmask;
 	unsigned short   vid;
 	unsigned short   pad;
 };
@@ -165,8 +164,6 @@ struct id_map {
 	unsigned long hostid, nsid, range;
 };
 
-extern int lxc_free_idmap(struct lxc_list *idmap);
-
 /*
  * Defines a structure containing a pty information for
  * virtualizing a tty
@@ -222,6 +219,7 @@ struct lxc_rootfs {
 	char *path;
 	char *mount;
 	char *pivot;
+	char *options;
 };
 
 /*
@@ -303,14 +301,15 @@ struct lxc_conf {
 
 	char *lsm_aa_profile;
 	char *lsm_se_context;
-	int lsm_umount_proc;
+	int tmp_umount_proc;
 	char *seccomp;  // filename with the seccomp rules
 #if HAVE_SCMP_FILTER_CTX
 	scmp_filter_ctx *seccomp_ctx;
 #endif
 	int maincmd_fd;
 	int autodev;  // if 1, mount and fill a /dev at start
-	int stopsignal; // signal used to stop container
+	int haltsignal; // signal used to halt container
+	int stopsignal; // signal used to hard stop container
 	int kmsg;  // if 1, create /dev/kmsg symlink
 	char *rcfile;	// Copy of the top level rcfile we read
 
@@ -323,6 +322,11 @@ struct lxc_conf {
 	int loglevel;   // loglevel as specifed in config (if any)
 
 	int inherit_ns_fd[LXC_NS_MAX];
+
+	int start_auto;
+	int start_delay;
+	int start_order;
+	struct lxc_list groups;
 };
 
 int run_lxc_hooks(const char *name, char *hook, struct lxc_conf *conf,
@@ -356,23 +360,23 @@ extern int lxc_clear_cgroups(struct lxc_conf *c, const char *key);
 extern int lxc_clear_mount_entries(struct lxc_conf *c);
 extern int lxc_clear_hooks(struct lxc_conf *c, const char *key);
 extern int lxc_clear_idmaps(struct lxc_conf *c);
+extern int lxc_clear_groups(struct lxc_conf *c);
 
 /*
  * Configure the container from inside
  */
 
 struct cgroup_process_info;
-extern int lxc_setup(const char *name, struct lxc_conf *lxc_conf,
-			const char *lxcpath,
-			struct cgroup_process_info *cgroup_info,
-			void *data);
+extern int lxc_setup(struct lxc_handler *handler);
 
 extern void lxc_rename_phys_nics_on_shutdown(struct lxc_conf *conf);
 
-extern uid_t get_mapped_rootid(struct lxc_conf *conf);
-extern int find_unmapped_nsuid(struct lxc_conf *conf);
-extern int mapped_hostid(int id, struct lxc_conf *conf);
+extern int find_unmapped_nsuid(struct lxc_conf *conf, enum idtype idtype);
+extern int mapped_hostid(unsigned id, struct lxc_conf *conf, enum idtype idtype);
 extern int chown_mapped_root(char *path, struct lxc_conf *conf);
 extern int ttys_shift_ids(struct lxc_conf *c);
 extern int userns_exec_1(struct lxc_conf *conf, int (*fn)(void *), void *data);
+extern int parse_mntopts(const char *mntopts, unsigned long *mntflags,
+			 char **mntdata);
+extern void tmp_proc_unmount(struct lxc_conf *lxc_conf);
 #endif

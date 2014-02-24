@@ -25,14 +25,9 @@
 import _lxc
 import os
 import subprocess
-import stat
 import time
-import warnings
 
-warnings.warn("The python-lxc API isn't yet stable "
-              "and may change at any point in the future.", Warning, 2)
-
-default_config_path = _lxc.get_default_config_path()
+default_config_path = _lxc.get_global_config_item("lxc.lxcpath")
 version = _lxc.get_version()
 
 
@@ -216,8 +211,8 @@ class Container(_lxc.Container):
 
         args = {}
         args['newname'] = newname
-        args['flags'] = 0
-        args['newsize'] = 0
+        args['flags'] = flags
+        args['newsize'] = newsize
         args['hookargs'] = hookargs
         if config_path:
             args['config_path'] = config_path
@@ -327,6 +322,18 @@ class Container(_lxc.Container):
 
         return ips
 
+    def rename(self, new_name):
+        """
+            Rename the container.
+            On success, returns the new Container object.
+            On failure, returns False.
+        """
+
+        if _lxc.Container.rename(self, new_name):
+            return Container(new_name)
+
+        return False
+
     def set_config_item(self, key, value):
         """
             Set a config key to a provided value.
@@ -349,6 +356,10 @@ class Container(_lxc.Container):
 
         set_key(key, value)
         new_value = self.get_config_item(key)
+
+        # loglevel is special and won't match the string we set
+        if key == "lxc.loglevel":
+            new_value = value
 
         if (isinstance(value, str) and isinstance(new_value, str) and
                 value == new_value):
@@ -386,10 +397,16 @@ def list_containers(active=True, defined=True,
     if config_path:
         if not os.path.exists(config_path):
             return tuple()
-        entries = _lxc.list_containers(active=active, defined=defined,
-                                       config_path=config_path)
+        try:
+            entries = _lxc.list_containers(active=active, defined=defined,
+                                           config_path=config_path)
+        except ValueError:
+            return tuple()
     else:
-        entries = _lxc.list_containers(active=active, defined=defined)
+        try:
+            entries = _lxc.list_containers(active=active, defined=defined)
+        except ValueError:
+            return tuple()
 
     if as_object:
         return tuple([Container(name, config_path) for name in entries])
@@ -454,9 +471,10 @@ LXC_ATTACH_REMOUNT_PROC_SYS = _lxc.LXC_ATTACH_REMOUNT_PROC_SYS
 LXC_ATTACH_SET_PERSONALITY = _lxc.LXC_ATTACH_SET_PERSONALITY
 
 # clone: clone flags
-LXC_CLONE_COPYHOOKS = _lxc.LXC_CLONE_COPYHOOKS
+LXC_CLONE_KEEPBDEVTYPE = _lxc.LXC_CLONE_KEEPBDEVTYPE
 LXC_CLONE_KEEPMACADDR = _lxc.LXC_CLONE_KEEPMACADDR
 LXC_CLONE_KEEPNAME = _lxc.LXC_CLONE_KEEPNAME
+LXC_CLONE_MAYBE_SNAPSHOT = _lxc.LXC_CLONE_MAYBE_SNAPSHOT
 LXC_CLONE_SNAPSHOT = _lxc.LXC_CLONE_SNAPSHOT
 
 # create: create flags

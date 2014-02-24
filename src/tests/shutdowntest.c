@@ -51,8 +51,8 @@ int main(int argc, char *argv[])
 	}
 	c->set_config_item(c, "lxc.network.link", "lxcbr0");
 	c->set_config_item(c, "lxc.network.flags", "up");
-	if (!c->createl(c, "ubuntu", NULL, NULL, 0, "-r", "lucid", NULL)) {
-		fprintf(stderr, "%d: failed to create a lucid container\n", __LINE__);
+	if (!c->createl(c, "ubuntu", NULL, NULL, 0, "-r", "trusty", NULL)) {
+		fprintf(stderr, "%d: failed to create a trusty container\n", __LINE__);
 		goto out;
 	}
 
@@ -61,14 +61,16 @@ int main(int argc, char *argv[])
 		goto out;
 	}
 
+	c->clear_config(c);
 	c->load_config(c, NULL);
 	c->want_daemonize(c, true);
 	if (!c->startl(c, 0, NULL)) {
 		fprintf(stderr, "%d: failed to start %s\n", __LINE__, MYNAME);
 		goto out;
 	}
-	fprintf(stderr, "%d: %s started, you have 60 seconds to test a console\n", __LINE__, MYNAME);
-	sleep(60);  // wait a minute to let user connect to console
+
+	/* Wait for init to be ready for SIGPWR */
+	sleep(10);
 
 	if (!c->shutdown(c, 60)) {
 		fprintf(stderr, "%d: failed to shut down %s\n", __LINE__, MYNAME);

@@ -21,6 +21,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
+#include "config.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -38,22 +39,15 @@
 #include <sched.h>
 #include <pwd.h>
 #include <grp.h>
-#include "config.h"
+
 #include "namespace.h"
 #include "utils.h"
-
-#ifndef HAVE_GETLINE
-#ifdef HAVE_FGETLN
-#include <../include/getline.h>
-#endif
-#endif
 
 int unshare(int flags);
 
 static void usage(const char *name)
 {
-	printf("usage: %s [-h] [-c] [-mnuUip] [-P <pid-file>]"
-			"[command [arg ..]]\n", name);
+	printf("usage: %s [-h] [-m <uid-maps>] -- [command [arg ..]]\n", name);
 	printf("\n");
 	printf("  -h		this message\n");
 	printf("\n");
@@ -75,14 +69,16 @@ static void opentty(const char * tty) {
 
 	fd = open(tty, O_RDWR | O_NONBLOCK);
 	if (fd == -1) {
-		printf("FATAL: can't reopen tty: %s", strerror(errno));
-		sleep(1);
-		exit(1);
+		printf("WARN: could not reopen tty: %s\n", strerror(errno));
+		return;
 	}
 
 	flags = fcntl(fd, F_GETFL);
 	flags &= ~O_NONBLOCK;
-	fcntl(fd, F_SETFL, flags);
+	if (fcntl(fd, F_SETFL, flags) < 0) {
+		printf("WARN: could not set fd flags: %s\n", strerror(errno));
+		return;
+	}
 
 	for (i = 0; i < fd; i++)
 		close(i);
@@ -126,7 +122,7 @@ struct id_map {
 	struct id_map *next;
 };
 
-struct id_map default_map = {
+static struct id_map default_map = {
 	.which = 'b',
 	.host_id = 100000,
 	.ns_id = 0,
@@ -425,7 +421,7 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	buf[0] = 1;
+	buf[0] = '1';
 	if (map_child_uids(pid, active_map)) {
 		fprintf(stderr, "error mapping child\n");
 		ret = 0;

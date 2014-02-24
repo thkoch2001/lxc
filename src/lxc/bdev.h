@@ -24,11 +24,12 @@
 #ifndef __LXC_BDEV_H
 #define __LXC_BDEV_H
 /* blockdev operations for:
- * dir, raw, btrfs, overlayfs, aufs, lvm, loop, zfs
+ * aufs, dir, raw, btrfs, overlayfs, aufs, lvm, loop, zfs
  * someday: qemu-nbd, qcow2, qed
  */
 
 #include "config.h"
+#include <stdint.h>
 #include <lxc/lxccontainer.h>
 
 struct bdev;
@@ -38,7 +39,7 @@ struct bdev;
  */
 struct bdev_specs {
 	char *fstype;
-	unsigned long fssize;  // fs size in bytes
+	uint64_t fssize;  // fs size in bytes
 	struct {
 		char *zfsroot;
 	} zfs;
@@ -61,7 +62,8 @@ struct bdev_ops {
 	/* given original mount, rename the paths for cloned container */
 	int (*clone_paths)(struct bdev *orig, struct bdev *new, const char *oldname,
 			const char *cname, const char *oldpath, const char *lxcpath,
-			int snap, unsigned long newsize);
+			int snap, uint64_t newsize, struct lxc_conf *conf);
+	bool can_snapshot;
 };
 
 /*
@@ -72,17 +74,19 @@ struct bdev_ops {
  * data is so far unused.
  */
 struct bdev {
-	struct bdev_ops *ops;
-	char *type;
+	const struct bdev_ops *ops;
+	const char *type;
 	char *src;
 	char *dest;
-	char *data;
+	char *mntopts;
 	// turn the following into a union if need be
 	// lofd is the open fd for the mounted loopback file
 	int lofd;
 };
 
-char *overlayfs_getlower(char *p);
+char *overlay_getlower(char *p);
+
+bool bdev_is_dir(const char *path);
 
 /*
  * Instantiate a bdev object.  The src is used to determine which blockdev
@@ -97,9 +101,9 @@ char *overlayfs_getlower(char *p);
  */
 struct bdev *bdev_init(const char *src, const char *dst, const char *data);
 
-struct bdev *bdev_copy(const char *src, const char *oldname, const char *cname,
-			const char *oldpath, const char *lxcpath, const char *bdevtype,
-			int snap, const char *bdevdata, unsigned long newsize,
+struct bdev *bdev_copy(struct lxc_container *c0, const char *cname,
+			const char *lxcpath, const char *bdevtype,
+			int flags, const char *bdevdata, uint64_t newsize,
 			int *needs_rdep);
 struct bdev *bdev_create(const char *dest, const char *type,
 			const char *cname, struct bdev_specs *specs);

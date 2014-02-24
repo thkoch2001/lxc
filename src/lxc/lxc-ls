@@ -25,10 +25,6 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 #
 
-# NOTE: To remove once the API is stabilized
-import warnings
-warnings.filterwarnings("ignore", "The python-lxc API isn't yet stable")
-
 import argparse
 import gettext
 import json
@@ -88,7 +84,7 @@ def getTerminalSize():
     return int(cr[1]), int(cr[0])
 
 
-def getSubContainers(container, lxcpath):
+def getSubContainers(container):
     with open(os.devnull, "w") as fd:
         fdnum, path = tempfile.mkstemp()
         os.remove(path)
@@ -110,6 +106,9 @@ def getSubContainers(container, lxcpath):
             return json.loads(out)
     return None
 
+# Constants
+FIELDS = ("name", "state", "ipv4", "ipv6", "autostart", "pid",
+          "memory", "ram", "swap")
 
 # Begin parsing the command line
 parser = argparse.ArgumentParser(description=_("LXC: List containers"),
@@ -134,10 +133,11 @@ parser.add_argument("--running", dest="state", action="append_const",
 parser.add_argument("--stopped", dest="state", action="append_const",
                     const="STOPPED", help=_("list only stopped containers"))
 
-parser.add_argument("--fancy", action="store_true",
+parser.add_argument("-f", "--fancy", action="store_true",
                     help=_("use fancy output"))
 
-parser.add_argument("--fancy-format", type=str, default="name,state,ipv4,ipv6",
+parser.add_argument("-F", "--fancy-format", type=str,
+                    default="name,state,ipv4,ipv6,autostart",
                     help=_("comma separated list of fields to show"))
 
 parser.add_argument("--nesting", dest="nesting", action="store_true",
@@ -159,10 +159,16 @@ if not sys.stdout.isatty():
     args.one = True
 
 # Set the lookup path for the containers
-lxcpath = os.environ.get('NESTED', args.lxcpath)
+# This value will contain the full path for a nested containers
+# use args.lxcpath if you need the value relative to the container
+nest_lxcpath = os.environ.get('NESTED', args.lxcpath)
 
 # Turn args.fancy_format into a list
 args.fancy_format = args.fancy_format.strip().split(",")
+
+if set(args.fancy_format) - set(FIELDS):
+    parser.error(_("Invalid field(s): %s" %
+                 ", ".join(list(set(args.fancy_format) - set(FIELDS)))))
 
 # Basic checks
 ## Check for setns
@@ -189,7 +195,7 @@ if args.nesting:
 
 # List of containers, stored as dictionaries
 containers = []
-for container_name in lxc.list_containers(config_path=lxcpath):
+for container_name in lxc.list_containers(config_path=nest_lxcpath):
     entry = {}
     entry['name'] = container_name
 
@@ -203,6 +209,10 @@ for container_name in lxc.list_containers(config_path=lxcpath):
         continue
 
     container = lxc.Container(container_name, args.lxcpath)
+
+    if 'NESTED' in os.environ:
+        container.load_config(os.path.join(nest_lxcpath, container_name,
+                                           "config"))
 
     if container.controllable:
         state = container.state
@@ -229,6 +239,57 @@ for container_name in lxc.list_containers(config_path=lxcpath):
         elif container.init_pid != -1:
             entry['pid'] = str(container.init_pid)
 
+    if 'autostart' in args.fancy_format or args.nesting:
+        entry['autostart'] = "NO"
+        try:
+            if container.get_config_item("lxc.start.auto") == "1":
+                entry['autostart'] = "YES"
+
+                groups = container.get_config_item("lxc.group")
+                if len(groups) > 0:
+                    entry['autostart'] = "YES (%s)" % ", ".join(groups)
+        except KeyError:
+            pass
+
+    if 'memory' in args.fancy_format or \
+       'ram' in args.fancy_format or \
+       'swap' in args.fancy_format:
+
+        if container.running:
+            try:
+                memory_total = int(container.get_cgroup_item(
+                    "memory.usage_in_bytes"))
+            except:
+                memory_total = 0
+
+            try:
+                memory_swap = int(container.get_cgroup_item(
+                    "memory.memsw.usage_in_bytes"))
+            except:
+                memory_swap = 0
+        else:
+            memory_total = 0
+            memory_swap = 0
+
+    if 'memory' in args.fancy_format:
+        if container.running:
+            entry['memory'] = "%sMB" % round(memory_total / 1048576, 2)
+        else:
+            entry['memory'] = "-"
+
+    if 'ram' in args.fancy_format:
+        if container.running:
+            entry['ram'] = "%sMB" % round(
+                (memory_total - memory_swap) / 1048576, 2)
+        else:
+            entry['ram'] = "-"
+
+    if 'swap' in args.fancy_format:
+        if container.running:
+            entry['swap'] = "%sMB" % round(memory_swap / 1048576, 2)
+        else:
+            entry['swap'] = "-"
+
     # Get the IPs
     for family, protocol in {'inet': 'ipv4', 'inet6': 'ipv6'}.items():
         if protocol in args.fancy_format or args.nesting:
@@ -238,22 +299,21 @@ for container_name in lxc.list_containers(config_path=lxcpath):
                 entry[protocol] = state
                 continue
 
-            # FIXME: We should get get_ips working as non-root
-            if container.running and (not SUPPORT_SETNS_NET \
-                    or os.geteuid() != 0):
-                entry[protocol] = 'UNKNOWN'
-                continue
+            if container.running:
+                if not SUPPORT_SETNS_NET:
+                    entry[protocol] = 'UNKNOWN'
+                    continue
 
-            ips = container.get_ips(family=family)
-            if ips:
-                entry[protocol] = ", ".join(ips)
+                ips = container.get_ips(family=family)
+                if ips:
+                    entry[protocol] = ", ".join(ips)
 
     # Append the container
     containers.append(entry)
 
     # Nested containers
     if args.nesting and container.state == "RUNNING":
-        sub = getSubContainers(container, args.lxcpath)
+        sub = getSubContainers(container)
         if sub:
             for entry in sub:
                 if 'nesting_parent' not in entry:

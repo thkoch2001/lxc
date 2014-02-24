@@ -71,7 +71,7 @@ static int create_ubuntu(void)
 		return -1;
 	}
 	if (pid == 0) {
-		ret = execlp("lxc-create", "lxc-create", "-t", "ubuntu", "-f", LXC_DEFAULT_CONFIG, "-n", MYNAME, NULL);
+		ret = execlp("lxc-create", "lxc-create", "-t", "ubuntu", "-n", MYNAME, NULL);
 		// Should not return
 		perror("execl");
 		exit(1);
@@ -158,16 +158,11 @@ int main(int argc, char *argv[])
 		goto out;
 	}
 
-	printf("hit return to start container");
-	char mychar;
-	ret = scanf("%c", &mychar);
-	if (ret < 0)
-		goto out;
-
 	if (!lxc_container_get(c)) {
 		fprintf(stderr, "%d: failed to get extra ref to container\n", __LINE__);
 		exit(1);
 	}
+	c->want_daemonize(c, false);
 	pid_t pid = fork();
 	if (pid < 0) {
 		fprintf(stderr, "%d: fork failed\n", __LINE__);
@@ -195,7 +190,7 @@ int main(int argc, char *argv[])
 	}
 
 	len = c->get_cgroup_item(c, "cpuset.cpus", buf, 200);
-	if (len <= 0 || strcmp(buf, "0\n")) {
+	if (len <= 0 || strncmp(buf, "0", 1)) {
 		fprintf(stderr, "%d: not able to get cpuset.cpus (len %d buf %s)\n", __LINE__, len, buf);
 		goto out;
 	}
@@ -216,10 +211,6 @@ int main(int argc, char *argv[])
 
 	c->set_cgroup_item(c, "freezer.state", "THAWED");
 
-	printf("hit return to finish");
-	ret = scanf("%c", &mychar);
-	if (ret < 0)
-		goto out;
 	c->stop(c);
 
     /* feh - multilib has moved the lxc-init crap */

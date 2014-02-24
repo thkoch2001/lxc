@@ -33,6 +33,7 @@
 
 #include "arguments.h"
 #include "utils.h"
+#include "version.h"
 
 /*---------------------------------------------------------------------------*/
 static int build_shortopts(const struct option *a_options,
@@ -128,6 +129,11 @@ static void print_usage(const struct option longopts[],
 	exit(0);
 }
 
+static void print_version() {
+	printf("%s\n", LXC_VERSION);
+	exit(0);
+}
+
 static void print_help(const struct lxc_arguments *args, int code)
 {
 	fprintf(stderr, "\
@@ -140,6 +146,7 @@ Common options :\n\
   -P, --lxcpath=PATH               Use specified container path\n\
   -?, --help                       Give this help list\n\
       --usage                      Give a short usage message\n\
+      --version                    Print the version number\n\
 \n\
 Mandatory or optional arguments to long options are also mandatory or optional\n\
 for any corresponding short options.\n\
@@ -203,6 +210,7 @@ extern int lxc_arguments_parse(struct lxc_arguments *args,
 				return ret;
 			break;
 		case OPT_USAGE: print_usage(args->options, args);
+		case OPT_VERSION: print_version();
 		case '?':	print_help(args, 1);
 		case 'h': 	print_help(args, 0);
 		default:
@@ -222,14 +230,14 @@ extern int lxc_arguments_parse(struct lxc_arguments *args,
 
 	/* If no lxcpaths were given, use default */
 	if (!args->lxcpath_cnt) {
-		ret = lxc_arguments_lxcpath_add(args, default_lxc_path());
+		ret = lxc_arguments_lxcpath_add(args, lxc_global_config_value("lxc.lxcpath"));
 		if (ret < 0)
 			return ret;
 	}
 
 	/* Check the command options */
 
-	if (!args->name) {
+	if (!args->name && strcmp(args->progname, "lxc-autostart") != 0) {
 		lxc_error(args, "missing container name, use --name option");
 		return -1;
 	}

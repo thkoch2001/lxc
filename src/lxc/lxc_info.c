@@ -29,13 +29,15 @@
 #include <libgen.h>
 #include <sys/types.h>
 
-#include <lxc/lxc.h>
-#include <lxc/log.h>
-#include <lxc/utils.h>
 #include <lxc/lxccontainer.h>
 
+#include "lxc.h"
+#include "log.h"
+#include "utils.h"
 #include "commands.h"
 #include "arguments.h"
+
+lxc_log_define(lxc_info_ui, lxc);
 
 static bool ips;
 static bool state;
@@ -139,7 +141,7 @@ static unsigned long long str_size_humanize(char *iobuf, size_t iobufsz)
 	return val;
 }
 
-static void print_net_stats(const char *name, const char *lxcpath)
+static void print_net_stats(struct lxc_container *c)
 {
 	int rc,netnr;
 	unsigned long long rx_bytes = 0, tx_bytes = 0;
@@ -149,7 +151,7 @@ static void print_net_stats(const char *name, const char *lxcpath)
 
 	for(netnr = 0; ;netnr++) {
 		sprintf(buf, "lxc.network.%d.type", netnr);
-		type = lxc_cmd_get_config_item(name, buf, lxcpath);
+		type = c->get_running_config_item(c, buf);
 		if (!type)
 			break;
 
@@ -159,7 +161,7 @@ static void print_net_stats(const char *name, const char *lxcpath)
 			sprintf(buf, "lxc.network.%d.link", netnr);
 		}
 		free(type);
-		ifname = lxc_cmd_get_config_item(name, buf, lxcpath);
+		ifname = c->get_running_config_item(c, buf);
 		if (!ifname)
 			return;
 		printf("%-15s %s\n", "Link:", ifname);
@@ -244,7 +246,7 @@ static void print_stats(struct lxc_container *c)
 	}
 }
 
-void print_info_msg_int(const char *key, int value)
+static void print_info_msg_int(const char *key, int value)
 {
 	if (humanize)
 		printf("%-15s %d\n", key, value);
@@ -256,7 +258,7 @@ void print_info_msg_int(const char *key, int value)
 	}
 }
 
-void print_info_msg_str(const char *key, const char *value)
+static void print_info_msg_str(const char *key, const char *value)
 {
 	if (humanize)
 		printf("%-15s %s\n", key, value);
@@ -301,46 +303,56 @@ static int print_info(const char *name, const char *lxcpath)
 		print_info_msg_str("State:", c->state(c));
 	}
 
-	if (pid) {
-		pid_t initpid;
+	if (c->is_running(c)) {
+		if (pid) {
+			pid_t initpid;
 
-		initpid = c->init_pid(c);
-		if (initpid >= 0)
-			print_info_msg_int("PID:", initpid);
-	}
+			initpid = c->init_pid(c);
+			if (initpid >= 0)
+				print_info_msg_int("PID:", initpid);
+		}
 
-	if (ips) {
-		char **addresses = c->get_ips(c, NULL, NULL, 0);
-		if (addresses) {
-			char *address;
-			i = 0;
-			while (addresses[i]) {
-				address = addresses[i];
-				print_info_msg_str("IP:", address);
-				i++;
+		if (ips) {
+			char **addresses = c->get_ips(c, NULL, NULL, 0);
+			if (addresses) {
+				char *address;
+				i = 0;
+				while (addresses[i]) {
+					address = addresses[i];
+					print_info_msg_str("IP:", address);
+					i++;
+				}
 			}
 		}
 	}
 
 	if (stats) {
 		print_stats(c);
-		print_net_stats(name, lxcpath);
+		print_net_stats(c);
 	}
 
 	for(i = 0; i < keys; i++) {
 		int len = c->get_config_item(c, key[i], NULL, 0);
 
-		if (len >= 0) {
+		if (len > 0) {
 			char *val = (char*) malloc(sizeof(char)*len + 1);
 
 			if (c->get_config_item(c, key[i], val, len + 1) != len) {
 				fprintf(stderr, "unable to read %s from configuration\n", key[i]);
 			} else {
-				printf("%s = %s\n", key[i], val);
+				if (!humanize && keys == 1)
+					printf("%s\n", val);
+				else
+					printf("%s = %s\n", key[i], val);
 			}
 			free(val);
+		} else if (len == 0) {
+			if (!humanize && keys == 1)
+				printf("\n");
+			else
+				printf("%s =\n", key[i]);
 		} else {
-			fprintf(stderr, "%s unset or invalid\n", key[i]);
+			fprintf(stderr, "%s invalid\n", key[i]);
 		}
 	}
 
@@ -361,6 +373,7 @@ int main(int argc, char *argv[])
 	if (lxc_log_init(my_args.name, my_args.log_file, my_args.log_priority,
 			 my_args.progname, my_args.quiet, my_args.lxcpath[0]))
 		return ret;
+	lxc_log_options_no_override();
 
 	if (print_info(my_args.name, my_args.lxcpath[0]) == 0)
 		ret = EXIT_SUCCESS;

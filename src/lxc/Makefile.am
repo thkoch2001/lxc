@@ -60,10 +60,9 @@ liblxc_so_SOURCES = \
 	monitor.c monitor.h \
 	console.c \
 	freezer.c \
-	checkpoint.c \
-	restart.c \
 	error.h error.c \
 	parse.c parse.h \
+	cgfs.c \
 	cgroup.c cgroup.h \
 	lxc.h \
 	utils.c utils.h \
@@ -93,6 +92,10 @@ liblxc_so_SOURCES = \
 	\
 	$(LSM_SOURCES)
 
+if ENABLE_CGMANAGER
+liblxc_so_SOURCES += cgmanager.c
+endif
+
 if IS_BIONIC
 liblxc_so_SOURCES += \
 	../include/ifaddrs.c ../include/ifaddrs.h \
@@ -111,15 +114,21 @@ AM_CFLAGS=-I$(top_srcdir)/src \
 	-DLXCPATH=\"$(LXCPATH)\" \
 	-DLXC_GLOBAL_CONF=\"$(LXC_GLOBAL_CONF)\" \
 	-DLXCINITDIR=\"$(LXCINITDIR)\" \
+	-DLIBEXECDIR=\"$(LIBEXECDIR)\" \
 	-DLXCTEMPLATEDIR=\"$(LXCTEMPLATEDIR)\" \
 	-DLOGPATH=\"$(LOGPATH)\" \
 	-DLXC_DEFAULT_CONFIG=\"$(LXC_DEFAULT_CONFIG)\" \
 	-DLXC_USERNIC_DB=\"$(LXC_USERNIC_DB)\" \
 	-DLXC_USERNIC_CONF=\"$(LXC_USERNIC_CONF)\" \
-	-DDEFAULT_CGROUP_PATTERN=\"$(DEFAULT_CGROUP_PATTERN)\"
+	-DDEFAULT_CGROUP_PATTERN=\"$(DEFAULT_CGROUP_PATTERN)\" \
+	-DRUNTIME_PATH=\"$(RUNTIME_PATH)\"
 
 if ENABLE_APPARMOR
 AM_CFLAGS += -DHAVE_APPARMOR
+endif
+
+if ENABLE_CGMANAGER
+AM_CFLAGS += -DHAVE_CGMANAGER
 endif
 
 if ENABLE_SELINUX
@@ -131,30 +140,30 @@ AM_CFLAGS += -DUSE_CONFIGPATH_LOGS
 endif
 
 if ENABLE_SECCOMP
-AM_CFLAGS += -DHAVE_SECCOMP
+AM_CFLAGS += -DHAVE_SECCOMP $(SECCOMP_CFLAGS)
 liblxc_so_SOURCES += seccomp.c
 endif
 
-liblxc_so_CFLAGS = -fPIC -DPIC $(AM_CFLAGS)
+liblxc_so_CFLAGS = -fPIC -DPIC $(AM_CFLAGS) -pthread
 
 liblxc_so_LDFLAGS = \
+	-pthread \
 	-shared \
 	-Wl,-soname,liblxc.so.$(firstword $(subst ., ,$(VERSION)))
 
 liblxc_so_LDADD = $(CAP_LIBS) $(APPARMOR_LIBS) $(SECCOMP_LIBS)
 
-bin_SCRIPTS = \
-	lxc-ps \
-	lxc-netstat \
-	lxc-checkconfig \
-	lxc-version
+if ENABLE_CGMANAGER
+liblxc_so_LDADD += $(CGMANAGER_LIBS) $(DBUS_LIBS) $(NIH_LIBS) $(NIH_DBUS_LIBS)
+liblxc_so_CFLAGS += $(CGMANAGER_CFLAGS) $(DBUS_CFLAGS) $(NIH_CFLAGS) $(NIH_DBUS_CFLAGS)
+endif
+
+bin_SCRIPTS = lxc-checkconfig
 
 EXTRA_DIST = \
 	lxc-device \
-	lxc-devsetup \
 	lxc-ls \
-	lxc-top \
-	lxc.service
+	lxc-top
 
 if ENABLE_PYTHON
 bin_SCRIPTS += lxc-device
@@ -170,31 +179,29 @@ endif
 
 bin_PROGRAMS = \
 	lxc-attach \
-	lxc-unshare \
-	lxc-stop \
-	lxc-start \
+	lxc-autostart \
+	lxc-cgroup \
 	lxc-clone \
-	lxc-execute \
-	lxc-monitor \
-	lxc-monitord \
-	lxc-wait \
+	lxc-config \
 	lxc-console \
+	lxc-create \
+	lxc-destroy \
+	lxc-execute \
 	lxc-freeze \
 	lxc-info \
-	lxc-cgroup \
-	lxc-unfreeze \
-	lxc-checkpoint \
-	lxc-restart \
-	lxc-kill \
-	lxc-config \
-	lxc-destroy \
-	lxc-create \
-	lxc-user-nic \
+	lxc-monitor \
 	lxc-snapshot \
-	lxc-usernsexec
+	lxc-start \
+	lxc-stop \
+	lxc-unfreeze \
+	lxc-unshare \
+	lxc-usernsexec \
+	lxc-wait
 
 pkglibexec_PROGRAMS = \
-	lxc-init
+	lxc-init \
+	lxc-monitord \
+	lxc-user-nic
 
 AM_LDFLAGS = -Wl,-E
 if ENABLE_RPATH
@@ -203,8 +210,8 @@ endif
 LDADD=liblxc.so @CAP_LIBS@ @APPARMOR_LIBS@ @SECCOMP_LIBS@
 
 lxc_attach_SOURCES = lxc_attach.c
+lxc_autostart_SOURCES = lxc_autostart.c
 lxc_cgroup_SOURCES = lxc_cgroup.c
-lxc_checkpoint_SOURCES = lxc_checkpoint.c
 lxc_config_SOURCES = lxc_config.c
 lxc_console_SOURCES = lxc_console.c
 lxc_destroy_SOURCES = lxc_destroy.c
@@ -214,14 +221,12 @@ lxc_info_SOURCES = lxc_info.c
 lxc_init_SOURCES = lxc_init.c
 lxc_monitor_SOURCES = lxc_monitor.c
 lxc_monitord_SOURCES = lxc_monitord.c
-lxc_restart_SOURCES = lxc_restart.c
 lxc_clone_SOURCES = lxc_clone.c
 lxc_start_SOURCES = lxc_start.c
 lxc_stop_SOURCES = lxc_stop.c
 lxc_unfreeze_SOURCES = lxc_unfreeze.c
 lxc_unshare_SOURCES = lxc_unshare.c
 lxc_wait_SOURCES = lxc_wait.c
-lxc_kill_SOURCES = lxc_kill.c
 lxc_create_SOURCES = lxc_create.c
 lxc_snapshot_SOURCES = lxc_snapshot.c
 lxc_usernsexec_SOURCES = lxc_usernsexec.c
@@ -234,7 +239,9 @@ install-exec-local: install-soPROGRAMS
 	cd $(DESTDIR)$(libdir); \
 	ln -sf liblxc.so.$(VERSION) liblxc.so.$(firstword $(subst ., ,$(VERSION))); \
 	ln -sf liblxc.so.$(firstword $(subst ., ,$(VERSION))) liblxc.so
-	chmod u+s $(DESTDIR)$(bindir)/lxc-user-nic
+
+install-exec-hook:
+	chmod u+s $(DESTDIR)$(libexecdir)/lxc/lxc-user-nic
 
 uninstall-local:
 	$(RM) $(DESTDIR)$(libdir)/liblxc.so*
