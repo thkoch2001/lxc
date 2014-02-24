@@ -1,5 +1,3 @@
-/usr/share/lxc/templates/lxc-debconfig		/usr/share/lxc/templates/lxc-debian
-/usr/share/lxc/templates/lxc-debconfig.d	/usr/share/lxc/templates/lxc-debian.d
 /usr/share/lxc/templates/lxc-debconfig		/usr/share/lxc/templates/lxc-progress-linux
 /usr/share/lxc/templates/lxc-debconfig.d	/usr/share/lxc/templates/lxc-progress-linux.d
 

@@ -1,5 +1,7 @@
 #!/usr/bin/make -f
 
+-include /usr/share/dpkg/vendor.mk
+
 DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
 
 %:
@@ -15,6 +17,12 @@ override_dh_auto_install:
 	mkdir -p debian/lxc-dev/usr/bin
 	mv debian/tmp/usr/bin/lxc-test-* debian/lxc-dev/usr/bin
 
+	# template
+ifeq ($(DEB_VENDOR),Progress Linux)
+	# rename lxc-debian to lxc-debian.upstream
+	mv debian/tmp/usr/share/lxc/templates/lxc-debian debian/tmp/usr/share/lxc/templates/lxc-debian.upstream
+endif
+
 override_dh_builddeb:
 	dh_builddeb -- -Zxz
 
@@ -27,6 +35,13 @@ override_dh_install:
 override_dh_installinit:
 	dh_installinit -plxc-stuff --onlyscripts --no-restart-on-upgrade --no-start --name lxc
 	dh_installinit -plxc-stuff --onlyscripts --no-restart-on-upgrade --no-start --name irkerhook-lxc
+
+override_dh_link:
+ifeq ($(DEB_VENDOR),Progress Linux)
+	# install lxc-debconfig as lxc-debian
+	dh_link -plxc-stuff /usr/share/lxc/templates/lxc-debconfig	/usr/share/lxc/templates/lxc-debian
+	dh_link -plxc-stuff /usr/share/lxc/templates/lxc-debconfig.d	/usr/share/lxc/templates/lxc-debian.d
+endif
 
 override_dh_strip:
 	dh_strip --dbg-package=lxc-dbg
