@@ -1,3 +1,5 @@
 usr/include
 usr/lib/*/*.so
 usr/lib/*/pkgconfig
+
+doc/api/html/*	/usr/share/doc/lxc-dev/html
