@@ -1,0 +1,25 @@
+Author: Daniel Baumann <mail@daniel-baumann.ch>
+Description: Correcting wrong LSB headers in sysvinit script.
+
+diff -Naurp lxc.orig/config/init/sysvinit/lxc lxc/config/init/sysvinit/lxc
+--- lxc.orig/config/init/sysvinit/lxc
++++ lxc/config/init/sysvinit/lxc
+@@ -7,10 +7,17 @@
+ #
+ ### BEGIN INIT INFO
+ # Provides: lxc
+-# Default-Start: 3 4 5
++# Required-Start: $syslog $remote_fs
++# Required-Stop: $syslog $remote_fs
++# Should-Start:
++# Should-Stop:
++# Default-Start: 2 3 4 5
+ # Default-Stop: 0 1 6
+ # Short-Description: Bring up/down LXC autostart containers
+ # Description: Bring up/down LXC autostart containers
++# X-Start-Before:
++# X-Stop-After:
++# X-Interactive:
+ ### END INIT INFO
+ 
+ # Source function library.
