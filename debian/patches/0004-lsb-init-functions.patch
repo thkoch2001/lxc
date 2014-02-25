@@ -1,0 +1,40 @@
+Author: Daniel Baumann <mail@daniel-baumann.ch>
+Description: Correcting wrong LSB functions in sysvinit script (Closes: #740066).
+
+diff -Naurp lxc.orig/config/init/sysvinit/lxc lxc/config/init/sysvinit/lxc
+--- lxc.orig/config/init/sysvinit/lxc
++++ lxc/config/init/sysvinit/lxc
+@@ -21,7 +21,7 @@
+ ### END INIT INFO
+ 
+ # Source function library.
+-. /etc/init.d/functions
++. /lib/lsb/init-functions
+ 
+ # Check for needed utility program
+ [ -x /usr/bin/lxc-autostart ] || exit 1
+@@ -53,11 +53,13 @@ case "$1" in
+ 
+ 	# Start containers
+ 	wait_for_bridge
+-	action $"Starting LXC containers: " /usr/bin/lxc-autostart
++	log_daemon_msg "Starting LXC containers: "
++	/usr/bin/lxc-autostart
+ 	touch /var/lock/subsys/lxc
+ 	;;
+   stop)
+-	action $"Stopping LXC containers: " /usr/bin/lxc-autostart -s
++	log_daemon_msg "Stopping LXC containers: "
++	/usr/bin/lxc-autostart -s
+ 	rm -f /var/lock/subsys/lxc
+ 	;;
+   restart|reload|force-reload)
+@@ -65,7 +67,7 @@ case "$1" in
+ 	$0 start
+ 	;;
+   *)
+-	echo $"Usage: $0 {start|stop|restart|reload|force-reload}"
++	echo "Usage: $0 {start|stop|restart|reload|force-reload}"
+ 	exit 2
+ esac
+ exit $?
