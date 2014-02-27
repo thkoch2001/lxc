@@ -2,3 +2,4 @@
 0002-lxc-sysvinit.patch
 0003-lsb-init-headers.patch
 0004-lsb-init-functions.patch
+0005-lsb-init-lock.patch
