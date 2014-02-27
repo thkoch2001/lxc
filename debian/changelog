@@ -1,3 +1,12 @@
+lxc (1.0.0-3) experimental; urgency=low
+
+  * Adding initial Italian debconf translation from Gianluigi Tiesi
+    <sherpya@netfarm.it> (Closes: #740217).
+  * Creating missing lock directory in upstreams sysvinit initscript
+    (Closes: #740216).
+
+ -- Daniel Baumann <mail@daniel-baumann.ch>  Thu, 27 Feb 2014 12:09:38 +0100
+
 lxc (1.0.0-2) experimental; urgency=low
 
   * Correcting upstreams wrong lsb headers in sysvinit initscript (Closes:
