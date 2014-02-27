@@ -78,13 +78,16 @@ case "${_PROGRAM}" in
 			esac
 
 			# Send IRC notification
-			for _FILE in /etc/default/irkerhook-lxc /etc/default/irkerhook-lxc.d/*
-			do
-				if [ -f "${_FILE}" ]
-				then
-					. "${_FILE}" || true
-				fi
-			done
+			if [ -x /usr/bin/irkerhook-lxc ]
+			then
+				for _FILE in /etc/default/irkerhook-lxc /etc/default/irkerhook-lxc.d/*
+				do
+					if [ -f "${_FILE}" ]
+					then
+						. "${_FILE}" || true
+					fi
+				done
+			fi
 
 			case "${IRK_ENABLED}" in
 				true)
