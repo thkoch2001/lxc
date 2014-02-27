@@ -1,0 +1,48 @@
+# Italian translation of lxc debconf templates.
+# Copyright (C) 2014 Gianluigi Tiesi <sherpya@netfarm.it>
+# This file is distributed under the same license as the lxc package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: lxc 0.7.5-2\n"
+"Report-Msgid-Bugs-To: lxc@packages.debian.org\n"
+"POT-Creation-Date: 2014-01-16 15:31+0100\n"
+"PO-Revision-Date: 2010-07-20 05:54+0200\n"
+"Last-Translator: Gianluigi Tiesi <sherpya@netfarm.it>\n"
+"Language-Team: none\n"
+"Language: it\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. Type: title
+#. Description
+#: ../lxc-stuff.templates:1001
+msgid "Linux Containers: LXC setup"
+msgstr "Linux Containers: Impostazioni LXC"
+
+#. Type: string
+#. Default
+#: ../lxc-stuff.templates:2001
+msgid "/srv/lxc/containers"
+msgstr ""
+
+#. Type: string
+#. Description
+#: ../lxc-stuff.templates:2002
+msgid "LXC directory:"
+msgstr "Cartella LXC:"
+
+#. Type: string
+#. Description
+#: ../lxc-stuff.templates:2002
+msgid ""
+"Please specify the directory that will be used to store the Linux Containers."
+msgstr ""
+"Per favore specifica la cartella che conterrà i Linux Container."
+
+#. Type: string
+#. Description
+#: ../lxc-stuff.templates:2002
+msgid "If unsure, use /srv/lxc/containers (default)."
+msgstr "Se non sei sicuro, scegli /srv/lxc/containers (predefinita)."
