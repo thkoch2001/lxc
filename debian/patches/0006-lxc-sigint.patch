@@ -1,0 +1,24 @@
+Author: Stefan Siegel <siegel.stefan@gmail.com>
+Description: lxc-attach should ignore SIGINT (Closes: #740264).
+ lxc-attach terminates on SIGINT, which is extremely annoying.
+ Pressing Ctrl-C should kill the running process, not the whole session.
+
+diff -Naurp lxc.orig/src/lxc/lxc_attach.c lxc/src/lxc/lxc_attach.c
+--- lxc.orig/src/lxc/lxc_attach.c
++++ lxc/src/lxc/lxc_attach.c
+@@ -26,6 +26,7 @@
+ #include <sys/wait.h>
+ #include <sys/types.h>
+ #include <stdlib.h>
++#include <signal.h>
+ 
+ #include "attach.h"
+ #include "arguments.h"
+@@ -231,6 +232,7 @@ int main(int argc, char *argv[])
+ 	if (ret < 0)
+ 		return -1;
+ 
++	signal(SIGINT, SIG_IGN);
+ 	ret = lxc_wait_for_pid_status(pid);
+ 	if (ret < 0)
+ 		return -1;

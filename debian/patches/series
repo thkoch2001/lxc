@@ -3,3 +3,4 @@
 0003-lsb-init-headers.patch
 0004-lsb-init-functions.patch
 0005-lsb-init-lock.patch
+0006-lxc-sigint.patch
