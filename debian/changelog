@@ -1,3 +1,13 @@
+lxc (1.0.0-4) experimental; urgency=low
+
+  * Only run irkerhook when irkerhook is actually installed, not just when
+    it's enabled only.
+  * Updating todo file.
+  * Adding patch from Stefan Siegel <siegel.stefan@gmail.com> to make lxc-
+    attach ignore SIGINT (Closes: #740264).
+
+ -- Daniel Baumann <mail@daniel-baumann.ch>  Sat, 01 Mar 2014 12:32:54 +0100
+
 lxc (1.0.0-3) experimental; urgency=low
 
   * Adding initial Italian debconf translation from Gianluigi Tiesi
