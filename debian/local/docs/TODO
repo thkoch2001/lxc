@@ -37,6 +37,8 @@ lxc-debconfig:
   * write preseed file into /etc/lxc/debconf after lxc-debconfig is done
   * create /etc/lxc/{debian,progress} and respect it depending on mode
   * save last used IP, use this +1 as default for next container
+  * check for already used IPs and give a warning if a container with
+    same ip already exists on the system.
   * add manpage
   * handle mac (arp; local; etc.)
   * guess bridge device
