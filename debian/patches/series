@@ -4,3 +4,4 @@
 0004-lsb-init-functions.patch
 0005-lsb-init-lock.patch
 0006-lxc-sigint.patch
+0007-lxc-systemd.patch

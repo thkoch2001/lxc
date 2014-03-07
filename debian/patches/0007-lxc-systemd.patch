@@ -1,0 +1,27 @@
+Author: Daniel Baumann <mail@daniel-baumann.ch>
+Description: Correct wrong systemd unit directory.
+
+diff -Naurp lxc.orig/config/init/systemd/Makefile.am lxc/config/init/systemd/Makefile.am
+--- lxc.orig/config/init/systemd/Makefile.am
++++ lxc/config/init/systemd/Makefile.am
+@@ -3,7 +3,7 @@ EXTRA_DIST = \
+ 	lxc.service
+ 
+ if INIT_SCRIPT_SYSTEMD
+-SYSTEMD_UNIT_DIR = $(prefix)/lib/systemd/system
++SYSTEMD_UNIT_DIR = /lib/systemd/system
+ 
+ install-systemd: lxc.service lxc-devsetup
+ 	$(MKDIR_P) $(DESTDIR)$(SYSTEMD_UNIT_DIR)
+diff -Naurp lxc.orig/config/init/systemd/Makefile.in lxc/config/init/systemd/Makefile.in
+--- lxc.orig/config/init/systemd/Makefile.in
++++ lxc/config/init/systemd/Makefile.in
+@@ -304,7 +304,7 @@ EXTRA_DIST = \
+ 	lxc-devsetup \
+ 	lxc.service
+ 
+-@INIT_SCRIPT_SYSTEMD_TRUE@SYSTEMD_UNIT_DIR = $(prefix)/lib/systemd/system
++@INIT_SCRIPT_SYSTEMD_TRUE@SYSTEMD_UNIT_DIR = /lib/systemd/system
+ @INIT_SCRIPT_SYSTEMD_TRUE@pkglibexec_SCRIPTS = lxc-devsetup
+ all: all-am
+ 
