@@ -1,3 +1,11 @@
+lxc (1.0.1-1) experimental; urgency=low
+
+  * Merging upstream version 1.0.1.
+  * Keeping lxc in root rather than usr for the time being.
+  * Adding patch to correct wrong systemd unit directory.
+
+ -- Daniel Baumann <mail@daniel-baumann.ch>  Fri, 07 Mar 2014 18:24:49 +0100
+
 lxc (1.0.0-4) experimental; urgency=low
 
   * Only run irkerhook when irkerhook is actually installed, not just when
