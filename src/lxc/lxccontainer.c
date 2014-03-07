@@ -637,7 +637,6 @@ static bool lxcapi_start(struct lxc_container *c, int useinit, char * const argv
 		open("/dev/null", O_RDWR);
 		open("/dev/null", O_RDWR);
 		setsid();
-		restart_cgroups();
 	} else {
 		if (!am_single_threaded()) {
 			ERROR("Cannot start non-daemonized container when threaded");
@@ -806,7 +805,7 @@ static struct bdev *do_bdev_create(struct lxc_container *c, const char *type,
 	/* if we are not root, chown the rootfs dir to root in the
 	 * target uidmap */
 
-	if (geteuid() != 0) {
+	if (geteuid() != 0 || (c->lxc_conf && !lxc_list_empty(&c->lxc_conf->id_map))) {
 		if (chown_mapped_root(bdev->dest, c->lxc_conf) < 0) {
 			ERROR("Error chowning %s to container root", bdev->dest);
 			bdev_put(bdev);
@@ -992,7 +991,7 @@ static bool create_run_template(struct lxc_container *c, char *tpath, bool quiet
 		 * and we append "--mapped-uid x", where x is the mapped uid
 		 * for our geteuid()
 		 */
-		if (geteuid() != 0 && !lxc_list_empty(&conf->id_map)) {
+		if (!lxc_list_empty(&conf->id_map)) {
 			int n2args = 1;
 			char txtuid[20];
 			char txtgid[20];
@@ -1450,7 +1449,7 @@ static inline bool enter_to_ns(struct lxc_container *c) {
 	init_pid = c->init_pid(c);
 
 	/* Switch to new userns */
-	if (geteuid() && access("/proc/self/ns/user", F_OK) == 0) {
+	if ((geteuid() != 0 || (c->lxc_conf && !lxc_list_empty(&c->lxc_conf->id_map))) && access("/proc/self/ns/user", F_OK) == 0) {
 		ret = snprintf(new_userns_path, MAXPATHLEN, "/proc/%d/ns/user", init_pid);
 		if (ret < 0 || ret >= MAXPATHLEN)
 			goto out;
@@ -2502,6 +2501,12 @@ static int clone_update_rootfs(struct clone_update_data *data)
 			bdev_put(bdev);
 			return -1;
 		}
+		if (detect_shared_rootfs()) {
+			if (mount(NULL, "/", NULL, MS_SLAVE|MS_REC, NULL)) {
+				SYSERROR("Failed to make / rslave");
+				ERROR("Continuing...");
+			}
+		}
 		if (bdev->ops->mount(bdev) < 0) {
 			bdev_put(bdev);
 			return -1;
@@ -2604,6 +2609,7 @@ static struct lxc_container *lxcapi_clone(struct lxc_container *c, const char *n
 	char newpath[MAXPATHLEN];
 	int ret, storage_copied = 0;
 	const char *n, *l;
+	char *origroot = NULL;
 	struct clone_update_data data;
 	FILE *fout;
 	pid_t pid;
@@ -2639,6 +2645,10 @@ static struct lxc_container *lxcapi_clone(struct lxc_container *c, const char *n
 	}
 
 	// copy the configuration, tweak it as needed,
+	if (c->lxc_conf->rootfs.path) {
+		origroot = c->lxc_conf->rootfs.path;
+		c->lxc_conf->rootfs.path = NULL;
+	}
 	fout = fopen(newpath, "w");
 	if (!fout) {
 		SYSERROR("open %s", newpath);
@@ -2646,6 +2656,7 @@ static struct lxc_container *lxcapi_clone(struct lxc_container *c, const char *n
 	}
 	write_config(fout, c->lxc_conf);
 	fclose(fout);
+	c->lxc_conf->rootfs.path = origroot;
 
 	sprintf(newpath, "%s/%s/rootfs", l, n);
 	if (mkdir(newpath, 0755) < 0) {
@@ -2665,6 +2676,11 @@ static struct lxc_container *lxcapi_clone(struct lxc_container *c, const char *n
 		ERROR("clone: failed to create new container (%s %s)", n, l);
 		goto out;
 	}
+
+	// copy/snapshot rootfs's
+	ret = copy_storage(c, c2, bdevtype, flags, bdevdata, newsize);
+	if (ret < 0)
+		goto out;
 
 	// update utsname
 	if (!set_config_item_locked(c2, "lxc.utsname", newname)) {
@@ -2687,11 +2703,6 @@ static struct lxc_container *lxcapi_clone(struct lxc_container *c, const char *n
 	// update macaddrs
 	if (!(flags & LXC_CLONE_KEEPMACADDR))
 		network_new_hwaddrs(c2);
-
-	// copy/snapshot rootfs's
-	ret = copy_storage(c, c2, bdevtype, flags, bdevdata, newsize);
-	if (ret < 0)
-		goto out;
 
 	// We've now successfully created c2's storage, so clear it out if we
 	// fail after this
@@ -3033,7 +3044,7 @@ out_free:
 static bool lxcapi_snapshot_restore(struct lxc_container *c, const char *snapname, const char *newname)
 {
 	char clonelxcpath[MAXPATHLEN];
-	int ret;
+	int flags = 0,ret;
 	struct lxc_container *snap, *rest;
 	struct bdev *bdev;
 	bool b = false;
@@ -3071,7 +3082,10 @@ static bool lxcapi_snapshot_restore(struct lxc_container *c, const char *snapnam
 		return false;
 	}
 
-	rest = lxcapi_clone(snap, newname, c->config_path, 0, bdev->type, NULL, 0, NULL);
+	if (strcmp(bdev->type, "dir") != 0 && strcmp(bdev->type, "loop") != 0)
+		flags = LXC_CLONE_SNAPSHOT | LXC_CLONE_MAYBE_SNAPSHOT;
+	rest = lxcapi_clone(snap, newname, c->config_path, flags,
+			bdev->type, NULL, 0, NULL);
 	bdev_put(bdev);
 	if (rest && lxcapi_is_defined(rest))
 		b = true;

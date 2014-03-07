@@ -1194,3 +1194,117 @@ uint64_t fnv_64a_buf(void *buf, size_t len, uint64_t hval)
 
 	return hval;
 }
+
+/*
+ * Detect whether / is mounted MS_SHARED.  The only way I know of to
+ * check that is through /proc/self/mountinfo.
+ * I'm only checking for /.  If the container rootfs or mount location
+ * is MS_SHARED, but not '/', then you're out of luck - figuring that
+ * out would be too much work to be worth it.
+ */
+#define LINELEN 4096
+int detect_shared_rootfs(void)
+{
+	char buf[LINELEN], *p;
+	FILE *f;
+	int i;
+	char *p2;
+
+	f = fopen("/proc/self/mountinfo", "r");
+	if (!f)
+		return 0;
+	while (fgets(buf, LINELEN, f)) {
+		for (p = buf, i=0; p && i < 4; i++)
+			p = strchr(p+1, ' ');
+		if (!p)
+			continue;
+		p2 = strchr(p+1, ' ');
+		if (!p2)
+			continue;
+		*p2 = '\0';
+		if (strcmp(p+1, "/") == 0) {
+			// this is '/'.  is it shared?
+			p = strchr(p2+1, ' ');
+			if (p && strstr(p, "shared:")) {
+				fclose(f);
+				return 1;
+			}
+		}
+	}
+	fclose(f);
+	return 0;
+}
+
+/*
+ * looking at fs/proc_namespace.c, it appears we can
+ * actually expect the rootfs entry to very specifically contain
+ * " - rootfs rootfs "
+ * IIUC, so long as we've chrooted so that rootfs is not our root,
+ * the rootfs entry should always be skipped in mountinfo contents.
+ */
+int detect_ramfs_rootfs(void)
+{
+	char buf[LINELEN], *p;
+	FILE *f;
+	int i;
+	char *p2;
+
+	f = fopen("/proc/self/mountinfo", "r");
+	if (!f)
+		return 0;
+	while (fgets(buf, LINELEN, f)) {
+		for (p = buf, i=0; p && i < 4; i++)
+			p = strchr(p+1, ' ');
+		if (!p)
+			continue;
+		p2 = strchr(p+1, ' ');
+		if (!p2)
+			continue;
+		*p2 = '\0';
+		if (strcmp(p+1, "/") == 0) {
+			// this is '/'.  is it the ramfs?
+			p = strchr(p2+1, '-');
+			if (p && strncmp(p, "- rootfs rootfs ", 16) == 0) {
+				fclose(f);
+				return 1;
+			}
+		}
+	}
+	fclose(f);
+	return 0;
+}
+
+bool on_path(char *cmd) {
+	char *path = NULL;
+	char *entry = NULL;
+	char *saveptr = NULL;
+	char cmdpath[MAXPATHLEN];
+	int ret;
+
+	path = getenv("PATH");
+	if (!path)
+		return false;
+
+	path = strdup(path);
+	if (!path)
+		return false;
+
+	entry = strtok_r(path, ":", &saveptr);
+	while (entry) {
+		ret = snprintf(cmdpath, MAXPATHLEN, "%s/%s", entry, cmd);
+
+		if (ret < 0 || ret >= MAXPATHLEN)
+			goto next_loop;
+
+		if (access(cmdpath, X_OK) == 0) {
+			free(path);
+			return true;
+		}
+
+next_loop:
+		entry = strtok_r(NULL, ":", &saveptr);
+	}
+
+	free(path);
+	return false;
+}

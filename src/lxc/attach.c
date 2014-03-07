@@ -64,6 +64,14 @@
 #  define SOCK_CLOEXEC                02000000
 #endif
 
+#ifndef MS_REC
+#define MS_REC 16384
+#endif
+
+#ifndef MS_SLAVE
+#define MS_SLAVE (1<<19)
+#endif
+
 lxc_log_define(lxc_attach, lxc);
 
 static struct lxc_proc_context_info *lxc_proc_get_context_info(pid_t pid)
@@ -218,6 +226,13 @@ static int lxc_attach_remount_sys_proc(void)
 	if (ret < 0) {
 		SYSERROR("failed to unshare mount namespace");
 		return -1;
+	}
+
+	if (detect_shared_rootfs()) {
+		if (mount(NULL, "/", NULL, MS_SLAVE|MS_REC, NULL)) {
+			SYSERROR("Failed to make / rslave");
+			ERROR("Continuing...");
+		}
 	}
 
 	/* assume /proc is always mounted, so remount it */

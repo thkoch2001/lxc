@@ -3,7 +3,7 @@
 
 m4_define([lxc_version_major], 1)
 m4_define([lxc_version_minor], 0)
-m4_define([lxc_version_micro], 0)
+m4_define([lxc_version_micro], 1)
 m4_define([lxc_version_beta], [])
 
 m4_define([lxc_version_base], [lxc_version_major.lxc_version_minor.lxc_version_micro])
@@ -379,10 +379,8 @@ AM_COND_IF([ENABLE_LUA],
 	PKG_CHECK_VAR([LUA_VERSION], [$LUAPKGCONFIG], [V],,
 		[PKG_CHECK_VAR([LUA_VERSION], [$LUAPKGCONFIG], [major_version])])
 	AC_MSG_RESULT([$LUA_VERSION])
-	PKG_CHECK_VAR([LUA_INSTALL_CMOD], [$LUAPKGCONFIG], [INSTALL_CMOD],,
-		[LUA_INSTALL_CMOD=$libdir/lua/$LUA_VERSION])
-	PKG_CHECK_VAR([LUA_INSTALL_LMOD], [$LUAPKGCONFIG], [INSTALL_LMOD],,
-		[LUA_INSTALL_LMOD=$datadir/lua/$LUA_VERSION])
+	AC_SUBST([LUA_LIBDIR], [$libdir/lua/$LUA_VERSION])
+	AC_SUBST([LUA_SHAREDIR], [$datadir/lua/$LUA_VERSION])
 	])
 
 # Optional bash integration
@@ -698,6 +696,7 @@ AC_CONFIG_FILES([
 	src/Makefile
 	src/lxc/Makefile
 	src/lxc/lxc-checkconfig
+	src/lxc/lxc-ls
 	src/lxc/lxc-start-ephemeral
 	src/lxc/legacy/lxc-ls
 	src/lxc/lxc.functions

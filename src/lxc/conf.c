@@ -1427,46 +1427,6 @@ static int setup_autodev(const char *root)
 }
 
 /*
- * Detect whether / is mounted MS_SHARED.  The only way I know of to
- * check that is through /proc/self/mountinfo.
- * I'm only checking for /.  If the container rootfs or mount location
- * is MS_SHARED, but not '/', then you're out of luck - figuring that
- * out would be too much work to be worth it.
- */
-#define LINELEN 4096
-int detect_shared_rootfs(void)
-{
-	char buf[LINELEN], *p;
-	FILE *f;
-	int i;
-	char *p2;
-
-	f = fopen("/proc/self/mountinfo", "r");
-	if (!f)
-		return 0;
-	while (fgets(buf, LINELEN, f)) {
-		for (p = buf, i=0; p && i < 4; i++)
-			p = index(p+1, ' ');
-		if (!p)
-			continue;
-		p2 = index(p+1, ' ');
-		if (!p2)
-			continue;
-		*p2 = '\0';
-		if (strcmp(p+1, "/") == 0) {
-			// this is '/'.  is it shared?
-			p = index(p2+1, ' ');
-			if (p && strstr(p, "shared:")) {
-				fclose(f);
-				return 1;
-			}
-		}
-	}
-	fclose(f);
-	return 0;
-}
-
-/*
  * I'll forgive you for asking whether all of this is needed :)  The
  * answer is yes.
  * pivot_root will fail if the new root, the put_old dir, or the parent
@@ -1546,11 +1506,16 @@ static int setup_rootfs(struct lxc_conf *conf)
 		return -1;
 	}
 
-	if (detect_shared_rootfs()) {
+       if (detect_ramfs_rootfs()) {
 		if (chroot_into_slave(conf)) {
 			ERROR("Failed to chroot into slave /");
 			return -1;
 		}
+       } else if (detect_shared_rootfs()) {
+               if (mount("", "/", NULL, MS_SLAVE|MS_REC, 0)) {
+                       SYSERROR("Failed to make / rslave");
+                       return -1;
+               }
 	}
 
 	// First try mounting rootfs using a bdev
@@ -2605,7 +2570,6 @@ void lxc_rename_phys_nics_on_shutdown(struct lxc_conf *conf)
 		free(s->orig_name);
 	}
 	conf->num_savednics = 0;
-	free(conf->saved_nics);
 }
 
 static char *default_rootfs_mount = LXCROOTFSMOUNT;
@@ -3205,7 +3169,12 @@ int lxc_map_ids(struct lxc_list *idmap, pid_t pid)
 	int ret = 0;
 	enum idtype type;
 	char *buf = NULL, *pos;
-	int am_root = (getuid() == 0);
+	int use_shadow = (on_path("newuidmap") && on_path("newuidmap"));
+
+	if (!use_shadow && geteuid()) {
+		ERROR("Missing newuidmap/newgidmap");
+		return -1;
+	}
 
 	for(type = ID_TYPE_UID; type <= ID_TYPE_GID; type++) {
 		int left, fill;
@@ -3216,7 +3185,7 @@ int lxc_map_ids(struct lxc_list *idmap, pid_t pid)
 				return -ENOMEM;
 		}
 		pos = buf;
-		if (!am_root)
+		if (use_shadow)
 			pos += sprintf(buf, "new%cidmap %d",
 				type == ID_TYPE_UID ? 'u' : 'g',
 				pid);
@@ -3230,9 +3199,9 @@ int lxc_map_ids(struct lxc_list *idmap, pid_t pid)
 			had_entry = 1;
 			left = 4096 - (pos - buf);
 			fill = snprintf(pos, left, "%s%lu %lu %lu%s",
-					am_root ? "" : " ",
+					use_shadow ? " " : "",
 					map->nsid, map->hostid, map->range,
-					am_root ? "\n" : "");
+					use_shadow ? "" : "\n");
 			if (fill <= 0 || fill >= left)
 				SYSERROR("snprintf failed, too many mappings");
 			pos += fill;
@@ -3240,7 +3209,7 @@ int lxc_map_ids(struct lxc_list *idmap, pid_t pid)
 		if (!had_entry)
 			continue;
 
-		if (am_root) {
+		if (!use_shadow) {
 			ret = write_id_mapping(type, pid, buf, pos-buf);
 		} else {
 			left = 4096 - (pos - buf);
@@ -3470,6 +3439,13 @@ int chown_mapped_root(char *path, struct lxc_conf *conf)
 		}
 		return 0;
 	}
+
+	if (rootid == geteuid()) {
+		// nothing to do
+		INFO("%s: container root is our uid;  no need to chown" ,__func__);
+		return 0;
+	}
+
 	pid = fork();
 	if (pid < 0) {
 		SYSERROR("Failed forking");
@@ -4115,11 +4091,10 @@ static void lxc_clear_saved_nics(struct lxc_conf *conf)
 {
 	int i;
 
-	if (!conf->num_savednics)
+	if (!conf->saved_nics)
 		return;
 	for (i=0; i < conf->num_savednics; i++)
 		free(conf->saved_nics[i].orig_name);
-	conf->saved_nics = 0;
 	free(conf->saved_nics);
 }
 

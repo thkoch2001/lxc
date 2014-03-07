@@ -94,8 +94,6 @@ static void print_top_failing_dir(const char *path)
 	while (p < e) {
 		while (p < e && *p == '/') p++;
 		while (p < e && *p != '/') p++;
-		if (p >= e)
-			return;
 		saved = *p;
 		*p = '\0';
 		if (access(copy, X_OK)) {
@@ -666,7 +664,7 @@ static int do_start(void *data)
 		}
 	}
 
-	if (access(handler->lxcpath, R_OK)) {
+	if (access(handler->lxcpath, X_OK)) {
 		print_top_failing_dir(handler->lxcpath);
 		goto out_warn_father;
 	}
@@ -775,6 +773,7 @@ static int lxc_spawn(struct lxc_handler *handler)
 {
 	int failed_before_rename = 0;
 	const char *name = handler->name;
+	bool cgroups_connected = false;
 	int saved_ns_fd[LXC_NS_MAX];
 	int preserve_mask = 0, i;
 	int netpipepair[2], nveths;
@@ -843,6 +842,8 @@ static int lxc_spawn(struct lxc_handler *handler)
 		ERROR("failed initializing cgroup support");
 		goto out_delete_net;
 	}
+
+	cgroups_connected = true;
 
 	if (!cgroup_create(handler)) {
 		ERROR("failed creating cgroups");
@@ -954,6 +955,9 @@ static int lxc_spawn(struct lxc_handler *handler)
 		goto out_delete_net;
 	}
 
+	cgroup_disconnect();
+	cgroups_connected = false;
+
 	/* Tell the child to complete its initialization and wait for
 	 * it to exec or return an error.  (the child will never
 	 * return LXC_SYNC_POST_CGROUP+1.  It will either close the
@@ -981,6 +985,8 @@ static int lxc_spawn(struct lxc_handler *handler)
 	return 0;
 
 out_delete_net:
+	if (cgroups_connected)
+		cgroup_disconnect();
 	if (handler->clone_flags & CLONE_NEWNET)
 		lxc_delete_network(handler);
 out_abort:
@@ -1049,6 +1055,9 @@ int __lxc_start(const char *name, struct lxc_conf *conf,
 		case SIGHUP: /* reboot */
 			DEBUG("Container rebooting");
 			handler->conf->reboot = 1;
+			break;
+		case SIGSYS: /* seccomp */
+			DEBUG("Container violated its seccomp policy");
 			break;
 		default:
 			DEBUG("unknown exit status for init: %d", WTERMSIG(status));

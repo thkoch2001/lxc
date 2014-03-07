@@ -120,10 +120,10 @@ pkglibexec_PROGRAMS = lxc-init$(EXEEXT) lxc-monitord$(EXEEXT) \
 @ENABLE_RPATH_TRUE@am__append_19 = -Wl,-rpath -Wl,$(libdir)
 subdir = src/lxc
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
-	$(srcdir)/lxc-checkconfig.in $(srcdir)/lxc-start-ephemeral.in \
-	$(srcdir)/lxc.functions.in $(srcdir)/version.h.in \
-	$(top_srcdir)/config/depcomp $(am__noinst_HEADERS_DIST) \
-	$(pkginclude_HEADERS)
+	$(srcdir)/lxc-checkconfig.in $(srcdir)/lxc-ls.in \
+	$(srcdir)/lxc-start-ephemeral.in $(srcdir)/lxc.functions.in \
+	$(srcdir)/version.h.in $(top_srcdir)/config/depcomp \
+	$(am__noinst_HEADERS_DIST) $(pkginclude_HEADERS)
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/config/acinclude.m4 \
 	$(top_srcdir)/config/tls.m4 $(top_srcdir)/configure.ac
@@ -131,8 +131,8 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/src/config.h
-CONFIG_CLEAN_FILES = lxc-checkconfig lxc-start-ephemeral lxc.functions \
-	version.h
+CONFIG_CLEAN_FILES = lxc-checkconfig lxc-ls lxc-start-ephemeral \
+	lxc.functions version.h
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)" "$(DESTDIR)$(pkglibexecdir)" \
 	"$(DESTDIR)$(sodir)" "$(DESTDIR)$(bindir)" \
@@ -441,9 +441,9 @@ LOCALSTATEDIR = @LOCALSTATEDIR@
 LOGPATH = @LOGPATH@
 LTLIBOBJS = @LTLIBOBJS@
 LUA_CFLAGS = @LUA_CFLAGS@
-LUA_INSTALL_CMOD = @LUA_INSTALL_CMOD@
-LUA_INSTALL_LMOD = @LUA_INSTALL_LMOD@
+LUA_LIBDIR = @LUA_LIBDIR@
 LUA_LIBS = @LUA_LIBS@
+LUA_SHAREDIR = @LUA_SHAREDIR@
 LUA_VERSION = @LUA_VERSION@
 LXCHOOKDIR = @LXCHOOKDIR@
 LXCINITDIR = @LXCINITDIR@
@@ -665,6 +665,8 @@ $(ACLOCAL_M4):  $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(am__aclocal_m4_deps):
 lxc-checkconfig: $(top_builddir)/config.status $(srcdir)/lxc-checkconfig.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+lxc-ls: $(top_builddir)/config.status $(srcdir)/lxc-ls.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 lxc-start-ephemeral: $(top_builddir)/config.status $(srcdir)/lxc-start-ephemeral.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
