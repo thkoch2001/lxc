@@ -39,8 +39,8 @@ _ = gettext.gettext
 gettext.textdomain("lxc-ls")
 
 # Constants
-LXCPATH = "/usr/local/var/lib/lxc"
-RUNTIME_PATH = "/run"
+LXCPATH = "@LXCPATH@"
+RUNTIME_PATH = "@RUNTIME_PATH@"
 
 
 # Functions used later on
